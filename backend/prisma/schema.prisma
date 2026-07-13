@@ -1,0 +1,130 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("STUDENT") // "ADMIN", "STUDENT", "STAFF"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  student   Student?
+  staff     Staff?
+}
+
+model Student {
+  id             String         @id @default(uuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rollNumber     String         @unique
+  phoneNumber    String
+  parentContact  String
+  status         String         @default("CHECKED_IN") // "CHECKED_IN", "CHECKED_OUT", "SUSPENDED"
+  roomId         String?
+  room           Room?          @relation(fields: [roomId], references: [id])
+  
+  leaveRequests  LeaveRequest[]
+  complaints     Complaint[]
+  invoices       Invoice[]
+  visitors       Visitor[]
+  messAttendance MessAttendance[]
+}
+
+model Room {
+  id          String   @id @default(uuid())
+  roomNumber  String   @unique
+  block       String   // e.g., "A", "B"
+  sharingType Int      // 1, 2, 3 sharing
+  isAc        Boolean  @default(false)
+  status      String   @default("AVAILABLE") // "AVAILABLE", "FULL", "MAINTENANCE"
+  assets      String   // JSON string of furniture items & condition (e.g. beds, tables)
+  
+  students    Student[]
+}
+
+model LeaveRequest {
+  id          String      @id @default(uuid())
+  studentId   String
+  student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  startDate   DateTime
+  endDate     DateTime
+  type        String      @default("NIGHT_OUT") // "NIGHT_OUT", "OUT_OF_STATION", "EMERGENCY"
+  reason      String
+  status      String      @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "CHECKED_OUT", "RETURNED"
+  approvedBy  String?     // Warden ID or name
+  comments    String?
+  checkOutTime DateTime?
+  checkInTime  DateTime?
+  createdAt   DateTime    @default(now())
+}
+
+model Complaint {
+  id          String          @id @default(uuid())
+  studentId   String
+  student     Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  category    String          // Electrical, Plumbing, HVAC, Wi-Fi, Structural, etc.
+  description String
+  priority    String          @default("MEDIUM") // "LOW", "MEDIUM", "HIGH", "URGENT"
+  status      String          @default("PENDING") // "PENDING", "IN_PROGRESS", "RESOLVED"
+  wardenNotes String?
+  createdAt   DateTime        @default(now())
+}
+
+model Invoice {
+  id          String        @id @default(uuid())
+  studentId   String
+  student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amount      Float
+  dueDate     DateTime
+  status      String        @default("UNPAID") // "UNPAID", "PAID"
+  paidAt      DateTime?
+  createdAt   DateTime      @default(now())
+}
+
+model Visitor {
+  id           String    @id @default(uuid())
+  studentId    String
+  student      Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  name         String
+  phone        String
+  relationship String
+  checkInTime  DateTime  @default(now())
+  checkOutTime DateTime?
+}
+
+model Staff {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department  String   // Warden, Mess, Security, Cleaning, Maintenance
+  designation String
+  phoneNumber String
+}
+
+model Notice {
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  priority  String   @default("INFO") // INFO, WARNING, URGENT
+  postedBy  String   // Warden Name
+  createdAt DateTime @default(now())
+}
+
+model MessAttendance {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mealType    String   // "BREAKFAST", "LUNCH", "SNACKS", "DINNER"
+  date        String   // "YYYY-MM-DD"
+  timestamp   DateTime @default(now())
+  verifiedBy  String   // "BIOMETRIC_FINGERPRINT", "BIOMETRIC_FACE"
+}
+
