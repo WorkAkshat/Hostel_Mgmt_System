@@ -55,19 +55,52 @@ const DashboardLayout = () => {
 
   const tabs = getNavTabs();
 
-  return (
-    <div className="app-container pb-[65px] lg:pb-0">
-      <Sidebar isOpen={false} onClose={() => {}} />
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
-      <div className="main-content">
-        <Header onMenuToggle={() => {}} />
-        <main className="min-h-[calc(100vh-var(--header-height)-4rem)]">
+  // Keep desktop tracking reactive to window resize
+  useState(() => {
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  });
+
+  // Must match the width values in Sidebar.jsx
+  const SIDEBAR_EXPANDED = '280px';
+  const SIDEBAR_COLLAPSED = '100px';
+  const sidebarWidth = isCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;
+
+  return (
+    <div className="app-container">
+      <Sidebar 
+        isCollapsed={isCollapsed} 
+        setIsCollapsed={setIsCollapsed} 
+        isMobileOpen={isMobileOpen} 
+        onClose={() => setIsMobileOpen(false)} 
+      />
+
+      <div 
+        className="main-content transition-all duration-300 ease-in-out"
+        style={{ 
+          marginLeft: isDesktop ? sidebarWidth : '0px', 
+          paddingLeft: isDesktop ? '32px' : '16px', 
+          paddingRight: isDesktop ? '32px' : '16px', 
+          paddingTop: 'calc(var(--header-height) + 32px)', 
+          paddingBottom: '40px' 
+        }}
+      >
+        <Header 
+          isCollapsed={isCollapsed}
+          onMenuToggle={() => setIsMobileOpen(true)} 
+        />
+        <main className="animate-fade-in">
           <Outlet />
         </main>
       </div>
 
-      {/* Sticky Bottom Navigation Bar for Mobile */}
-      <div className="fixed bottom-0 left-0 right-0 h-[65px] bg-[var(--bg-secondary)] border-t border-[var(--border-color)] flex items-center justify-around z-40 lg:hidden shadow-lg">
+      {/* Sticky Floating Bottom Navigation Bar for Mobile */}
+      <div className="fixed bottom-4 left-4 right-4 h-[64px] bg-white/90 backdrop-blur-md border border-[var(--border-color)] flex items-center justify-around z-40 lg:hidden shadow-lg rounded-2xl">
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.path;
           return (
@@ -75,7 +108,7 @@ const DashboardLayout = () => {
               key={tab.path}
               onClick={() => navigate(tab.path)}
               className={`flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer w-16 h-full transition-all ${
-                isActive ? 'text-[var(--accent)] font-semibold' : 'text-[var(--text-secondary)]'
+                isActive ? 'text-[var(--secondary)] font-semibold scale-105' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
               {tab.icon}
@@ -85,7 +118,7 @@ const DashboardLayout = () => {
         })}
         <button
           onClick={() => setShowProfileModal(true)}
-          className="flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer w-16 h-full text-[var(--text-secondary)]"
+          className="flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer w-16 h-full text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
         >
           <User size={20} />
           <span className="text-[10px]">Account</span>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../utils/api';
-import { Search, UserPlus, Edit, Trash2, Mail, Phone, Home, ShieldAlert, Award } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, Mail, Phone, Home, ShieldAlert } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
 
 const Students = () => {
@@ -9,6 +10,7 @@ const Students = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const location = useLocation();
   
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -48,7 +50,14 @@ const Students = () => {
     fetchInitialData();
   }, []);
 
-  // Filter students based on search and dropdown filters
+  useEffect(() => {
+    if (location.state?.action === 'add') {
+      setIsAddModalOpen(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
+  // Filter students
   const filteredStudents = students.filter(student => {
     const matchesSearch = 
       student.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -77,7 +86,7 @@ const Students = () => {
     }
   };
 
-  // Open edit modal with student data pre-filled
+  // Open edit modal
   const openEditModal = (student) => {
     setSelectedStudent(student);
     setEditForm({
@@ -121,10 +130,10 @@ const Students = () => {
   };
 
   return (
-    <div className="animate-fade-in">
-      <div style={styles.headerRow}>
+    <div className="animate-fade-in flex flex-col gap-6 text-left">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="page-title">Student Directory</h1>
+          <h1 className="page-title">Students Directory</h1>
           <p className="page-subtitle">Add, edit, remove student enrollments and manage room allocation mapping.</p>
         </div>
         <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
@@ -134,21 +143,19 @@ const Students = () => {
       </div>
 
       {/* Filters Bar */}
-      <div className="glass-card" style={styles.filtersBar}>
-        <div style={styles.searchWrapper}>
-          <Search size={18} style={styles.searchIcon} />
+      <div className="glass-card p-5 flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="relative flex items-center w-full sm:max-w-md">
+          <Search size={18} className="absolute left-4 text-slate-400" />
           <input 
             type="text" 
             placeholder="Search by name, roll number, or room..." 
-            className="form-input"
-            style={styles.searchInput}
+            className="form-input pl-11 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         <select 
-          className="form-input" 
-          style={styles.filterDropdown}
+          className="form-input w-full sm:w-[200px]" 
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -159,97 +166,190 @@ const Students = () => {
         </select>
       </div>
 
-      {/* Students Data Grid */}
+      {/* Directory Content */}
       {loading ? (
-        <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>Loading directory...</p>
+        <div className="min-h-[40vh] flex flex-col items-center justify-center gap-4">
+          <div className="spinner"></div>
+          <p className="text-slate-400 font-medium text-sm">Loading directory records...</p>
+        </div>
       ) : filteredStudents.length === 0 ? (
-        <div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-tertiary)' }}>No students match your query filters.</p>
+        <div className="glass-card p-12 text-center flex flex-col items-center gap-2">
+          <p className="text-slate-400 font-medium">No students match your query filters.</p>
         </div>
       ) : (
-        <div className="custom-table-container glass-card">
-          <table className="custom-table">
-            <thead>
-              <tr>
-                <th>Student Info</th>
-                <th>Roll Number</th>
-                <th>Contact</th>
-                <th>Assigned Room</th>
-                <th>Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredStudents.map((student) => (
-                <tr key={student.id}>
-                  <td>
-                    <div style={styles.studentInfo}>
-                      <div style={styles.avatar}>
-                        {student.user?.name?.charAt(0).toUpperCase()}
+        <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block custom-table-container">
+            <table className="custom-table">
+              <thead>
+                <tr>
+                  <th>Student Info</th>
+                  <th>Roll Number</th>
+                  <th>Contact Details</th>
+                  <th>Assigned Room</th>
+                  <th>Status</th>
+                  <th className="text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredStudents.map((student) => (
+                  <tr key={student.id}>
+                    <td>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-extrabold text-sm flex items-center justify-center border border-blue-100/60 shadow-sm shrink-0">
+                          {student.user?.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col overflow-hidden">
+                          <h4 className="text-sm font-bold text-slate-800 truncate">{student.user?.name}</h4>
+                          <span className="text-xs text-slate-400 truncate mt-0.5">{student.user?.email}</span>
+                        </div>
                       </div>
-                      <div>
-                        <h4 style={styles.studentName}>{student.user?.name}</h4>
-                        <span style={styles.studentEmail}>{student.user?.email}</span>
+                    </td>
+                    <td>
+                      <code className="bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded text-slate-600 font-mono text-xs font-semibold">
+                        {student.rollNumber}
+                      </code>
+                    </td>
+                    <td>
+                      <div className="flex flex-col gap-1 text-slate-600 text-xs">
+                        <span className="flex items-center gap-1"><Phone size={12} className="text-slate-400" />{student.phoneNumber}</span>
+                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Parent: {student.parentContact}</span>
                       </div>
+                    </td>
+                    <td>
+                      {student.room ? (
+                        <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1 rounded-xl text-xs font-bold border border-blue-100">
+                          <Home size={12} />
+                          <span>Room {student.room.roomNumber} ({student.room.block})</span>
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 italic text-xs">Unallocated</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`badge ${
+                        student.status === 'CHECKED_IN' ? 'badge-success' : 
+                        student.status === 'CHECKED_OUT' ? 'badge-warning' : 'badge-danger'
+                      }`}>
+                        {student.status.replace('_', ' ').toLowerCase()}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => openEditModal(student)}
+                          className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 cursor-pointer transition-all hover:text-slate-800" 
+                          title="Edit Student"
+                        >
+                          <Edit size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(student.id)}
+                          className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 flex items-center justify-center text-red-500 cursor-pointer transition-all" 
+                          title="Delete Record"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card Grid View */}
+          <div className="grid grid-cols-1 gap-4 md:hidden">
+            {filteredStudents.map((student) => (
+              <div 
+                key={student.id} 
+                className="glass-card p-5 shadow-sm flex flex-col gap-4"
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-extrabold text-sm flex items-center justify-center border border-blue-100/60 shadow-sm shrink-0">
+                      {student.user?.name?.charAt(0).toUpperCase()}
                     </div>
-                  </td>
-                  <td><code style={styles.code}>{student.rollNumber}</code></td>
-                  <td>
-                    <div style={styles.contactDetails}>
-                      <span><Phone size={12} /> {student.phoneNumber}</span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)' }}>Parent: {student.parentContact}</span>
+                    <div className="flex flex-col overflow-hidden">
+                      <h4 className="text-sm font-bold text-slate-800 truncate">{student.user?.name}</h4>
+                      <span className="text-[11px] text-slate-400 truncate mt-0.5">{student.user?.email}</span>
                     </div>
-                  </td>
-                  <td>
+                  </div>
+                  <span className={`badge shrink-0 ${
+                    student.status === 'CHECKED_IN' ? 'badge-success' : 
+                    student.status === 'CHECKED_OUT' ? 'badge-warning' : 'badge-danger'
+                  }`}>
+                    {student.status.replace('_', ' ').toLowerCase()}
+                  </span>
+                </div>
+
+                <div className="h-[1px] bg-slate-100" />
+
+                <div className="flex flex-col gap-2.5 text-xs text-slate-600">
+                  <div className="flex justify-between">
+                    <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Roll Number:</span>
+                    <span className="font-mono bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-semibold">{student.rollNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Student Phone:</span>
+                    <span className="font-medium">{student.phoneNumber}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Parent Phone:</span>
+                    <span className="font-medium">{student.parentContact}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Assigned Room:</span>
                     {student.room ? (
-                      <span style={styles.roomTag}>
-                        <Home size={12} />
+                      <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-blue-100/50">
+                        <Home size={10} />
                         <span>Room {student.room.roomNumber} ({student.room.block})</span>
                       </span>
                     ) : (
-                      <span style={styles.pendingAllocation}>Unallocated</span>
+                      <span className="text-slate-400 italic text-[11px]">Unallocated</span>
                     )}
-                  </td>
-                  <td>
-                    <span className={`badge ${
-                      student.status === 'CHECKED_IN' ? 'badge-success' : 
-                      student.status === 'CHECKED_OUT' ? 'badge-warning' : 'badge-danger'
-                    }`}>
-                      {student.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={styles.actions}>
-                      <button style={styles.actionBtnEdit} onClick={() => openEditModal(student)} title="Edit profile">
-                        <Edit size={16} />
-                      </button>
-                      <button style={styles.actionBtnDelete} onClick={() => handleDelete(student.id)} title="Delete record">
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                </div>
+
+                <div className="h-[1px] bg-slate-100 mt-1" />
+
+                <div className="flex justify-end gap-3 mt-1">
+                  <button 
+                    onClick={() => openEditModal(student)}
+                    className="flex-grow h-10 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all bg-white"
+                  >
+                    <Edit size={14} />
+                    <span>Edit Profile</span>
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(student.id)}
+                    className="w-10 h-10 border border-red-200 hover:bg-red-50 text-red-500 rounded-xl flex items-center justify-center cursor-pointer transition-all bg-white"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* CREATE STUDENT MODAL */}
       <CustomModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Register Student">
         {addError && (
-          <div style={styles.modalErrorBanner}>
-            <ShieldAlert size={16} />
+          <div className="flex items-center gap-2 p-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold mb-4 animate-fade-in">
+            <ShieldAlert size={16} className="shrink-0" />
             <span>{addError}</span>
           </div>
         )}
-        <form onSubmit={handleAddSubmit} style={styles.modalForm}>
+        <form onSubmit={handleAddSubmit} className="flex flex-col gap-4">
           <div className="form-group">
             <label className="form-label">Full Name</label>
             <input 
               type="text" 
               className="form-input" 
               required
+              placeholder="e.g. Jane Doe"
               value={addForm.name}
               onChange={(e) => setAddForm({...addForm, name: e.target.value})}
             />
@@ -260,6 +360,7 @@ const Students = () => {
               type="email" 
               className="form-input" 
               required
+              placeholder="e.g. student@university.edu"
               value={addForm.email}
               onChange={(e) => setAddForm({...addForm, email: e.target.value})}
             />
@@ -270,7 +371,7 @@ const Students = () => {
               type="password" 
               className="form-input" 
               required
-              placeholder="Min 6 characters"
+              placeholder="Minimum 6 characters required"
               value={addForm.password}
               onChange={(e) => setAddForm({...addForm, password: e.target.value})}
             />
@@ -281,6 +382,7 @@ const Students = () => {
               type="text" 
               className="form-input" 
               required
+              placeholder="e.g. 2024CS001"
               value={addForm.rollNumber}
               onChange={(e) => setAddForm({...addForm, rollNumber: e.target.value})}
             />
@@ -291,6 +393,7 @@ const Students = () => {
               type="text" 
               className="form-input" 
               required
+              placeholder="Enter 10-digit mobile number"
               value={addForm.phoneNumber}
               onChange={(e) => setAddForm({...addForm, phoneNumber: e.target.value})}
             />
@@ -301,6 +404,7 @@ const Students = () => {
               type="text" 
               className="form-input" 
               required
+              placeholder="Enter guardian's contact number"
               value={addForm.parentContact}
               onChange={(e) => setAddForm({...addForm, parentContact: e.target.value})}
             />
@@ -324,7 +428,7 @@ const Students = () => {
               ))}
             </select>
           </div>
-          <div style={styles.modalActions}>
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
             <button type="button" className="btn-secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary">Register</button>
           </div>
@@ -334,18 +438,19 @@ const Students = () => {
       {/* EDIT STUDENT MODAL */}
       <CustomModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title={`Update Profile: ${selectedStudent?.user?.name}`}>
         {editError && (
-          <div style={styles.modalErrorBanner}>
-            <ShieldAlert size={16} />
+          <div className="flex items-center gap-2 p-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold mb-4 animate-fade-in">
+            <ShieldAlert size={16} className="shrink-0" />
             <span>{editError}</span>
           </div>
         )}
-        <form onSubmit={handleEditSubmit} style={styles.modalForm}>
+        <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
           <div className="form-group">
             <label className="form-label">Full Name</label>
             <input 
               type="text" 
               className="form-input" 
               required
+              placeholder="e.g. Jane Doe"
               value={editForm.name}
               onChange={(e) => setEditForm({...editForm, name: e.target.value})}
             />
@@ -356,6 +461,7 @@ const Students = () => {
               type="text" 
               className="form-input" 
               required
+              placeholder="Enter 10-digit mobile number"
               value={editForm.phoneNumber}
               onChange={(e) => setEditForm({...editForm, phoneNumber: e.target.value})}
             />
@@ -366,6 +472,7 @@ const Students = () => {
               type="text" 
               className="form-input" 
               required
+              placeholder="Enter guardian's contact number"
               value={editForm.parentContact}
               onChange={(e) => setEditForm({...editForm, parentContact: e.target.value})}
             />
@@ -401,7 +508,7 @@ const Students = () => {
               <option value="SUSPENDED">Suspended</option>
             </select>
           </div>
-          <div style={styles.modalActions}>
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
             <button type="button" className="btn-secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary">Save Changes</button>
           </div>
@@ -411,165 +518,5 @@ const Students = () => {
   );
 };
 
-const styles = {
-  headerRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '2rem',
-  },
-  filtersBar: {
-    padding: '1rem 1.5rem',
-    display: 'flex',
-    gap: '1rem',
-    marginBottom: '2rem',
-  },
-  searchWrapper: {
-    position: 'relative',
-    flexGrow: 1,
-    display: 'flex',
-    alignItems: 'center',
-  },
-  searchIcon: {
-    position: 'absolute',
-    left: '1rem',
-    color: '#6b7280',
-  },
-  searchInput: {
-    paddingLeft: '2.75rem',
-    width: '100%',
-  },
-  filterDropdown: {
-    width: '180px',
-  },
-  studentInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-  },
-  avatar: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '50%',
-    background: 'var(--accent-light)',
-    color: 'var(--accent)',
-    fontWeight: 'bold',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    border: '1px solid rgba(99, 102, 241, 0.1)',
-  },
-  studentName: {
-    fontSize: '0.9rem',
-    fontWeight: '600',
-    color: 'var(--text-primary)',
-  },
-  studentEmail: {
-    fontSize: '0.75rem',
-    color: 'var(--text-tertiary)',
-  },
-  code: {
-    background: 'rgba(0, 0, 0, 0.02)',
-    border: '1px solid var(--border-color)',
-    padding: '0.2rem 0.5rem',
-    borderRadius: '4px',
-    fontSize: '0.85rem',
-    color: 'var(--text-secondary)',
-  },
-  contactDetails: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.15rem',
-    fontSize: '0.85rem',
-  },
-  roomTag: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-    background: 'var(--accent-light)',
-    color: 'var(--accent)',
-    padding: '0.25rem 0.6rem',
-    borderRadius: '6px',
-    fontSize: '0.8rem',
-    fontWeight: '600',
-  },
-  pendingAllocation: {
-    color: 'var(--text-tertiary)',
-    fontStyle: 'italic',
-    fontSize: '0.85rem',
-  },
-  actions: {
-    display: 'flex',
-    gap: '0.5rem',
-  },
-  actionBtnEdit: {
-    background: 'transparent',
-    border: '1px solid var(--border-color)',
-    color: 'var(--text-secondary)',
-    width: '32px',
-    height: '32px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s ease',
-  },
-  actionBtnDelete: {
-    background: 'transparent',
-    border: '1px solid var(--border-color)',
-    color: 'var(--danger)',
-    width: '32px',
-    height: '32px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    transition: 'all 0.2s ease',
-  },
-  modalForm: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  modalActions: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '0.75rem',
-    marginTop: '1.5rem',
-  },
-  modalErrorBanner: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    background: 'rgba(239, 68, 68, 0.1)',
-    border: '1px solid rgba(239, 68, 68, 0.2)',
-    padding: '0.5rem 0.75rem',
-    borderRadius: '6px',
-    color: 'var(--danger)',
-    fontSize: '0.8rem',
-    marginBottom: '1rem',
-  }
-};
-
-// CSS styles injection
-const addStudentPageStyles = () => {
-  const styleEl = document.createElement('style');
-  styleEl.innerHTML = `
-    .action-edit-hover:hover {
-      border-color: var(--accent) !important;
-      color: var(--accent) !important;
-      background: var(--accent-light) !important;
-    }
-    .action-del-hover:hover {
-      border-color: var(--danger) !important;
-      color: var(--danger) !important;
-      background: var(--danger-bg) !important;
-    }
-  `;
-  document.head.appendChild(styleEl);
-};
-addStudentPageStyles();
-
 export default Students;
+

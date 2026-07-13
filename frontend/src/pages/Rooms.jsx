@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { Home, Plus, Settings, Eye, Trash2, CheckCircle, ShieldAlert, ClipboardCheck, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Home, ShieldAlert, ClipboardCheck, Users, HelpCircle } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
+import SidePanel from '../components/SidePanel';
 
 const Rooms = () => {
   const { user } = useAuth();
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const location = useLocation();
   
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -21,7 +24,7 @@ const Rooms = () => {
   });
   const [addError, setAddError] = useState(null);
 
-  // Asset Edit State (within details modal)
+  // Asset Edit State (within details panel)
   const [assetsList, setAssetsList] = useState([]);
   const [isUpdatingAssets, setIsUpdatingAssets] = useState(false);
 
@@ -41,6 +44,13 @@ const Rooms = () => {
     fetchRooms();
   }, []);
 
+  useEffect(() => {
+    if (location.state?.action === 'add') {
+      setIsAddModalOpen(true);
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
+
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     setAddError(null);
@@ -57,7 +67,7 @@ const Rooms = () => {
     }
   };
 
-  const openDetailsModal = (room) => {
+  const openDetailsPanel = (room) => {
     setSelectedRoom(room);
     try {
       const parsedAssets = JSON.parse(room.assets);
@@ -106,8 +116,8 @@ const Rooms = () => {
   };
 
   return (
-    <div className="animate-fade-in">
-      <div style={styles.headerRow}>
+    <div className="animate-fade-in flex flex-col gap-6 text-left">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="page-title">Rooms & Inventory Assets</h1>
           <p className="page-subtitle">Inspect rooms sharing status, occupancy blocks, and audit property assets condition.</p>
@@ -121,37 +131,41 @@ const Rooms = () => {
       </div>
 
       {/* Floor selection and legend */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-2">
+      <div className="glass-card p-5 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex flex-wrap items-center gap-2">
           {['All', '1', '2', '3'].map((floor) => (
             <button
               key={floor}
               onClick={() => setSelectedFloor(floor)}
-              className={`px-4 py-2 rounded-full text-xs font-semibold cursor-pointer transition-all ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${
                 selectedFloor === floor 
-                  ? 'bg-[#0b1a52] text-white' 
-                  : 'bg-black/5 text-[#475569] hover:bg-black/10'
+                  ? 'bg-[var(--primary)] text-white shadow-sm' 
+                  : 'bg-slate-50 text-slate-500 border border-slate-200/60 hover:bg-slate-100'
               }`}
             >
               {floor === 'All' ? 'All Floors' : `Floor ${floor}`}
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-4 text-xs font-semibold text-[var(--text-secondary)]">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-green-500"></span>Available</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#0b1a52]"></span>Occupied</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-gray-400"></span>Service</span>
+        <div className="flex items-center gap-5 text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Available</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>Full / Occupied</span>
+          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>Service</span>
         </div>
       </div>
 
+      {/* Rooms Grid */}
       {loading ? (
-        <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>Loading rooms grid...</p>
+        <div className="min-h-[40vh] flex flex-col items-center justify-center gap-4">
+          <div className="spinner"></div>
+          <p className="text-slate-400 font-medium text-sm">Loading rooms grid records...</p>
+        </div>
       ) : rooms.length === 0 ? (
-        <div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-tertiary)' }}>No rooms configured in the system.</p>
+        <div className="glass-card p-12 text-center">
+          <p className="text-slate-400 font-medium">No rooms configured in the system.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-x-4 gap-y-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {rooms
             .filter((room) => {
               if (selectedFloor === 'All') return true;
@@ -159,68 +173,122 @@ const Rooms = () => {
               return firstDigit === selectedFloor;
             })
             .map((room) => {
-              const currentOccupancy = room.students?.length || 0;
-              let cardClass = "";
-              let statusText = "";
-              let statusClass = "";
+              const occupiedBeds = room.students?.length || 0;
+              const capacity = room.sharingType;
+              const progressPercentage = Math.min((occupiedBeds / capacity) * 100, 100);
 
-              if (room.status === 'AVAILABLE') {
-                cardClass = "bg-green-50/60 border border-green-500 text-green-700 hover:bg-green-100/50";
-                statusText = "Available";
-                statusClass = "text-green-600";
-              } else if (room.status === 'FULL') {
-                cardClass = "bg-[#0b1a52] border border-[#0b1a52] text-white hover:bg-[#16276b]";
-                statusText = "Occupied";
-                statusClass = "text-[#0b1a52] font-semibold";
-              } else {
-                cardClass = "bg-gray-100 border border-gray-300 text-gray-500 hover:bg-gray-200/50";
+              let statusText = "Available";
+              let statusBadgeClass = "badge-success";
+
+              if (room.status === 'FULL') {
+                statusText = "Full";
+                statusBadgeClass = "badge-info";
+              } else if (room.status === 'MAINTENANCE' || room.status === 'SERVICE') {
                 statusText = "Service";
-                statusClass = "text-gray-400";
+                statusBadgeClass = "badge-danger";
               }
 
               return (
                 <div 
                   key={room.id}
-                  className="flex flex-col items-center gap-1.5"
+                  className="glass-card p-5 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300 flex flex-col gap-4 relative group"
                 >
-                  <div 
-                    onClick={() => openDetailsModal(room)}
-                    className={`w-full aspect-square rounded-xl flex items-center justify-center font-bold text-lg cursor-pointer transition-all relative group shadow-sm ${cardClass}`}
-                  >
-                    <span>{room.roomNumber}</span>
-                    
-                    {/* Overlay delete button for empty rooms to avoid UI clutter */}
-                    {user.role === 'ADMIN' && currentOccupancy === 0 && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteRoom(room.id);
-                        }}
-                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-red-500/10 text-red-500 border-none items-center justify-center cursor-pointer hidden group-hover:flex"
-                        title="Delete Room"
+                  {/* Card Header */}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shadow-sm shrink-0">
+                        <Home size={16} />
+                      </div>
+                      <div className="flex flex-col">
+                        <h4 className="text-sm font-extrabold text-slate-800 leading-tight">Room {room.roomNumber}</h4>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{room.block}</span>
+                      </div>
+                    </div>
+                    <span className={`badge ${statusBadgeClass}`}>{statusText}</span>
+                  </div>
+
+                  {/* Occupancy Indicator */}
+                  <div className="flex flex-col gap-1.5 mt-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Occupancy:</span>
+                      <span className="font-bold text-slate-700">{occupiedBeds} / {capacity} Beds</span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          occupiedBeds === capacity ? 'bg-indigo-600' : 'bg-emerald-500'
+                        }`}
+                        style={{ width: `${progressPercentage}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Room Meta - AC equipped */}
+                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      room.isAc ? 'bg-sky-50 text-sky-600 border border-sky-100' : 'bg-slate-50 text-slate-400 border border-slate-100'
+                    }`}>
+                      {room.isAc ? 'AC Premium' : 'Non-AC Standard'}
+                    </span>
+                    {user.role === 'ADMIN' && occupiedBeds === 0 && (
+                      <button 
+                        onClick={() => handleDeleteRoom(room.id)}
+                        className="opacity-0 group-hover:opacity-100 absolute top-4 right-4 text-red-500 hover:text-red-700 bg-transparent border-none cursor-pointer transition-all"
+                        title="Delete Room Record"
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={16} />
                       </button>
                     )}
                   </div>
-                  <span className={`text-[10px] uppercase tracking-wide ${statusClass}`}>
-                    {statusText}
-                  </span>
+
+                  {/* Room occupants list */}
+                  <div className="flex flex-col gap-2 mt-1">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Residents:</span>
+                    <div className="flex items-center gap-1.5 h-7">
+                      {room.students && room.students.length > 0 ? (
+                        <div className="flex items-center">
+                          {room.students.map((student, idx) => (
+                            <div 
+                              key={student.id} 
+                              className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 font-extrabold text-[10px] flex items-center justify-center border-2 border-white shadow-sm -mr-2 last:mr-0 cursor-help"
+                              title={student.user?.name}
+                            >
+                              {student.user?.name?.charAt(0).toUpperCase()}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">No residents assigned</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="h-[1px] bg-slate-100 mt-2" />
+
+                  {/* Action Button */}
+                  <button 
+                    onClick={() => openDetailsPanel(room)}
+                    className="w-full h-10 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all bg-white"
+                  >
+                    <ClipboardCheck size={14} />
+                    <span>Audit Room Assets</span>
+                  </button>
                 </div>
               );
             })}
         </div>
       )}
 
-      {/* CREATE ROOM MODAL */}
+      {/* CREATE ROOM RECORD MODAL */}
       <CustomModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Create Room Record">
         {addError && (
-          <div style={styles.modalErrorBanner}>
-            <ShieldAlert size={16} />
+          <div className="flex items-center gap-2 p-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold mb-4 animate-fade-in">
+            <ShieldAlert size={16} className="shrink-0" />
             <span>{addError}</span>
           </div>
         )}
-        <form onSubmit={handleAddSubmit} style={styles.modalForm}>
+        <form onSubmit={handleAddSubmit} className="flex flex-col gap-4">
           <div className="form-group">
             <label className="form-label">Room Number</label>
             <input 
@@ -256,49 +324,51 @@ const Rooms = () => {
               <option value="3">3 (Triple Sharing)</option>
             </select>
           </div>
-          <div className="form-group" style={styles.checkboxGroup}>
+          <div className="flex items-center gap-2.5 mt-2 text-sm text-slate-600 select-none">
             <input 
               type="checkbox" 
               id="isAc"
               checked={addForm.isAc}
               onChange={(e) => setAddForm({...addForm, isAc: e.target.checked})}
+              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
             />
-            <label htmlFor="isAc" style={{ userSelect: 'none', cursor: 'pointer' }}>Equipped with Air Conditioning (AC)</label>
+            <label htmlFor="isAc" className="cursor-pointer font-medium text-xs text-slate-500 uppercase tracking-wider">Equipped with Air Conditioning (AC)</label>
           </div>
-          <div style={styles.modalActions}>
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2">
             <button type="button" className="btn-secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary">Create Room</button>
           </div>
         </form>
       </CustomModal>
 
-      {/* ROOM DETAILS & ASSET INSPECTION MODAL */}
-      <CustomModal 
+      {/* ROOM DETAILS & ASSET INSPECTION SIDE PANEL */}
+      <SidePanel 
         isOpen={isDetailsModalOpen} 
         onClose={() => setIsDetailsModalOpen(false)} 
         title={`Audit Room ${selectedRoom?.roomNumber} Inventory`}
       >
-        <div style={styles.detailsBody}>
-          <div style={styles.assetsHeader}>
-            <ClipboardCheck size={20} color="var(--accent)" />
-            <h4 style={{ color: 'var(--text-primary)' }}>Property Inventory Ledger</h4>
+        <div className="flex flex-col gap-5 text-left h-full">
+          <div className="flex items-center gap-2 border-b border-slate-50 pb-4">
+            <ClipboardCheck size={20} className="text-[var(--primary)]" />
+            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Property Inventory Ledger</h4>
           </div>
           
-          <p style={styles.assetInstruction}>
-            Warden can inspect room items (beds, tables, fans) and flag maintenance issues.
+          <p className="text-xs text-slate-400 font-medium">
+            Wardens can inspect room items (beds, tables, fans) and flag maintenance or physical damage issues.
           </p>
 
-          <div style={styles.assetsList}>
+          <div className="flex flex-col gap-3.5 bg-slate-50 border border-slate-100 rounded-2xl p-4 flex-grow overflow-y-auto">
             {assetsList.map((asset, index) => (
-              <div key={index} style={styles.assetItem}>
-                <span style={styles.assetName}>{asset.name}</span>
-                <div style={styles.assetStatusBtns}>
+              <div key={index} className="flex justify-between items-center border-b border-slate-200/50 pb-3 last:border-0 last:pb-0">
+                <span className="text-xs font-bold text-slate-700">{asset.name}</span>
+                <div className="flex gap-1.5">
                   <button 
                     type="button"
-                    style={{
-                      ...styles.assetStatusBtn,
-                      ...asset.status === 'Good' || asset.status === 'Working' ? styles.assetStatusGoodActive : {}
-                    }}
+                    className={`h-8 px-3 text-[10px] font-bold rounded-lg border cursor-pointer transition-all ${
+                      asset.status === 'Good' || asset.status === 'Working' 
+                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200' 
+                        : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100'
+                    }`}
                     onClick={() => handleUpdateAssetStatus(index, 'Good')}
                     disabled={user.role !== 'ADMIN'}
                   >
@@ -306,10 +376,11 @@ const Rooms = () => {
                   </button>
                   <button 
                     type="button"
-                    style={{
-                      ...styles.assetStatusBtn,
-                      ...asset.status === 'Damaged' || asset.status === 'Broken' ? styles.assetStatusBadActive : {}
-                    }}
+                    className={`h-8 px-3 text-[10px] font-bold rounded-lg border cursor-pointer transition-all ${
+                      asset.status === 'Damaged' || asset.status === 'Broken' 
+                        ? 'bg-rose-50 text-rose-600 border-rose-200 shadow-sm' 
+                        : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100'
+                    }`}
                     onClick={() => handleUpdateAssetStatus(index, 'Broken')}
                     disabled={user.role !== 'ADMIN'}
                   >
@@ -320,14 +391,14 @@ const Rooms = () => {
             ))}
           </div>
 
-          <div style={styles.modalActions}>
-            <button type="button" className="btn-secondary" onClick={() => setIsDetailsModalOpen(false)}>
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
+            <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsDetailsModalOpen(false)}>
               {user.role === 'ADMIN' ? 'Cancel' : 'Close'}
             </button>
             {user.role === 'ADMIN' && (
               <button 
                 type="button" 
-                className="btn-primary" 
+                className="btn-primary h-11 px-5" 
                 onClick={saveAssetsChanges}
                 disabled={isUpdatingAssets}
               >
@@ -336,225 +407,10 @@ const Rooms = () => {
             )}
           </div>
         </div>
-      </CustomModal>
+      </SidePanel>
     </div>
   );
 };
 
-const styles = {
-  headerRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '2rem',
-  },
-  roomsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-    gap: '1.5rem',
-  },
-  roomCard: {
-    padding: '1.25rem',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  cardHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '0.5rem',
-  },
-  blockName: {
-    fontSize: '0.75rem',
-    color: 'var(--text-tertiary)',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
-  deleteBtn: {
-    background: 'transparent',
-    border: 'none',
-    color: 'var(--danger)',
-    cursor: 'pointer',
-    opacity: 0.6,
-    transition: 'opacity 0.2s ease',
-  },
-  roomNumRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: '0.25rem',
-  },
-  roomNumber: {
-    fontSize: '1.25rem',
-    fontWeight: '700',
-    color: 'var(--text-primary)',
-  },
-  sharingMeta: {
-    fontSize: '0.8rem',
-    color: 'var(--text-secondary)',
-    marginBottom: '1rem',
-  },
-  occupancyBarContainer: {
-    height: '6px',
-    background: 'rgba(0,0,0,0.03)',
-    borderRadius: '4px',
-    overflow: 'hidden',
-    marginBottom: '0.35rem',
-  },
-  occupancyBarFill: {
-    height: '100%',
-    borderRadius: '4px',
-  },
-  occupancyTextRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '0.75rem',
-    color: 'var(--text-secondary)',
-    marginBottom: '1rem',
-  },
-  occupantsArea: {
-    height: '42px',
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: '1.25rem',
-  },
-  vacantLabel: {
-    fontSize: '0.8rem',
-    color: 'var(--text-tertiary)',
-    fontStyle: 'italic',
-  },
-  avatarsRow: {
-    display: 'flex',
-    alignItems: 'center',
-  },
-  avatarMini: {
-    width: '28px',
-    height: '28px',
-    borderRadius: '50%',
-    background: 'var(--accent)',
-    color: '#ffffff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontWeight: 'bold',
-    fontSize: '0.75rem',
-    border: '2px solid #ffffff',
-    marginRight: '-6px',
-    boxShadow: 'var(--shadow-sm)',
-  },
-  cardActions: {
-    marginTop: 'auto',
-  },
-  inspectBtn: {
-    width: '100%',
-    justifyContent: 'center',
-    padding: '0.5rem',
-    fontSize: '0.8rem',
-  },
-  modalForm: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  checkboxGroup: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    marginTop: '0.5rem',
-    fontSize: '0.875rem',
-    color: 'var(--text-secondary)',
-  },
-  modalActions: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '0.75rem',
-    marginTop: '1.5rem',
-  },
-  modalErrorBanner: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    background: 'rgba(239, 68, 68, 0.1)',
-    border: '1px solid rgba(239, 68, 68, 0.2)',
-    padding: '0.5rem 0.75rem',
-    borderRadius: '6px',
-    color: 'var(--danger)',
-    fontSize: '0.8rem',
-    marginBottom: '1rem',
-  },
-  detailsBody: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  assetsHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    marginBottom: '0.5rem',
-  },
-  assetInstruction: {
-    fontSize: '0.8rem',
-    color: 'var(--text-secondary)',
-    marginBottom: '1.25rem',
-  },
-  assetsList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-    background: 'rgba(0,0,0,0.015)',
-    border: '1px solid var(--border-color)',
-    borderRadius: 'var(--border-radius-sm)',
-    padding: '1rem',
-  },
-  assetItem: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderBottom: '1px solid rgba(0,0,0,0.04)',
-    paddingBottom: '0.5rem',
-  },
-  assetName: {
-    fontSize: '0.875rem',
-    color: 'var(--text-primary)',
-    fontWeight: '500',
-  },
-  assetStatusBtns: {
-    display: 'flex',
-    gap: '0.25rem',
-  },
-  assetStatusBtn: {
-    background: 'rgba(0,0,0,0.02)',
-    border: '1px solid var(--border-color)',
-    padding: '0.25rem 0.6rem',
-    fontSize: '0.75rem',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    color: 'var(--text-secondary)',
-    transition: 'all 0.2s ease',
-  },
-  assetStatusGoodActive: {
-    background: 'var(--success-bg)',
-    color: 'var(--success)',
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-  },
-  assetStatusBadActive: {
-    background: 'var(--danger-bg)',
-    color: 'var(--danger)',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  }
-};
-
-// CSS styles injection
-const addRoomsPageStyles = () => {
-  const styleEl = document.createElement('style');
-  styleEl.innerHTML = `
-    .room-card-del-hover:hover {
-      opacity: 1 !important;
-    }
-  `;
-  document.head.appendChild(styleEl);
-};
-addRoomsPageStyles();
-
 export default Rooms;
+

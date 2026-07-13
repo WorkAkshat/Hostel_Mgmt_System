@@ -136,17 +136,20 @@ const Leaves = () => {
   };
 
   return (
-    <div className="animate-fade-in space-y-6">
-      {/* Mobile/Desktop Header with Back Navigation */}
+    <div className="animate-fade-in flex flex-col gap-6 text-left">
+      {/* Page Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/student/dashboard')} className="bg-transparent border-none text-gray-500 hover:text-gray-900 cursor-pointer p-1 rounded-full hover:bg-gray-100 transition-colors flex items-center justify-center shrink-0">
-          <ArrowLeft size={20} />
+        <button 
+          onClick={() => navigate(user.role === 'ADMIN' ? '/admin/dashboard' : user.role === 'STUDENT' ? '/student/dashboard' : '/staff/visitors')} 
+          className="bg-slate-50 border border-slate-200/60 text-slate-500 hover:text-slate-900 cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0"
+        >
+          <ArrowLeft size={16} />
         </button>
         <div>
-          <h1 className="page-title text-base lg:text-lg font-bold text-[#0b1a52] leading-none mb-1">
+          <h1 className="page-title leading-tight">
             {user.role === 'ADMIN' ? 'Leave & Gate Pass Approvals' : user.role === 'STAFF' ? 'Gate Security Log' : 'Apply Leave'}
           </h1>
-          <p className="text-[11px] text-gray-400">
+          <p className="page-subtitle mb-0 mt-1">
             {user.role === 'ADMIN' ? 'Approve or reject leave applications and monitor campus check-ins.' :
              user.role === 'STAFF' ? 'Register exit check-outs and check-in arrivals for hostel residents.' :
              'GHMS out/in leave pass control system'}
@@ -159,80 +162,80 @@ const Leaves = () => {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Submit form on left */}
           <div className="flex flex-col gap-6">
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+            <div className="glass-card p-6 shadow-sm">
               <div className="mb-5">
-                <h3 className="text-sm font-bold text-[#0b1a52]">Leave Request</h3>
-                <p className="text-xs text-gray-400 mt-0.5">Submit your details for approval</p>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Leave Request</h3>
+                <p className="text-xs text-slate-400 mt-0.5 font-medium">Submit your details for Warden approval</p>
               </div>
               
               {formError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-xs p-3 rounded-xl mb-4 flex items-center gap-2">
-                  <ShieldAlert size={14} />
+                <div className="flex items-center gap-2 p-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold mb-4 animate-fade-in">
+                  <ShieldAlert size={16} className="shrink-0" />
                   <span>{formError}</span>
                 </div>
               )}
 
-              <form onSubmit={handleStudentSubmit} className="space-y-4">
+              <form onSubmit={handleStudentSubmit} className="flex flex-col gap-4">
                 {/* Leave Type Select Grid */}
-                <div className="form-group">
-                  <label className="form-label text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Leave Type</label>
-                  <div className="flex gap-3">
+                <div className="form-group mb-2">
+                  <label className="form-label">Leave Type</label>
+                  <div className="grid grid-cols-3 gap-3">
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, type: 'OUT_OF_STATION' })}
-                      className={`flex-1 py-3 px-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 ${
+                      className={`py-3.5 px-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 ${
                         form.type === 'OUT_OF_STATION' 
-                          ? 'border-[#0b1a52] bg-[#0b1a52] text-white shadow-sm font-bold' 
-                          : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                          ? 'border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm font-bold' 
+                          : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
                       }`}
                     >
                       <Home size={18} />
-                      <span className="text-[11px]">Home</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Home</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, type: 'NIGHT_OUT' })}
-                      className={`flex-1 py-3 px-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 ${
+                      className={`py-3.5 px-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 ${
                         form.type === 'NIGHT_OUT' 
-                          ? 'border-[#0b1a52] bg-[#0b1a52] text-white shadow-sm font-bold' 
-                          : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                          ? 'border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm font-bold' 
+                          : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
                       }`}
                     >
                       <MapPin size={18} />
-                      <span className="text-[11px]">Local</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Local</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => setForm({ ...form, type: 'EMERGENCY' })}
-                      className={`flex-1 py-3 px-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 ${
+                      className={`py-3.5 px-4 border rounded-xl flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-all duration-200 ${
                         form.type === 'EMERGENCY' 
-                          ? 'border-[#0b1a52] bg-[#0b1a52] text-white shadow-sm font-bold' 
-                          : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                          ? 'border-[var(--primary)] bg-[var(--primary)] text-white shadow-sm font-bold' 
+                          : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
                       }`}
                     >
                       <Plane size={18} />
-                      <span className="text-[11px]">Vacation</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider">Vacation</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Start and End Dates Grid */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="form-group">
-                    <label className="form-label text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Start Date</label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="form-group mb-0">
+                    <label className="form-label">Departure Date & Time</label>
                     <input 
                       type="datetime-local" 
-                      className="form-input rounded-xl border-gray-200 text-xs py-2 px-3" 
+                      className="form-input text-xs font-semibold" 
                       required
                       value={form.startDate}
                       onChange={(e) => setForm({...form, startDate: e.target.value})}
                     />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">End Date</label>
+                  <div className="form-group mb-0">
+                    <label className="form-label">Return Date & Time</label>
                     <input 
                       type="datetime-local" 
-                      className="form-input rounded-xl border-gray-200 text-xs py-2 px-3" 
+                      className="form-input text-xs font-semibold" 
                       required
                       value={form.endDate}
                       onChange={(e) => setForm({...form, endDate: e.target.value})}
@@ -241,27 +244,15 @@ const Leaves = () => {
                 </div>
 
                 {/* Reason for Leave */}
-                <div className="form-group">
-                  <label className="form-label text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Reason for Leave</label>
+                <div className="form-group mb-0">
+                  <label className="form-label">Reason for Leave</label>
                   <textarea 
-                    className="form-input rounded-xl border-gray-200 text-xs" 
-                    rows="3" 
+                    className="form-input h-20 py-2.5" 
                     required
                     placeholder="Explain your reason for taking leave..."
                     value={form.reason}
                     onChange={(e) => setForm({...form, reason: e.target.value})}
                     style={{ resize: 'vertical' }}
-                  />
-                </div>
-
-                {/* Parent Contact */}
-                <div className="form-group">
-                  <label className="form-label text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Parent's Contact Number</label>
-                  <input 
-                    type="text" 
-                    className="form-input rounded-xl border-gray-200 text-xs py-2 px-3" 
-                    required
-                    placeholder="+91 00000 00000"
                   />
                 </div>
 
@@ -273,63 +264,78 @@ const Leaves = () => {
                   </p>
                 </div>
 
-                <button type="submit" className="btn-primary w-full py-3 justify-center rounded-xl bg-[#0b1a52] hover:bg-[#16276b] font-bold text-sm border-none">
+                <button type="submit" className="btn-primary w-full justify-center">
                   <span>Submit Request</span>
                 </button>
               </form>
             </div>
 
-            {/* Biometric Gate Terminal Info */}
-            <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
-              <h3 className="text-sm font-bold text-[#0b1a52]">Gate Biometric System</h3>
-              <p className="text-xs text-gray-400 mt-1 leading-relaxed">
+            {/* Biometric Gate Trigger Card */}
+            <div className="glass-card p-6 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <Fingerprint size={20} className="text-slate-500" />
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Gate Biometric Scanner</h3>
+              </div>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed font-medium">
                 Your checkout and check-in times at the gate are automatically updated on this dashboard via the physical fingerprint devices installed at the main entrance.
               </p>
+              <button 
+                onClick={() => setIsBiometricModalOpen(true)}
+                className="w-full h-10 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all bg-white"
+              >
+                <Fingerprint size={14} />
+                <span>Simulate Gate Fingerprint Scan</span>
+              </button>
             </div>
           </div>
 
           {/* Leave history on right */}
-          <div className="glass-card" style={styles.card}>
-            <h3 style={styles.cardTitle}>My Leave History</h3>
+          <div className="glass-card p-6 shadow-sm flex flex-col">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-5">My Leave History</h3>
             {loading ? (
-              <p style={styles.loadingText}>Loading history log...</p>
+              <p className="text-slate-400 font-medium text-center py-12 text-sm">Loading history log...</p>
             ) : leaves.length === 0 ? (
-              <p style={styles.emptyText}>No leaves filed yet.</p>
+              <p className="text-slate-400 font-medium text-center py-12 text-sm">No leaves filed yet.</p>
             ) : (
-              <div style={styles.leavesTimeline}>
+              <div className="flex flex-col gap-4 overflow-y-auto max-h-[560px] pr-2">
                 {leaves.map((leave) => (
-                  <div key={leave.id} style={styles.timelineItem} className="glass-card">
-                    <div style={styles.timelineHeader}>
-                      <span style={styles.timelineType}>{leave.type.replace('_', ' ')}</span>
+                  <div key={leave.id} className="p-4 border border-slate-200/80 rounded-2xl flex flex-col gap-3 hover:border-slate-300 transition-all bg-white text-left">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">{leave.type.replace('_', ' ')}</span>
                       <span className={`badge ${
                         leave.status === 'APPROVED' ? 'badge-success' :
                         leave.status === 'PENDING' ? 'badge-warning' :
                         leave.status === 'REJECTED' ? 'badge-danger' : 'badge-info'
                       }`}>
-                        {leave.status}
+                        {leave.status.toLowerCase()}
                       </span>
                     </div>
                     
-                    <p style={styles.timelineMeta}>
-                      {new Date(leave.startDate).toLocaleString()} to {new Date(leave.endDate).toLocaleString()}
-                    </p>
-                    <p style={styles.timelineReason}>Reason: {leave.reason}</p>
+                    <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider flex items-center gap-1.5">
+                      <CalendarDays size={14} />
+                      <span>{new Date(leave.startDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })} - {new Date(leave.endDate).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
+                    </div>
+                    <p className="text-xs text-slate-600 font-medium">Reason: {leave.reason}</p>
                     
                     {leave.comments && (
-                      <div style={styles.wardenComments}>
-                        <strong>Warden Note:</strong> {leave.comments} (Warden: {leave.approvedBy})
+                      <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-[11px] text-slate-600">
+                        <strong className="font-bold text-slate-700">Warden Note:</strong> {leave.comments} (By: {leave.approvedBy})
                       </div>
                     )}
                     
-                    {leave.checkOutTime && (
-                      <p style={styles.gateStamp}>
-                        <LogOut size={12} /> Biometric Gate Out: {new Date(leave.checkOutTime).toLocaleString()}
-                      </p>
-                    )}
-                    {leave.checkInTime && (
-                      <p style={styles.gateStamp}>
-                        <LogIn size={12} /> Biometric Gate In: {new Date(leave.checkInTime).toLocaleString()}
-                      </p>
+                    {(leave.checkOutTime || leave.checkInTime) && (
+                      <div className="flex flex-col gap-1 border-t border-slate-50 pt-2 text-[10px]">
+                        {leave.checkOutTime && (
+                          <p className="text-emerald-600 font-bold flex items-center gap-1">
+                            <LogOut size={12} /> Biometric Gate Out: {new Date(leave.checkOutTime).toLocaleString()}
+                          </p>
+                        )}
+                        {leave.checkInTime && (
+                          <p className="text-emerald-600 font-bold flex items-center gap-1">
+                            <LogIn size={12} /> Biometric Gate In: {new Date(leave.checkInTime).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -339,112 +345,115 @@ const Leaves = () => {
         </div>
       ) : (
         /* WARDEN & SECURITY PORTAL VIEW */
-        <div className="glass-card" style={{ padding: '1.5rem' }}>
-          <h3 style={styles.cardTitle}>Active Leave Registers</h3>
+        <div className="glass-card p-6 shadow-sm flex flex-col">
+          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-5">Active Leave Registers</h3>
           
           {loading ? (
-            <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>Loading leaves...</p>
+            <div className="min-h-[30vh] flex flex-col items-center justify-center gap-4">
+              <div className="spinner"></div>
+              <p className="text-slate-400 font-medium text-sm">Loading leave records...</p>
+            </div>
           ) : leaves.length === 0 ? (
-            <p style={styles.emptyText}>No requests in the queue.</p>
+            <p className="text-center py-12 text-slate-400 text-sm">No requests in the queue.</p>
           ) : (
             <div className="custom-table-container">
               <table className="custom-table">
                 <thead>
                   <tr>
                     <th>Student Info</th>
-                    <th>Roll Number / Room</th>
+                    <th>Roll / Room</th>
                     <th>Duration Dates</th>
                     <th>Reason</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th className="text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {leaves.map((leave) => (
                     <tr key={leave.id}>
                       <td>
-                        <div style={styles.studentCell}>
-                          <div style={styles.avatarMini}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 font-extrabold text-xs flex items-center justify-center border border-blue-100/60 shadow-sm shrink-0">
                             {leave.student?.user?.name?.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <h4 style={styles.studentCellName}>{leave.student?.user?.name}</h4>
-                            <span style={styles.studentCellType}>{leave.type.replace('_', ' ')}</span>
+                          <div className="flex flex-col overflow-hidden">
+                            <h4 className="text-xs font-bold text-slate-800 truncate">{leave.student?.user?.name}</h4>
+                            <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{leave.type.replace('_', ' ')}</span>
                           </div>
                         </div>
                       </td>
                       <td>
-                        <div style={styles.rollCell}>
-                          <code>{leave.student?.rollNumber}</code>
-                          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                        <div className="flex flex-col text-slate-600 text-xs">
+                          <code className="font-mono font-semibold text-slate-700">{leave.student?.rollNumber}</code>
+                          <span className="text-[10px] text-slate-400 mt-0.5">
                             Room {leave.student?.room?.roomNumber || 'N/A'}
                           </span>
                         </div>
                       </td>
                       <td>
-                        <div style={styles.dateCell}>
+                        <div className="flex flex-col text-slate-600 text-xs">
                           <span><strong>Out:</strong> {new Date(leave.startDate).toLocaleDateString()} {new Date(leave.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          <span><strong>In:</strong> {new Date(leave.endDate).toLocaleDateString()} {new Date(leave.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span className="mt-0.5"><strong>In:</strong> {new Date(leave.endDate).toLocaleDateString()} {new Date(leave.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
                       </td>
-                      <td><span style={styles.tableReason} title={leave.reason}>{leave.reason}</span></td>
+                      <td>
+                        <span className="text-xs text-slate-500 font-medium max-w-[200px] inline-block truncate" title={leave.reason}>
+                          {leave.reason}
+                        </span>
+                      </td>
                       <td>
                         <span className={`badge ${
                           leave.status === 'APPROVED' ? 'badge-success' :
                           leave.status === 'PENDING' ? 'badge-warning' :
                           leave.status === 'REJECTED' ? 'badge-danger' : 'badge-info'
                         }`}>
-                          {leave.status}
+                          {leave.status.toLowerCase()}
                         </span>
                       </td>
                       <td>
-                        <div style={styles.actionBtnsContainer}>
+                        <div className="flex items-center justify-end gap-2">
                           {leave.status === 'PENDING' && user.role === 'ADMIN' && (
                             <>
                               <button 
-                                className="btn-primary" 
-                                style={styles.approveBtn} 
+                                className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0"
                                 onClick={() => openWardenActionModal(leave, 'APPROVED')}
                               >
-                                <CheckCircle size={14} /> Approve
+                                <CheckCircle size={14} /> <span>Approve</span>
                               </button>
                               <button 
-                                className="btn-secondary" 
-                                style={styles.rejectBtn}
+                                className="btn-secondary h-9 px-3.5 text-xs font-bold text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
                                 onClick={() => openWardenActionModal(leave, 'REJECTED')}
                               >
-                                <XCircle size={14} /> Reject
+                                <XCircle size={14} /> <span>Reject</span>
                               </button>
                             </>
                           )}
                           
                           {leave.status === 'APPROVED' && (
                             <button 
-                              className="btn-primary" 
-                              style={styles.gateBtn}
+                              className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0"
                               onClick={() => handleLogCheckout(leave.id)}
                             >
-                              <LogOut size={14} /> Log Gate Out
+                              <LogOut size={14} /> <span>Log Gate Out</span>
                             </button>
                           )}
 
                           {leave.status === 'CHECKED_OUT' && (
                             <button 
-                              className="btn-success" 
-                              style={styles.gateBtnCheckin}
+                              className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700"
                               onClick={() => handleLogCheckin(leave.id)}
                             >
-                              <LogIn size={14} /> Log Gate In
+                              <LogIn size={14} /> <span>Log Gate In</span>
                             </button>
                           )}
 
                           {leave.status === 'RETURNED' && (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--success)', fontWeight: '500' }}>
+                            <span className="text-[11px] text-emerald-600 font-extrabold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">
                               Returned (Gate scan)
                             </span>
                           )}
                           {leave.status === 'REJECTED' && (
-                            <span style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: '500' }}>
+                            <span className="text-[11px] text-red-500 font-extrabold bg-red-50 border border-red-100 px-2 py-0.5 rounded">
                               Rejected
                             </span>
                           )}
@@ -461,7 +470,7 @@ const Leaves = () => {
 
       {/* BIOMETRIC SIMULATION SCANNER POPUP */}
       <CustomModal isOpen={isBiometricModalOpen} onClose={() => setIsBiometricModalOpen(false)} title="Biometric Gate Terminal">
-        <div style={{ padding: '1rem 0' }}>
+        <div className="py-2">
           <BiometricScanner 
             rollNumber={user.studentDetails?.rollNumber}
             endpoint="/leaves/biometric-verify"
@@ -476,23 +485,22 @@ const Leaves = () => {
         onClose={() => setIsCommentModalOpen(false)} 
         title={`${actionType === 'APPROVED' ? 'Approve' : 'Reject'} Leave Request`}
       >
-        <form onSubmit={handleWardenActionSubmit} style={styles.modalForm}>
-          <div className="form-group">
+        <form onSubmit={handleWardenActionSubmit} className="flex flex-col gap-4">
+          <div className="form-group mb-0">
             <label className="form-label">Review Notes / Warden Comments</label>
             <textarea 
-              className="form-input" 
-              rows="4" 
+              className="form-input h-24 py-2.5" 
               placeholder="Comments..."
               value={comments}
               onChange={(e) => setComments(e.target.value)}
               required={actionType === 'REJECTED'}
             />
           </div>
-          <div style={styles.modalActions}>
-            <button type="button" className="btn-secondary" onClick={() => setIsCommentModalOpen(false)}>Cancel</button>
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
+            <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsCommentModalOpen(false)}>Cancel</button>
             <button 
               type="submit" 
-              className="btn-primary"
+              className="btn-primary h-11 px-5"
               style={actionType === 'REJECTED' ? { background: 'var(--danger)' } : {}}
               disabled={actionLoading}
             >
@@ -505,211 +513,5 @@ const Leaves = () => {
   );
 };
 
-const styles = {
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '2.5rem',
-  },
-  card: {
-    padding: '1.75rem',
-  },
-  biometricTriggerCard: {
-    padding: '1.5rem',
-    background: 'linear-gradient(135deg, rgba(236,72,153,0.06) 0%, rgba(139,92,246,0.02) 100%)',
-    border: '1px solid rgba(236,72,153,0.12)',
-  },
-  biometricInstruction: {
-    fontSize: '0.8rem',
-    color: 'var(--text-secondary)',
-    lineHeight: '1.5',
-    margin: '0.5rem 0 1.25rem 0',
-  },
-  biometricVerifyBtn: {
-    width: '100%',
-    justifyContent: 'center',
-    background: 'var(--accent-gradient)',
-  },
-  cardTitle: {
-    fontSize: '1rem',
-    fontWeight: '700',
-    color: 'var(--text-primary)',
-    marginBottom: '1.25rem',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.25rem',
-  },
-  errorBanner: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    background: 'rgba(239, 68, 68, 0.1)',
-    border: '1px solid rgba(239, 68, 68, 0.25)',
-    padding: '0.5rem 0.75rem',
-    borderRadius: '6px',
-    color: 'var(--danger)',
-    fontSize: '0.8rem',
-    marginBottom: '1.25rem',
-  },
-  loadingText: {
-    color: 'var(--text-secondary)',
-    textAlign: 'center',
-    padding: '2rem 0',
-  },
-  emptyText: {
-    color: 'var(--text-tertiary)',
-    textAlign: 'center',
-    padding: '3rem 0',
-    fontSize: '0.85rem',
-  },
-  leavesTimeline: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1rem',
-    maxHeight: '520px',
-    overflowY: 'auto',
-    paddingRight: '0.25rem',
-  },
-  timelineItem: {
-    padding: '1rem',
-    border: '1px solid var(--border-color)',
-    borderRadius: 'var(--border-radius-sm)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.4rem',
-  },
-  timelineHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  timelineType: {
-    fontSize: '0.875rem',
-    fontWeight: '700',
-    color: 'var(--text-primary)',
-    textTransform: 'uppercase',
-  },
-  timelineMeta: {
-    fontSize: '0.75rem',
-    color: 'var(--accent)',
-    fontWeight: '500',
-  },
-  timelineReason: {
-    fontSize: '0.85rem',
-    color: 'var(--text-secondary)',
-  },
-  wardenComments: {
-    background: 'var(--accent-light)',
-    border: '1px solid rgba(236,72,153,0.1)',
-    borderRadius: '6px',
-    padding: '0.5rem 0.75rem',
-    fontSize: '0.8rem',
-    color: 'var(--text-primary)',
-    marginTop: '0.25rem',
-  },
-  gateStamp: {
-    fontSize: '0.75rem',
-    color: 'var(--success)',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-    fontWeight: '500',
-  },
-  studentCell: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-  },
-  avatarMini: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    background: 'var(--accent-light)',
-    color: 'var(--accent)',
-    fontWeight: 'bold',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '0.8rem',
-  },
-  studentCellName: {
-    fontSize: '0.9rem',
-    fontWeight: '600',
-    color: 'var(--text-primary)',
-  },
-  studentCellType: {
-    fontSize: '0.75rem',
-    color: 'var(--text-secondary)',
-  },
-  rollCell: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.15rem',
-  },
-  dateCell: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.15rem',
-    fontSize: '0.8rem',
-    color: 'var(--text-secondary)',
-  },
-  tableReason: {
-    fontSize: '0.85rem',
-    color: 'var(--text-secondary)',
-    maxWidth: '220px',
-    display: 'inline-block',
-    whiteSpace: 'nowrap',
-    textOverflow: 'ellipsis',
-    overflow: 'hidden',
-  },
-  actionBtnsContainer: {
-    display: 'flex',
-    gap: '0.4rem',
-  },
-  approveBtn: {
-    padding: '0.4rem 0.75rem',
-    fontSize: '0.75rem',
-  },
-  rejectBtn: {
-    padding: '0.4rem 0.75rem',
-    fontSize: '0.75rem',
-    color: 'var(--danger)',
-    borderColor: 'rgba(239, 68, 68, 0.2)',
-  },
-  gateBtn: {
-    padding: '0.4rem 0.75rem',
-    fontSize: '0.75rem',
-    width: '100%',
-    justifyContent: 'center',
-  },
-  gateBtnCheckin: {
-    padding: '0.4rem 0.75rem',
-    fontSize: '0.75rem',
-    background: 'var(--success-bg)',
-    color: 'var(--success)',
-    border: '1px solid rgba(16, 185, 129, 0.3)',
-    cursor: 'pointer',
-    borderRadius: 'var(--border-radius-sm)',
-    fontWeight: '600',
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-    width: '100%',
-    justifyContent: 'center',
-  },
-  modalForm: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  modalActions: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '0.75rem',
-    marginTop: '1.5rem',
-  }
-};
-
 export default Leaves;
+

@@ -62,7 +62,7 @@ const BiometricScanner = ({ rollNumber, endpoint, bodyExtra = {}, onSuccess, onF
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-6 bg-white/2 border border-[var(--border-color)] rounded-[var(--border-radius-md)] w-full max-w-[360px] mx-auto">
+    <div className="flex flex-col items-center justify-center p-6 bg-white/10 border border-[var(--border-color)] rounded-[var(--border-radius-md)] w-full max-w-[360px] mx-auto">
       <div 
         onClick={scanState === 'IDLE' || scanState === 'ERROR' ? triggerScan : null}
         className={getScannerClasses()}

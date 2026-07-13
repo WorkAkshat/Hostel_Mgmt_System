@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { CreditCard, Receipt, Calendar, FileText, CheckCircle, ShieldAlert, Sparkles, Send, ArrowLeft } from 'lucide-react';
+import { CreditCard, Receipt, Calendar, FileText, CheckCircle, ShieldAlert, ArrowLeft } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
 
 const Fees = () => {
@@ -111,26 +111,29 @@ const Fees = () => {
     .reduce((acc, i) => acc + i.amount, 0);
 
   return (
-    <div className="animate-fade-in space-y-6">
-      {/* Mobile/Desktop Header with Back Navigation */}
+    <div className="animate-fade-in flex flex-col gap-6 text-left">
+      {/* Page Header */}
       <div className="flex items-center gap-3">
         {user.role === 'STUDENT' && (
-          <button onClick={() => navigate('/student/dashboard')} className="bg-transparent border-none text-gray-500 hover:text-gray-900 cursor-pointer p-1 rounded-full hover:bg-gray-100 transition-colors flex items-center justify-center shrink-0">
-            <ArrowLeft size={20} />
+          <button 
+            onClick={() => navigate('/student/dashboard')} 
+            className="bg-slate-50 border border-slate-200/60 text-slate-500 hover:text-slate-900 cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0"
+          >
+            <ArrowLeft size={16} />
           </button>
         )}
         <div>
-          <h1 className="page-title text-base lg:text-lg font-bold text-[#0b1a52] leading-none mb-1">
+          <h1 className="page-title leading-tight">
             {user.role === 'ADMIN' ? 'Hostel Fee Ledger' : 'My Invoices & Receipts'}
           </h1>
-          <p className="text-[11px] text-gray-400">
+          <p className="page-subtitle mb-0 mt-1">
             {user.role === 'ADMIN' ? 'Monitor tuition bills, outstanding hostel debts, and generate student invoices.' :
-             'Inspect outstanding dues, view receipts, and make payments online'}
+             'Inspect outstanding dues, view receipts, and make payments online.'}
           </p>
         </div>
         {user.role === 'ADMIN' && (
-          <button className="btn-primary ml-auto" onClick={() => setIsGenerateModalOpen(true)}>
-            <Receipt size={18} />
+          <button className="btn-primary ml-auto shadow-sm" onClick={() => setIsGenerateModalOpen(true)}>
+            <Receipt size={16} />
             <span>Generate Student Bill</span>
           </button>
         )}
@@ -138,62 +141,74 @@ const Fees = () => {
 
       {/* Warden Stats Panel */}
       {user.role === 'ADMIN' && (
-        <div style={styles.wardenSummaryGrid}>
-          <div className="glass-card" style={styles.summaryCard}>
-            <span style={styles.summaryLabel}>Total Collected Revenue</span>
-            <h2 style={{ ...styles.summaryValue, color: 'var(--success)' }}>₹{totalCollected.toLocaleString()}</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div 
+            className="glass-card p-6 flex flex-col gap-1"
+            style={{ borderTop: '3px solid var(--success)' }}
+          >
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Collected Revenue</span>
+            <h2 className="text-2xl font-extrabold text-emerald-600 tracking-tight mt-1">₹{totalCollected.toLocaleString()}</h2>
           </div>
-          <div className="glass-card" style={styles.summaryCard}>
-            <span style={styles.summaryLabel}>Outstanding Dues (Pending)</span>
-            <h2 style={{ ...styles.summaryValue, color: 'var(--danger)' }}>₹{totalOutstanding.toLocaleString()}</h2>
+          <div 
+            className="glass-card p-6 flex flex-col gap-1"
+            style={{ borderTop: '3px solid var(--danger)' }}
+          >
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Outstanding Dues (Pending)</span>
+            <h2 className="text-2xl font-extrabold text-rose-600 tracking-tight mt-1">₹{totalOutstanding.toLocaleString()}</h2>
           </div>
         </div>
       )}
 
       {/* Invoices Ledger Table */}
       {loading ? (
-        <p style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>Loading ledger records...</p>
+        <div className="min-h-[40vh] flex flex-col items-center justify-center gap-4">
+          <div className="spinner"></div>
+          <p className="text-slate-400 font-medium text-sm">Loading billing records...</p>
+        </div>
       ) : invoices.length === 0 ? (
-        <div className="glass-card" style={{ padding: '3rem', textAlign: 'center' }}>
-          <p style={{ color: 'var(--text-tertiary)' }}>No billing invoices found in records.</p>
+        <div className="glass-card p-12 text-center">
+          <p className="text-slate-400 font-medium">No billing invoices found in records.</p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {/* Responsive Mobile Invoice Cards */}
-          <div className="block md:hidden space-y-4">
+          <div className="grid grid-cols-1 gap-4 md:hidden">
             {invoices.map((invoice) => (
-              <div key={invoice.id} className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex flex-col gap-3">
+              <div 
+                key={invoice.id} 
+                className="glass-card p-5 shadow-sm flex flex-col gap-4"
+              >
                 <div className="flex justify-between items-start">
                   <div>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Invoice ID</span>
-                    <code className="text-xs text-gray-700 block font-bold mt-0.5">#{invoice.id.split('-')[0].toUpperCase()}</code>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Invoice ID</span>
+                    <code className="text-xs text-slate-700 block font-bold mt-0.5 font-mono">#{invoice.id.split('-')[0].toUpperCase()}</code>
                   </div>
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
-                    invoice.status === 'PAID' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  <span className={`badge shrink-0 ${
+                    invoice.status === 'PAID' ? 'badge-success' : 'badge-danger'
                   }`}>
-                    {invoice.status}
+                    {invoice.status.toLowerCase()}
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3 py-2.5 border-t border-b border-gray-100">
+                <div className="grid grid-cols-2 gap-4 py-3 border-t border-b border-slate-100 text-xs">
                   <div>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Amount</span>
-                    <span className="text-sm font-extrabold text-[#0b1a52]">₹{invoice.amount.toLocaleString()}</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Amount</span>
+                    <span className="text-sm font-extrabold text-slate-800">₹{invoice.amount.toLocaleString()}</span>
                   </div>
                   <div>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Due Date</span>
-                    <span className="text-xs text-gray-700 font-semibold">{new Date(invoice.dueDate).toLocaleDateString()}</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-1">Due Date</span>
+                    <span className="text-xs text-slate-700 font-bold">{new Date(invoice.dueDate).toLocaleDateString()}</span>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center text-[11px] text-gray-500">
+                <div className="flex justify-between items-center text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
                   <span>Payment Date:</span>
-                  <span>{invoice.paidAt ? new Date(invoice.paidAt).toLocaleDateString() : 'Pending'}</span>
+                  <span className="text-slate-600 normal-case">{invoice.paidAt ? new Date(invoice.paidAt).toLocaleDateString() : 'Pending'}</span>
                 </div>
 
                 {invoice.status === 'UNPAID' && user.role === 'STUDENT' && (
                   <button 
-                    className="btn-primary w-full py-2.5 rounded-xl justify-center font-bold text-xs bg-[#0b1a52] hover:bg-[#16276b] border-none text-white flex items-center gap-1.5"
+                    className="btn-primary w-full justify-center"
                     onClick={() => openPaymentModal(invoice)}
                   >
                     <CreditCard size={14} />
@@ -205,17 +220,17 @@ const Fees = () => {
           </div>
 
           {/* Desktop Table View */}
-          <div className="hidden md:block custom-table-container glass-card">
+          <div className="hidden md:block custom-table-container">
             <table className="custom-table">
               <thead>
                 <tr>
-                  {user.role === 'ADMIN' && <th>Student Roster</th>}
+                  {user.role === 'ADMIN' && <th>Student Info</th>}
                   <th>Bill Amount</th>
                   <th>Due Date</th>
                   <th>Payment Date</th>
                   <th>Invoice Code</th>
                   <th>Status</th>
-                  <th>Payment Operations</th>
+                  <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -223,55 +238,57 @@ const Fees = () => {
                   <tr key={invoice.id}>
                     {user.role === 'ADMIN' && (
                       <td>
-                        <div style={styles.studentCell}>
-                          <div style={styles.avatar}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 font-extrabold text-xs flex items-center justify-center border border-blue-100/60 shadow-sm shrink-0">
                             {invoice.student?.user?.name?.charAt(0).toUpperCase()}
                           </div>
-                          <div>
-                            <h4 style={styles.studentName}>{invoice.student?.user?.name}</h4>
-                            <span style={styles.studentRoll}>{invoice.student?.rollNumber}</span>
+                          <div className="flex flex-col overflow-hidden">
+                            <h4 className="text-xs font-bold text-slate-800 truncate">{invoice.student?.user?.name}</h4>
+                            <span className="text-[10px] text-slate-400 font-mono mt-0.5">{invoice.student?.rollNumber}</span>
                           </div>
                         </div>
                       </td>
                     )}
-                    <td><strong style={styles.amountText}>₹{invoice.amount.toLocaleString()}</strong></td>
+                    <td><strong className="text-sm font-extrabold text-slate-800">₹{invoice.amount.toLocaleString()}</strong></td>
                     <td>
-                      <div style={styles.metaCell}>
-                        <Calendar size={12} />
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                        <Calendar size={12} className="text-slate-400" />
                         <span>{new Date(invoice.dueDate).toLocaleDateString()}</span>
                       </div>
                     </td>
                     <td>
                       {invoice.paidAt ? (
-                        <div style={styles.metaCell}>
-                          <Calendar size={12} />
+                        <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                          <Calendar size={12} className="text-slate-400" />
                           <span>{new Date(invoice.paidAt).toLocaleDateString()}</span>
                         </div>
                       ) : (
-                        <span style={styles.unpaidLabel}>N/A</span>
+                        <span className="text-slate-400 italic text-xs">Pending</span>
                       )}
                     </td>
-                    <td><code style={styles.code}>#{invoice.id.split('-')[0].toUpperCase()}</code></td>
+                    <td><code className="font-mono bg-slate-50 border border-slate-100 px-2 py-0.5 rounded text-xs text-slate-500">#{invoice.id.split('-')[0].toUpperCase()}</code></td>
                     <td>
                       <span className={`badge ${invoice.status === 'PAID' ? 'badge-success' : 'badge-danger'}`}>
-                        {invoice.status}
+                        {invoice.status.toLowerCase()}
                       </span>
                     </td>
                     <td>
-                      {invoice.status === 'UNPAID' ? (
-                        user.role === 'STUDENT' ? (
-                          <button className="btn-primary" style={styles.payBtn} onClick={() => openPaymentModal(invoice)}>
-                            <CreditCard size={14} /> Pay Now
-                          </button>
+                      <div className="flex items-center justify-end">
+                        {invoice.status === 'UNPAID' ? (
+                          user.role === 'STUDENT' ? (
+                            <button className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0" onClick={() => openPaymentModal(invoice)}>
+                              <CreditCard size={14} /> <span>Pay Now</span>
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic font-medium">Awaiting payment</span>
+                          )
                         ) : (
-                          <span style={styles.awaitingPayment}>Awaiting payment</span>
-                        )
-                      ) : (
-                        <div style={styles.successPaidArea}>
-                          <CheckCircle size={14} color="var(--success)" />
-                          <span>Paid Receipt</span>
-                        </div>
-                      )}
+                          <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-lg">
+                            <CheckCircle size={12} />
+                            <span>Paid</span>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -284,13 +301,13 @@ const Fees = () => {
       {/* WARDEN INVOICE GENERATOR MODAL */}
       <CustomModal isOpen={isGenerateModalOpen} onClose={() => setIsGenerateModalOpen(false)} title="Generate Fee Invoice">
         {generateError && (
-          <div style={styles.modalErrorBanner}>
-            <ShieldAlert size={16} />
+          <div className="flex items-center gap-2 p-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold mb-4 animate-fade-in">
+            <ShieldAlert size={16} className="shrink-0" />
             <span>{generateError}</span>
           </div>
         )}
-        <form onSubmit={handleGenerateSubmit} style={styles.modalForm}>
-          <div className="form-group">
+        <form onSubmit={handleGenerateSubmit} className="flex flex-col gap-4">
+          <div className="form-group mb-0">
             <label className="form-label">Student Roll Number</label>
             <input 
               type="text" 
@@ -301,7 +318,7 @@ const Fees = () => {
               onChange={(e) => setGenerateForm({...generateForm, studentRollNumber: e.target.value})}
             />
           </div>
-          <div className="form-group">
+          <div className="form-group mb-0">
             <label className="form-label">Billing Amount (INR)</label>
             <input 
               type="number" 
@@ -312,7 +329,7 @@ const Fees = () => {
               onChange={(e) => setGenerateForm({...generateForm, amount: e.target.value})}
             />
           </div>
-          <div className="form-group">
+          <div className="form-group mb-0">
             <label className="form-label">Due Date Deadline</label>
             <input 
               type="date" 
@@ -322,35 +339,35 @@ const Fees = () => {
               onChange={(e) => setGenerateForm({...generateForm, dueDate: e.target.value})}
             />
           </div>
-          <div style={styles.modalActions}>
-            <button type="button" className="btn-secondary" onClick={() => setIsGenerateModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={generateLoading}>
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2">
+            <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsGenerateModalOpen(false)}>Cancel</button>
+            <button type="submit" className="btn-primary h-11 px-5" disabled={generateLoading}>
               {generateLoading ? 'Generating...' : 'Dispatch Invoice'}
             </button>
           </div>
         </form>
       </CustomModal>
 
-      {/* STUDENT CREDIT CARD MOCK CHECKOUT PAYMENT DRAWER */}
+      {/* STUDENT CREDIT CARD MOCK CHECKOUT PAYMENT GATEWAY */}
       <CustomModal isOpen={isPayModalOpen} onClose={() => setIsPayModalOpen(false)} title="Secure Payment Gateway">
-        <form onSubmit={handleProcessPayment} style={styles.modalForm}>
-          <div style={styles.receiptSummary}>
-            <h4 style={{ color: 'var(--text-secondary)', fontSize: '0.8rem', textTransform: 'uppercase' }}>Invoice Summary</h4>
-            <div style={styles.receiptRow}>
+        <form onSubmit={handleProcessPayment} className="flex flex-col gap-4">
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col gap-2.5 text-xs text-slate-600 text-left">
+            <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px] mb-1">Invoice Summary</h4>
+            <div className="flex justify-between items-center pb-2 border-b border-slate-200/50">
               <span>Hostel Maintenance Charges:</span>
-              <strong>₹{selectedInvoice?.amount?.toLocaleString()}</strong>
+              <strong className="text-slate-800 font-extrabold text-sm">₹{selectedInvoice?.amount?.toLocaleString()}</strong>
             </div>
-            <div style={styles.receiptRow}>
+            <div className="flex justify-between items-center pt-0.5">
               <span>Reference Transaction Code:</span>
-              <code>#{selectedInvoice?.id?.split('-')[0].toUpperCase()}</code>
+              <code className="font-mono bg-white border border-slate-200/60 px-1.5 py-0.5 rounded text-slate-600 font-bold">#{selectedInvoice?.id?.split('-')[0].toUpperCase()}</code>
             </div>
           </div>
 
-          <p style={styles.paymentDisclaimer}>
+          <p className="text-[10px] text-slate-400 font-semibold leading-relaxed uppercase tracking-wider">
             This is a secure mock payment sandbox. Click Confirm to clear this bill from outstanding records.
           </p>
 
-          <div className="form-group">
+          <div className="form-group mb-0">
             <label className="form-label">Cardholder Name</label>
             <input 
               type="text" 
@@ -361,34 +378,34 @@ const Fees = () => {
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group mb-0">
             <label className="form-label">Card Number</label>
             <input 
               type="text" 
-              className="form-input" 
+              className="form-input font-medium" 
               required
               value={paymentForm.cardNumber}
               onChange={(e) => setPaymentForm({...paymentForm, cardNumber: e.target.value})}
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <div className="form-group">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="form-group mb-0">
               <label className="form-label">Expiry Date</label>
               <input 
                 type="text" 
-                className="form-input" 
+                className="form-input text-center font-medium" 
                 placeholder="MM/YY"
                 required
                 value={paymentForm.expiry}
                 onChange={(e) => setPaymentForm({...paymentForm, expiry: e.target.value})}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group mb-0">
               <label className="form-label">CVV</label>
               <input 
                 type="password" 
-                className="form-input" 
+                className="form-input text-center font-medium" 
                 placeholder="•••"
                 required
                 value={paymentForm.cvv}
@@ -397,9 +414,9 @@ const Fees = () => {
             </div>
           </div>
 
-          <div style={styles.modalActions}>
-            <button type="button" className="btn-secondary" onClick={() => setIsPayModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={paymentLoading}>
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2">
+            <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsPayModalOpen(false)}>Cancel</button>
+            <button type="submit" className="btn-primary h-11 px-5" disabled={paymentLoading}>
               {paymentLoading ? 'Processing transaction...' : `Pay ₹${selectedInvoice?.amount?.toLocaleString()}`}
             </button>
           </div>
@@ -409,147 +426,5 @@ const Fees = () => {
   );
 };
 
-const styles = {
-  headerRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '2rem',
-  },
-  wardenSummaryGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-    gap: '2rem',
-    marginBottom: '2rem',
-  },
-  summaryCard: {
-    padding: '1.5rem',
-    textAlign: 'center',
-  },
-  summaryLabel: {
-    fontSize: '0.85rem',
-    fontWeight: '600',
-    color: 'var(--text-secondary)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  },
-  summaryValue: {
-    fontSize: '2rem',
-    fontWeight: '800',
-    marginTop: '0.5rem',
-  },
-  studentCell: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-  },
-  avatar: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    background: 'var(--accent-light)',
-    color: 'var(--accent)',
-    fontWeight: 'bold',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '0.8rem',
-  },
-  studentName: {
-    fontSize: '0.9rem',
-    fontWeight: '600',
-    color: 'var(--text-primary)',
-  },
-  studentRoll: {
-    fontSize: '0.75rem',
-    color: 'var(--text-tertiary)',
-  },
-  amountText: {
-    color: 'var(--text-primary)',
-    fontSize: '1rem',
-  },
-  metaCell: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-    fontSize: '0.85rem',
-    color: 'var(--text-secondary)',
-  },
-  unpaidLabel: {
-    color: 'var(--text-tertiary)',
-    fontStyle: 'italic',
-    fontSize: '0.85rem',
-  },
-  code: {
-    background: 'rgba(0, 0, 0, 0.02)',
-    border: '1px solid var(--border-color)',
-    padding: '0.2rem 0.5rem',
-    borderRadius: '4px',
-    fontSize: '0.8rem',
-    color: 'var(--text-secondary)',
-  },
-  payBtn: {
-    padding: '0.4rem 0.75rem',
-    fontSize: '0.75rem',
-  },
-  awaitingPayment: {
-    fontSize: '0.8rem',
-    color: 'var(--text-tertiary)',
-    fontStyle: 'italic',
-  },
-  successPaidArea: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.35rem',
-    color: 'var(--success)',
-    fontSize: '0.85rem',
-    fontWeight: '600',
-  },
-  modalForm: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  modalActions: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    gap: '0.75rem',
-    marginTop: '1.5rem',
-  },
-  modalErrorBanner: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    background: 'rgba(239, 68, 68, 0.1)',
-    border: '1px solid rgba(239, 68, 68, 0.2)',
-    padding: '0.5rem 0.75rem',
-    borderRadius: '6px',
-    color: 'var(--danger)',
-    fontSize: '0.8rem',
-    marginBottom: '1rem',
-  },
-  receiptSummary: {
-    background: 'rgba(0,0,0,0.015)',
-    border: '1px solid var(--border-color)',
-    borderRadius: '8px',
-    padding: '1rem',
-    marginBottom: '1rem',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.5rem',
-  },
-  receiptRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '0.875rem',
-    color: 'var(--text-primary)',
-  },
-  paymentDisclaimer: {
-    fontSize: '0.75rem',
-    color: 'var(--text-tertiary)',
-    lineHeight: '1.4',
-    marginBottom: '1rem',
-  }
-};
-
 export default Fees;
+
