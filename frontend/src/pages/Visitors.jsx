@@ -63,7 +63,8 @@ const Visitors = () => {
       setLoading(true);
       const data = await api('/visitors');
       if (data && data.length > 0) {
-        setVisitors(data);
+        // Append MOCK_VISITORS to show more content as requested
+        setVisitors([...data, ...MOCK_VISITORS.filter(m => !data.find(d => d.name === m.name))]);
       } else {
         setVisitors(MOCK_VISITORS);
       }
@@ -122,7 +123,7 @@ const Visitors = () => {
     <div className="animate-fade-in flex flex-col gap-6 text-left">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
+        <div className="page-header mb-0 sm:mb-0">
           <h1 className="page-title">Visitor Registry Log</h1>
           <p className="page-subtitle">Log new guest check-ins, associate hosts, and register departures.</p>
         </div>
@@ -304,8 +305,8 @@ const Visitors = () => {
             <span>{formError}</span>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="form-group mb-0">
+        <form onSubmit={handleSubmit} className="form-grid">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Host Student Roll Number</label>
             <input 
               type="text" 
@@ -353,7 +354,7 @@ const Visitors = () => {
               <option value="Friend">Friend</option>
             </select>
           </div>
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2">
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2 full-width">
             <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary h-11 px-5" disabled={actionLoading}>
               {actionLoading ? 'Saving...' : 'Register Entry'}

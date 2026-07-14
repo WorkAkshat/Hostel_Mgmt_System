@@ -482,8 +482,8 @@ const Dashboard = () => {
 
       {/* Guest Pre-registration Form Modal */}
       <CustomModal isOpen={showGuestModal} onClose={() => setShowGuestModal(false)} title="Guest Pre-Registration Form">
-        <form onSubmit={handleGuestSubmit} className="flex flex-col gap-4">
-          <div className="form-group">
+        <form onSubmit={handleGuestSubmit} className="form-grid">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Guest Full Name</label>
             <input 
               type="text" 
@@ -494,7 +494,7 @@ const Dashboard = () => {
               onChange={(e) => setGuestForm({...guestForm, name: e.target.value})}
             />
           </div>
-          <div className="form-group">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Relationship</label>
             <select 
               className="form-input"
@@ -508,7 +508,7 @@ const Dashboard = () => {
               <option value="Guardian">Guardian</option>
             </select>
           </div>
-          <div className="form-group">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Contact Number</label>
             <input 
               type="text" 
@@ -519,7 +519,7 @@ const Dashboard = () => {
               onChange={(e) => setGuestForm({...guestForm, phone: e.target.value})}
             />
           </div>
-          <div className="form-group">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Date of Visit</label>
             <input 
               type="date" 
@@ -529,9 +529,9 @@ const Dashboard = () => {
               onChange={(e) => setGuestForm({...guestForm, date: e.target.value})}
             />
           </div>
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
-            <button type="button" className="btn-secondary" onClick={() => setShowGuestModal(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Register Guest</button>
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 full-width">
+            <button type="button" className="btn-secondary h-11 px-5" onClick={() => setShowGuestModal(false)}>Cancel</button>
+            <button type="submit" className="btn-primary h-11 px-5">Register Guest</button>
           </div>
         </form>
       </CustomModal>

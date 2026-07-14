@@ -139,13 +139,13 @@ const Leaves = () => {
     <div className="animate-fade-in flex flex-col gap-6 text-left">
       {/* Page Header */}
       <div className="flex items-center gap-3">
-        <button 
+        {/* <button 
           onClick={() => navigate(user.role === 'ADMIN' ? '/admin/dashboard' : user.role === 'STUDENT' ? '/student/dashboard' : '/staff/visitors')} 
           className="bg-slate-50 border border-slate-200/60 text-slate-500 hover:text-slate-900 cursor-pointer p-2 rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center shrink-0"
         >
           <ArrowLeft size={16} />
-        </button>
-        <div>
+        </button> */}
+        <div className="page-header mb-0 sm:mb-0">
           <h1 className="page-title leading-tight">
             {user.role === 'ADMIN' ? 'Leave & Gate Pass Approvals' : user.role === 'STAFF' ? 'Gate Security Log' : 'Apply Leave'}
           </h1>
@@ -175,9 +175,9 @@ const Leaves = () => {
                 </div>
               )}
 
-              <form onSubmit={handleStudentSubmit} className="flex flex-col gap-4">
+              <form onSubmit={handleStudentSubmit} className="form-grid">
                 {/* Leave Type Select Grid */}
-                <div className="form-group mb-2">
+                <div className="form-group mb-2 full-width">
                   <label className="form-label">Leave Type</label>
                   <div className="grid grid-cols-3 gap-3">
                     <button
@@ -220,7 +220,7 @@ const Leaves = () => {
                 </div>
 
                 {/* Start and End Dates Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 full-width">
                   <div className="form-group mb-0">
                     <label className="form-label">Departure Date & Time</label>
                     <input 
@@ -244,12 +244,12 @@ const Leaves = () => {
                 </div>
 
                 {/* Reason for Leave */}
-                <div className="form-group mb-0">
+                <div className="form-group mb-0 full-width">
                   <label className="form-label">Reason for Leave</label>
                   <textarea 
                     className="form-input h-20 py-2.5" 
                     required
-                    placeholder="Explain your reason for taking leave..."
+                    placeholder="Specify the formal reason for your leave request..."
                     value={form.reason}
                     onChange={(e) => setForm({...form, reason: e.target.value})}
                     style={{ resize: 'vertical' }}
@@ -257,16 +257,18 @@ const Leaves = () => {
                 </div>
 
                 {/* Disclaimer note */}
-                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 flex gap-2.5 items-start">
+                <div className="bg-blue-50 border border-blue-100 rounded-xl p-3.5 flex gap-2.5 items-start full-width">
                   <Clock size={16} className="text-blue-500 shrink-0 mt-0.5" />
                   <p className="text-[10px] text-blue-900 leading-relaxed font-semibold">
                     By submitting, you agree to return to the hostel by 8:00 PM on the end date specified. Any delay must be informed.
                   </p>
                 </div>
 
-                <button type="submit" className="btn-primary w-full justify-center">
-                  <span>Submit Request</span>
-                </button>
+                <div className="full-width">
+                  <button type="submit" className="btn-primary w-full justify-center">
+                    <span>Submit Request</span>
+                  </button>
+                </div>
               </form>
             </div>
 
@@ -485,18 +487,18 @@ const Leaves = () => {
         onClose={() => setIsCommentModalOpen(false)} 
         title={`${actionType === 'APPROVED' ? 'Approve' : 'Reject'} Leave Request`}
       >
-        <form onSubmit={handleWardenActionSubmit} className="flex flex-col gap-4">
-          <div className="form-group mb-0">
+        <form onSubmit={handleWardenActionSubmit} className="form-grid">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Review Notes / Warden Comments</label>
             <textarea 
               className="form-input h-24 py-2.5" 
-              placeholder="Comments..."
+              placeholder="Provide official review remarks or reason for rejection..."
               value={comments}
               onChange={(e) => setComments(e.target.value)}
               required={actionType === 'REJECTED'}
             />
           </div>
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 full-width">
             <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsCommentModalOpen(false)}>Cancel</button>
             <button 
               type="submit" 

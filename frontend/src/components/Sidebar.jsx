@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, 
   Users, 
@@ -80,13 +81,6 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
           )}
         </div>
         
-        {/* Toggle button on Desktop */}
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)} 
-          className="hidden lg:flex w-7 h-7 rounded-full bg-white/50 hover:bg-white/80 border border-white/60 items-center justify-center cursor-pointer text-slate-500 hover:text-slate-800 transition-all flex-shrink-0 shadow-sm backdrop-blur-md"
-        >
-          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
       </div>
 
       {/* Navigation List */}
@@ -164,15 +158,6 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
           </div>
         )}
 
-        {!isCollapsed && (
-          <button 
-            onClick={() => setIsCollapsed(true)}
-            className="flex items-center gap-2 text-[12px] font-semibold text-slate-500 hover:text-slate-800 bg-transparent border-none cursor-pointer p-2 w-full transition-colors mb-2"
-          >
-            <ChevronLeft size={14} />
-            Collapse
-          </button>
-        )}
       </div>
     </div>
   );
@@ -190,29 +175,37 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
       </aside>
 
       {/* Mobile Drawer Sidebar Overlay */}
-      {isMobileOpen && (
-        <div 
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 lg:hidden flex"
-          onClick={onClose}
-        >
-          <div 
-            className="w-[280px] h-screen bg-white/90 backdrop-blur-xl p-4 flex flex-col shadow-2xl relative"
-            onClick={(e) => e.stopPropagation()}
-            style={{ animation: 'slideInLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1)' }}
+      <AnimatePresence>
+        {isMobileOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 lg:hidden flex"
+            onClick={onClose}
           >
-            {/* Close button */}
-            <button 
-              onClick={onClose}
-              className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 border-none flex items-center justify-center cursor-pointer text-slate-500"
+            <motion.div 
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="w-[280px] h-screen bg-white/90 backdrop-blur-xl p-4 flex flex-col shadow-2xl relative"
+              onClick={(e) => e.stopPropagation()}
             >
-              <X size={16} />
-            </button>
-            <div className="h-full pt-4">
-              {sidebarContent}
-            </div>
-          </div>
-        </div>
-      )}
+              {/* Close button */}
+              <button 
+                onClick={onClose}
+                className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 border-none flex items-center justify-center cursor-pointer text-slate-500"
+              >
+                <X size={16} />
+              </button>
+              <div className="h-full pt-4">
+                {sidebarContent}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 };

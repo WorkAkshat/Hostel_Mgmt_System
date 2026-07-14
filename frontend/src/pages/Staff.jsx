@@ -53,7 +53,8 @@ const Staff = () => {
       setLoading(true);
       const data = await api('/staff');
       if (data && data.length > 0) {
-        setStaff(data);
+        // Append MOCK_STAFF to show more content as requested
+        setStaff([...data, ...MOCK_STAFF.filter(m => !data.find(d => d.user?.email === m.user?.email))]);
       } else {
         setStaff(MOCK_STAFF);
       }
@@ -105,7 +106,7 @@ const Staff = () => {
     <div className="animate-fade-in flex flex-col gap-6 text-left">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
+        <div className="page-header mb-0 sm:mb-0">
           <h1 className="page-title">Staff & Warden Roster</h1>
           <p className="page-subtitle">Roster of hostel wardens, cleaning staff, security personnel, and technicians.</p>
         </div>
@@ -182,8 +183,8 @@ const Staff = () => {
             <span>{formError}</span>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="form-group mb-0">
+        <form onSubmit={handleSubmit} className="form-grid">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Full Name</label>
             <input 
               type="text" 
@@ -248,7 +249,7 @@ const Staff = () => {
               onChange={(e) => setForm({...form, phoneNumber: e.target.value})}
             />
           </div>
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2">
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2 full-width">
             <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary h-11 px-5" disabled={actionLoading}>
               {actionLoading ? 'Saving...' : 'Register Employee'}

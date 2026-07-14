@@ -146,7 +146,7 @@ const Mess = () => {
             <ArrowLeft size={16} />
           </button>
         )}
-        <div>
+        <div className="page-header mb-0 sm:mb-0">
           <h1 className="page-title leading-tight">
             {user.role === 'ADMIN' ? 'Mess Biometrics & Schedule' : 'Mess Schedule & Dining'}
           </h1>

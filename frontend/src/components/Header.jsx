@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { Bell, Megaphone, LogOut, ChevronDown, Menu, Search, Sun, Moon } from 'lucide-react';
 
 const Header = ({ isCollapsed, onMenuToggle }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const [notices, setNotices] = useState([]);
   const [showNoticesDropdown, setShowNoticesDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -83,10 +84,6 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
         </button>
 
         <div className="flex items-center gap-2">
-          {/* Mockup burger icon for desktop just for the visual match of reference */}
-          <div className="hidden lg:flex w-9 h-9 rounded-full bg-white border border-slate-200 shadow-sm items-center justify-center text-slate-500 mr-2">
-            <Menu size={16} />
-          </div>
           <div className="flex flex-col text-left">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-slate-600">Hello, <strong className="text-slate-900">{user.name}</strong> 👋</span>
@@ -193,7 +190,10 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
                 <p className="text-[12px] text-slate-500 truncate mt-0.5">{user.email}</p>
               </div>
               <button 
-                onClick={logout} 
+                onClick={() => {
+                  logout();
+                  navigate('/login');
+                }} 
                 className="flex items-center gap-3 w-full p-3 bg-transparent border-none rounded-[12px] cursor-pointer text-[13px] text-left transition-all hover:bg-rose-50 text-rose-600 font-semibold"
               >
                 <LogOut size={16} />

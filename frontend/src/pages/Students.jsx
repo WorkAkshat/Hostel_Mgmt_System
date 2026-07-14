@@ -132,7 +132,7 @@ const Students = () => {
   return (
     <div className="animate-fade-in flex flex-col gap-6 text-left">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
+        <div className="page-header mb-0 sm:mb-0">
           <h1 className="page-title">Students Directory</h1>
           <p className="page-subtitle">Add, edit, remove student enrollments and manage room allocation mapping.</p>
         </div>
@@ -342,8 +342,8 @@ const Students = () => {
             <span>{addError}</span>
           </div>
         )}
-        <form onSubmit={handleAddSubmit} className="flex flex-col gap-4">
-          <div className="form-group">
+        <form onSubmit={handleAddSubmit} className="form-grid">
+          <div className="form-group full-width">
             <label className="form-label">Full Name</label>
             <input 
               type="text" 
@@ -428,7 +428,7 @@ const Students = () => {
               ))}
             </select>
           </div>
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 full-width">
             <button type="button" className="btn-secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary">Register</button>
           </div>
@@ -443,8 +443,8 @@ const Students = () => {
             <span>{editError}</span>
           </div>
         )}
-        <form onSubmit={handleEditSubmit} className="flex flex-col gap-4">
-          <div className="form-group">
+        <form onSubmit={handleEditSubmit} className="form-grid">
+          <div className="form-group full-width">
             <label className="form-label">Full Name</label>
             <input 
               type="text" 
@@ -508,7 +508,7 @@ const Students = () => {
               <option value="SUSPENDED">Suspended</option>
             </select>
           </div>
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 full-width">
             <button type="button" className="btn-secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary">Save Changes</button>
           </div>

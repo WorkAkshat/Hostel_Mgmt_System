@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Pages
 import Login from './pages/Login';
@@ -94,9 +95,17 @@ const DashboardLayout = () => {
           isCollapsed={isCollapsed}
           onMenuToggle={() => setIsMobileOpen(true)} 
         />
-        <main className="animate-fade-in">
-          <Outlet />
-        </main>
+        <AnimatePresence mode="wait">
+          <motion.main 
+            key={location.pathname}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+          >
+            <Outlet />
+          </motion.main>
+        </AnimatePresence>
       </div>
 
       {/* Sticky Floating Bottom Navigation Bar for Mobile */}
@@ -150,6 +159,7 @@ const DashboardLayout = () => {
               onClick={() => {
                 setShowProfileModal(false);
                 logout();
+                navigate('/login');
               }}
               className="flex items-center justify-center gap-2 w-full py-3 bg-[var(--danger-bg)] text-[var(--danger)] border-none rounded-lg font-semibold cursor-pointer transition-colors"
             >

@@ -103,7 +103,7 @@ const Complaints = () => {
             <ArrowLeft size={16} />
           </button>
         )}
-        <div>
+        <div className="page-header mb-0 sm:mb-0">
           <h1 className="page-title leading-tight">
             {user.role === 'ADMIN' ? 'Maintenance Helpdesk' : 'Raise Complaint'}
           </h1>
@@ -131,8 +131,8 @@ const Complaints = () => {
               </div>
             )}
 
-            <form onSubmit={handleStudentSubmit} className="flex flex-col gap-4">
-              <div className="form-group mb-1">
+            <form onSubmit={handleStudentSubmit} className="form-grid">
+              <div className="form-group mb-1 full-width">
                 <label className="form-label">Category of Issue</label>
                 <select 
                   className="form-input"
@@ -148,7 +148,7 @@ const Complaints = () => {
                 </select>
               </div>
 
-              <div className="form-group mb-1">
+              <div className="form-group mb-1 full-width">
                 <label className="form-label">Urgency Priority</label>
                 <div className="grid grid-cols-4 gap-2">
                   {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map(p => (
@@ -168,7 +168,7 @@ const Complaints = () => {
                 </div>
               </div>
 
-              <div className="form-group mb-0">
+              <div className="form-group mb-0 full-width">
                 <label className="form-label">Describe the Issue</label>
                 <textarea 
                   className="form-input h-24 py-2.5" 
@@ -180,10 +180,12 @@ const Complaints = () => {
                 />
               </div>
 
-              <button type="submit" className="btn-primary w-full justify-center mt-2.5">
-                <Wrench size={16} />
-                <span>Raise Complaint</span>
-              </button>
+              <div className="full-width">
+                <button type="submit" className="btn-primary w-full justify-center mt-2.5">
+                  <Wrench size={16} />
+                  <span>Raise Complaint</span>
+                </button>
+              </div>
             </form>
           </div>
 
@@ -322,8 +324,8 @@ const Complaints = () => {
         onClose={() => setIsActionModalOpen(false)} 
         title={`Process Ticket #${selectedComplaint?.id?.split('-')[0].toUpperCase()}`}
       >
-        <form onSubmit={handleWardenActionSubmit} className="flex flex-col gap-4">
-          <div className="form-group mb-0">
+        <form onSubmit={handleWardenActionSubmit} className="form-grid">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Ticket Status</label>
             <select 
               className="form-input"
@@ -336,17 +338,17 @@ const Complaints = () => {
             </select>
           </div>
 
-          <div className="form-group mb-0">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Resolution Comments / Action Notes</label>
             <textarea 
               className="form-input h-24 py-2.5" 
-              placeholder="e.g. Electrician Sunil has been assigned. Scheduled to visit room A-101 today by 3 PM. / Tap washer replaced. Resolved."
+              placeholder="Provide detailed resolution notes (e.g., Assigned technician scheduled for maintenance at 15:00 hours / Issue successfully rectified)."
               value={wardenNotes}
               onChange={(e) => setWardenNotes(e.target.value)}
             />
           </div>
 
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2">
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2 full-width">
             <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsActionModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary h-11 px-5" disabled={actionLoading}>
               {actionLoading ? 'Updating ticket...' : 'Save Ticket Status'}

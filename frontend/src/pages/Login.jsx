@@ -35,9 +35,25 @@ const Login = () => {
     }
   };
 
-  const handleQuickLogin = (roleEmail) => {
+  const handleQuickLogin = async (roleEmail) => {
     setEmail(roleEmail);
     setPassword('password123');
+    
+    // Auto-login
+    setLocalError(null);
+    setError(null);
+    try {
+      const loggedUser = await login(roleEmail, 'password123');
+      if (loggedUser.role === 'ADMIN') {
+        navigate('/admin/dashboard');
+      } else if (loggedUser.role === 'STUDENT') {
+        navigate('/student/dashboard');
+      } else {
+        navigate('/staff/visitors');
+      }
+    } catch (err) {
+      // Handled by context
+    }
   };
 
   return (

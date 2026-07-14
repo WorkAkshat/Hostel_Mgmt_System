@@ -122,7 +122,7 @@ const Fees = () => {
             <ArrowLeft size={16} />
           </button>
         )}
-        <div>
+        <div className="page-header mb-0 sm:mb-0">
           <h1 className="page-title leading-tight">
             {user.role === 'ADMIN' ? 'Hostel Fee Ledger' : 'My Invoices & Receipts'}
           </h1>
@@ -306,8 +306,8 @@ const Fees = () => {
             <span>{generateError}</span>
           </div>
         )}
-        <form onSubmit={handleGenerateSubmit} className="flex flex-col gap-4">
-          <div className="form-group mb-0">
+        <form onSubmit={handleGenerateSubmit} className="form-grid">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Student Roll Number</label>
             <input 
               type="text" 
@@ -339,7 +339,7 @@ const Fees = () => {
               onChange={(e) => setGenerateForm({...generateForm, dueDate: e.target.value})}
             />
           </div>
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2">
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2 full-width">
             <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsGenerateModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary h-11 px-5" disabled={generateLoading}>
               {generateLoading ? 'Generating...' : 'Dispatch Invoice'}
@@ -350,8 +350,8 @@ const Fees = () => {
 
       {/* STUDENT CREDIT CARD MOCK CHECKOUT PAYMENT GATEWAY */}
       <CustomModal isOpen={isPayModalOpen} onClose={() => setIsPayModalOpen(false)} title="Secure Payment Gateway">
-        <form onSubmit={handleProcessPayment} className="flex flex-col gap-4">
-          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col gap-2.5 text-xs text-slate-600 text-left">
+        <form onSubmit={handleProcessPayment} className="form-grid">
+          <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 flex flex-col gap-2.5 text-xs text-slate-600 text-left full-width">
             <h4 className="font-bold text-slate-400 uppercase tracking-wider text-[10px] mb-1">Invoice Summary</h4>
             <div className="flex justify-between items-center pb-2 border-b border-slate-200/50">
               <span>Hostel Maintenance Charges:</span>
@@ -363,11 +363,11 @@ const Fees = () => {
             </div>
           </div>
 
-          <p className="text-[10px] text-slate-400 font-semibold leading-relaxed uppercase tracking-wider">
+          <p className="text-[10px] text-slate-400 font-semibold leading-relaxed uppercase tracking-wider full-width">
             This is a secure mock payment sandbox. Click Confirm to clear this bill from outstanding records.
           </p>
 
-          <div className="form-group mb-0">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Cardholder Name</label>
             <input 
               type="text" 
@@ -378,7 +378,7 @@ const Fees = () => {
             />
           </div>
 
-          <div className="form-group mb-0">
+          <div className="form-group mb-0 full-width">
             <label className="form-label">Card Number</label>
             <input 
               type="text" 
@@ -389,7 +389,7 @@ const Fees = () => {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4 full-width">
             <div className="form-group mb-0">
               <label className="form-label">Expiry Date</label>
               <input 
@@ -414,7 +414,7 @@ const Fees = () => {
             </div>
           </div>
 
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2">
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2 full-width">
             <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsPayModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary h-11 px-5" disabled={paymentLoading}>
               {paymentLoading ? 'Processing transaction...' : `Pay ₹${selectedInvoice?.amount?.toLocaleString()}`}

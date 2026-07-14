@@ -118,7 +118,7 @@ const Rooms = () => {
   return (
     <div className="animate-fade-in flex flex-col gap-6 text-left">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
+        <div className="page-header mb-0 sm:mb-0">
           <h1 className="page-title">Rooms & Inventory Assets</h1>
           <p className="page-subtitle">Inspect rooms sharing status, occupancy blocks, and audit property assets condition.</p>
         </div>
@@ -288,8 +288,8 @@ const Rooms = () => {
             <span>{addError}</span>
           </div>
         )}
-        <form onSubmit={handleAddSubmit} className="flex flex-col gap-4">
-          <div className="form-group">
+        <form onSubmit={handleAddSubmit} className="form-grid">
+          <div className="form-group full-width">
             <label className="form-label">Room Number</label>
             <input 
               type="text" 
@@ -334,7 +334,7 @@ const Rooms = () => {
             />
             <label htmlFor="isAc" className="cursor-pointer font-medium text-xs text-slate-500 uppercase tracking-wider">Equipped with Air Conditioning (AC)</label>
           </div>
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2">
+          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2 full-width">
             <button type="button" className="btn-secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
             <button type="submit" className="btn-primary">Create Room</button>
           </div>
