@@ -572,34 +572,34 @@ const Dashboard = () => {
         <div className="flex flex-col gap-4 text-left">
           <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Immediate hotlines for security and resident assistance.</p>
           <div className="flex flex-col gap-3">
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between gap-4">
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h4 className="text-sm font-bold text-slate-800">Dr. Shalini Sharma</h4>
                 <p className="text-xs text-slate-400 font-medium mt-0.5">Chief Hostel Warden</p>
               </div>
-              <a href="tel:+919876543210" className="btn-primary h-10 px-4 text-xs shrink-0">
+              <a href="tel:+919876543210" className="btn-primary h-10 px-4 text-xs shrink-0 w-full sm:w-auto justify-center">
                 <Phone size={14} />
                 <span>Call Warden</span>
               </a>
             </div>
 
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between gap-4">
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h4 className="text-sm font-bold text-slate-800">Main Security Gate Desk</h4>
                 <p className="text-xs text-slate-400 font-medium mt-0.5">24/7 Gate Guard Wing</p>
               </div>
-              <a href="tel:+919876543211" className="btn-primary h-10 px-4 text-xs shrink-0">
+              <a href="tel:+919876543211" className="btn-primary h-10 px-4 text-xs shrink-0 w-full sm:w-auto justify-center">
                 <Phone size={14} />
                 <span>Call Gate</span>
               </a>
             </div>
 
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between gap-4">
+            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h4 className="text-sm font-bold text-slate-800">Ambulance & Medical Wing</h4>
                 <p className="text-xs text-slate-400 font-medium mt-0.5">Campus Health Center</p>
               </div>
-              <a href="tel:+919876543212" className="btn-primary h-10 px-4 text-xs shrink-0">
+              <a href="tel:+919876543212" className="btn-primary h-10 px-4 text-xs shrink-0 w-full sm:w-auto justify-center">
                 <Phone size={14} />
                 <span>Call Clinic</span>
               </a>

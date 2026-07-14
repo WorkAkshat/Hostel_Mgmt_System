@@ -68,13 +68,13 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
 
   return (
     <header 
-      className={`h-[80px] fixed top-0 right-0 z-30 flex items-center justify-between px-8 transition-all duration-300 ${
+      className={`h-[80px] fixed top-0 right-0 z-30 flex items-center justify-between px-4 sm:px-8 transition-all duration-300 ${
         scrolled ? 'bg-white/80 backdrop-blur-xl shadow-[0_4px_24px_rgba(15,23,42,0.04)] border-b border-white/40' : 'bg-transparent border-b border-transparent'
       }`}
       style={{ left: leftOffset }}
     >
       {/* Left Section - Mobile Hamburger / Breadcrumbs */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <button 
           onClick={onMenuToggle}
           className="lg:hidden w-10 h-10 rounded-[14px] bg-white border border-slate-200 flex items-center justify-center cursor-pointer text-slate-700 hover:bg-slate-50 shadow-sm"
@@ -85,9 +85,9 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
 
         <div className="flex items-center gap-2">
           <div className="flex flex-col text-left">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-slate-600">Hello, <strong className="text-slate-900">{user.name}</strong> 👋</span>
-              <span className="bg-blue-50 text-[var(--primary)] text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide border border-blue-100">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <span className="text-sm font-medium text-slate-600 hidden xs:inline">Hello, <strong className="text-slate-900">{user.name}</strong> 👋</span>
+              <span className="bg-blue-50 text-[var(--primary)] text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide border border-blue-100 hidden xs:inline">
                 {user.role === 'ADMIN' ? 'Chief Warden' : user.role === 'STAFF' ? 'Staff' : 'Student'}
               </span>
             </div>
@@ -107,7 +107,7 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
       </div>
 
       {/* Right Section - Utility Buttons & Dropdown */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Notices Bell */}
         <div className="relative">
           <button 
@@ -127,7 +127,7 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
 
           {/* ... notices dropdown ... */}
           {showNoticesDropdown && (
-            <div className="absolute right-0 top-12 w-[340px] max-h-[400px] rounded-[var(--border-radius-card)] flex flex-col shadow-2xl overflow-hidden border border-slate-200 bg-white/95 backdrop-blur-xl animate-fade-in z-50">
+            <div className="absolute -right-16 sm:right-0 top-12 w-[90vw] sm:w-[340px] max-w-[340px] max-h-[400px] rounded-[var(--border-radius-card)] flex flex-col shadow-2xl overflow-hidden border border-slate-200 bg-white/95 backdrop-blur-xl animate-fade-in z-50">
               <div className="flex items-center gap-2 p-4 border-b border-slate-100 bg-slate-50/80">
                 <Megaphone size={18} className="text-[var(--secondary)]" />
                 <h3 className="text-sm font-bold text-[var(--text-primary)]">Notice Board</h3>
@@ -184,7 +184,7 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
           </div>
 
           {showProfileDropdown && (
-            <div className="absolute right-0 top-12 w-[240px] rounded-[20px] shadow-[0_10px_35px_rgba(15,23,42,0.1)] p-2 border border-slate-200 bg-white/95 backdrop-blur-xl animate-fade-in z-50">
+            <div className="absolute right-0 top-12 w-[240px] max-w-[90vw] rounded-[20px] shadow-[0_10px_35px_rgba(15,23,42,0.1)] p-2 border border-slate-200 bg-white/95 backdrop-blur-xl animate-fade-in z-50">
               <div className="p-4 bg-slate-50/50 rounded-[14px] border border-slate-100 mb-2">
                 <p className="text-sm font-bold text-slate-800 truncate">{user.name}</p>
                 <p className="text-[12px] text-slate-500 truncate mt-0.5">{user.email}</p>

@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { CreditCard, Receipt, Calendar, FileText, CheckCircle, ShieldAlert, ArrowLeft } from 'lucide-react';
+import { CreditCard, Receipt, Calendar, FileText, CheckCircle, ShieldAlert, ArrowLeft, Download } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const Fees = () => {
   const { user } = useAuth();
@@ -50,20 +52,199 @@ const Fees = () => {
     fetchInvoices();
   }, [user]);
 
+  const handleDownloadPDF = (invoice) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+
+    // --- Colors & Branding ---
+    const primaryColor = [79, 70, 229]; // Indigo-600
+    const textGray = [71, 85, 105];
+    const textDark = [15, 23, 42];
+
+    // --- Header Section ---
+    doc.setFontSize(22);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text('GHMS PORTAL', 14, 22);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.text('Global Hostel Management System', 14, 28);
+    doc.text('123 University Campus Road, Education City, 400001', 14, 33);
+    doc.text('Phone: +91 800 123 4567 | Web: www.ghms-portal.edu', 14, 38);
+
+    // Invoice Meta
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+    doc.text('INVOICE', pageWidth - 14, 22, { align: 'right' });
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    const invoiceNumber = String(invoice.id).split('-')[0].toUpperCase();
+    doc.text(`Invoice No: #${invoiceNumber}`, pageWidth - 14, 30, { align: 'right' });
+    doc.text(`Issue Date: ${new Date().toLocaleDateString()}`, pageWidth - 14, 35, { align: 'right' });
+    doc.text(`Due Date: ${invoice.dueDate ? new Date(invoice.dueDate).toLocaleDateString() : 'N/A'}`, pageWidth - 14, 40, { align: 'right' });
+    
+    let yOffset = 45;
+    if (invoice.status === 'PAID' && invoice.paidAt) {
+      doc.text(`Payment Date: ${new Date(invoice.paidAt).toLocaleDateString()}`, pageWidth - 14, 45, { align: 'right' });
+      yOffset = 50;
+    }
+
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.line(14, yOffset, pageWidth - 14, yOffset);
+
+    // --- Student Details Section ---
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+    doc.text('Billed To:', 14, yOffset + 10);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    const studentName = invoice.student?.user?.name || 'N/A';
+    const rollNo = invoice.student?.rollNumber || 'N/A';
+    const roomInfo = invoice.student?.room ? `Room ${invoice.student.room.roomNumber} (${invoice.student.room.block})` : 'Unallocated';
+    
+    doc.text(`Student Name: ${studentName}`, 14, yOffset + 17);
+    doc.text(`Roll Number: ${rollNo}`, 14, yOffset + 23);
+    doc.text(`Hostel / Room: ${roomInfo}`, 14, yOffset + 29);
+    doc.text(`Course: B.Tech Computer Science`, 14, yOffset + 35);
+
+    // Status Badge Equivalent
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    if (invoice.status === 'PAID') {
+      doc.setTextColor(16, 185, 129); // emerald-500
+      doc.text('STATUS: PAID', pageWidth - 14, yOffset + 17, { align: 'right' });
+    } else {
+      doc.setTextColor(239, 68, 68); // red-500
+      doc.text('STATUS: PENDING', pageWidth - 14, yOffset + 17, { align: 'right' });
+    }
+
+    // --- Fee Breakdown Table ---
+    const totalAmount = Number(invoice.amount) || 0;
+    const hostelFee = Math.round(totalAmount * 0.55);
+    const messFee = Math.round(totalAmount * 0.35);
+    const electricity = Math.round(totalAmount * 0.05);
+    const otherCharges = totalAmount - (hostelFee + messFee + electricity);
+
+    const tableData = [
+      ['1', 'Hostel Accommodation Fee', `Rs. ${hostelFee.toLocaleString()}`],
+      ['2', 'Mess & Dining Services', `Rs. ${messFee.toLocaleString()}`],
+      ['3', 'Electricity & Utility Charges', `Rs. ${electricity.toLocaleString()}`],
+      ['4', 'Maintenance & Other Charges', `Rs. ${otherCharges.toLocaleString()}`],
+    ];
+
+    autoTable(doc, {
+      startY: yOffset + 45,
+      head: [['#', 'Description', 'Amount (INR)']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: primaryColor, textColor: [255, 255, 255] },
+      styles: { fontSize: 10, cellPadding: 6 },
+      columnStyles: {
+        0: { cellWidth: 20 },
+        1: { cellWidth: 'auto' },
+        2: { cellWidth: 50, halign: 'right' }
+      }
+    });
+
+    // --- Totals Section ---
+    const finalY = doc.lastAutoTable?.finalY || 150;
+    
+    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Subtotal:', pageWidth - 64, finalY + 10);
+    doc.text('Discounts:', pageWidth - 64, finalY + 16);
+    doc.text('GST (0%):', pageWidth - 64, finalY + 22);
+
+    doc.text(`Rs. ${totalAmount.toLocaleString()}`, pageWidth - 14, finalY + 10, { align: 'right' });
+    doc.text(`Rs. 0`, pageWidth - 14, finalY + 16, { align: 'right' });
+    doc.text(`Rs. 0`, pageWidth - 14, finalY + 22, { align: 'right' });
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Total Amount:', pageWidth - 64, finalY + 32);
+    doc.text(`Rs. ${totalAmount.toLocaleString()}`, pageWidth - 14, finalY + 32, { align: 'right' });
+
+    doc.setFontSize(10);
+    doc.text('Amount Paid:', pageWidth - 64, finalY + 40);
+    const paidAmount = invoice.status === 'PAID' ? totalAmount : 0;
+    const balanceDue = totalAmount - paidAmount;
+    doc.text(`Rs. ${paidAmount.toLocaleString()}`, pageWidth - 14, finalY + 40, { align: 'right' });
+    
+    doc.text('Balance Due:', pageWidth - 64, finalY + 48);
+    if (balanceDue > 0) {
+      doc.setTextColor(239, 68, 68);
+    } else {
+      doc.setTextColor(16, 185, 129);
+    }
+    doc.text(`Rs. ${balanceDue.toLocaleString()}`, pageWidth - 14, finalY + 48, { align: 'right' });
+
+    // --- Footer & Signatures ---
+    doc.setTextColor(textDark[0], textDark[1], textDark[2]);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Payment Instructions:', 14, finalY + 20);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('Please make the payment before the due date to avoid late fees.', 14, finalY + 26);
+    doc.text('For bank transfers: A/C: 1234567890, IFSC: GHMS0001234, Bank of Hostel.', 14, finalY + 32);
+
+    doc.setDrawColor(textDark[0], textDark[1], textDark[2]);
+    doc.line(14, 270, pageWidth - 14, 270);
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Authorized Signatory', pageWidth - 45, 255, { align: 'center' });
+    doc.line(pageWidth - 75, 248, pageWidth - 15, 248);
+
+    // Footer
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    doc.setTextColor(textGray[0], textGray[1], textGray[2]);
+    doc.text('This is a computer-generated document. No signature is required.', pageWidth / 2, 275, { align: 'center' });
+    doc.text(`Page 1 of 1`, pageWidth - 14, 285, { align: 'right' });
+
+    // Save PDF
+    const safeRollNo = String(rollNo).replace(/[^a-zA-Z0-9]/g, '_');
+    doc.save(`Invoice_${safeRollNo}_${invoiceNumber}.pdf`);
+  };
+
   // Handle Warden billing generation
   const handleGenerateSubmit = async (e) => {
     e.preventDefault();
     setGenerateError(null);
     try {
       setGenerateLoading(true);
-      await api('/invoices', {
+      const response = await api('/invoices', {
         method: 'POST',
         body: generateForm
       });
       setIsGenerateModalOpen(false);
-      setGenerateForm({ studentRollNumber: '', amount: '', dueDate: '' });
       fetchInvoices();
-      alert('Invoice generated successfully.');
+      alert('Invoice generated successfully. Downloading PDF...');
+      
+      // Auto-download PDF
+      const invoiceForPDF = {
+         id: response?.id || `INV-${Date.now()}`,
+         amount: Number(generateForm.amount),
+         dueDate: generateForm.dueDate,
+         status: 'UNPAID',
+         student: response?.student || {
+           rollNumber: generateForm.studentRollNumber,
+           user: { name: 'Student' }
+         }
+      };
+      handleDownloadPDF(invoiceForPDF);
+      
+      setGenerateForm({ studentRollNumber: '', amount: '', dueDate: '' });
     } catch (error) {
       setGenerateError(error.message || 'Failed to generate invoice');
     } finally {
@@ -206,15 +387,24 @@ const Fees = () => {
                   <span className="text-slate-600 normal-case">{invoice.paidAt ? new Date(invoice.paidAt).toLocaleDateString() : 'Pending'}</span>
                 </div>
 
-                {invoice.status === 'UNPAID' && user.role === 'STUDENT' && (
+                <div className="flex gap-2">
+                  {invoice.status === 'UNPAID' && user.role === 'STUDENT' && (
+                    <button 
+                      className="btn-primary flex-1 justify-center"
+                      onClick={() => openPaymentModal(invoice)}
+                    >
+                      <CreditCard size={14} />
+                      <span>Pay Invoice</span>
+                    </button>
+                  )}
                   <button 
-                    className="btn-primary w-full justify-center"
-                    onClick={() => openPaymentModal(invoice)}
+                    className="flex-1 bg-slate-50 border border-slate-200/60 text-slate-600 hover:text-slate-900 cursor-pointer h-11 rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center font-bold text-xs gap-2"
+                    onClick={() => handleDownloadPDF(invoice)}
                   >
-                    <CreditCard size={14} />
-                    <span>Pay Invoice</span>
+                    <Download size={14} />
+                    <span>Download PDF</span>
                   </button>
-                )}
+                </div>
               </div>
             ))}
           </div>
@@ -273,19 +463,36 @@ const Fees = () => {
                       </span>
                     </td>
                     <td>
-                      <div className="flex items-center justify-end">
-                        {invoice.status === 'UNPAID' ? (
-                          user.role === 'STUDENT' ? (
-                            <button className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0" onClick={() => openPaymentModal(invoice)}>
-                              <CreditCard size={14} /> <span>Pay Now</span>
-                            </button>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic font-medium">Awaiting payment</span>
-                          )
-                        ) : (
-                          <div className="flex items-center gap-1 text-emerald-600 text-xs font-bold bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-lg">
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 cursor-pointer transition-all hover:text-slate-800 shadow-sm" 
+                          onClick={() => handleDownloadPDF(invoice)}
+                          title="Download PDF Invoice"
+                        >
+                          <Download size={14} />
+                        </button>
+                        
+                        {invoice.status === 'PAID' ? (
+                          <div className="flex items-center gap-1.5 text-emerald-600 text-[11px] font-bold bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-lg h-8 uppercase tracking-wider shadow-sm cursor-default" title="Payment Completed">
                             <CheckCircle size={12} />
                             <span>Paid</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 text-rose-600 text-[11px] font-bold bg-rose-50 border border-rose-100 px-2.5 py-1 rounded-lg h-8 uppercase tracking-wider shadow-sm cursor-default" title="Payment Pending">
+                              <ShieldAlert size={12} />
+                              <span>Unpaid</span>
+                            </div>
+                            
+                            {user.role === 'STUDENT' && (
+                              <button 
+                                className="btn-primary h-8 px-3 text-xs font-bold shrink-0 shadow-sm transition-transform hover:-translate-y-0.5" 
+                                onClick={() => openPaymentModal(invoice)}
+                                title="Process Secure Payment"
+                              >
+                                <CreditCard size={14} /> <span>Pay Now</span>
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>

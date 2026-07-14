@@ -256,35 +256,32 @@ const Complaints = () => {
           ) : complaints.length === 0 ? (
             <p className="text-center py-12 text-slate-400 text-sm">All quiet. No active complaints registered.</p>
           ) : (
-            <div className="custom-table-container animate-fade-in">
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Student & Room</th>
-                    <th>Category</th>
-                    <th>Issue Description</th>
-                    <th>Priority</th>
-                    <th>Date Raised</th>
-                    <th>Status</th>
-                    <th className="text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {complaints.map((c) => (
-                    <tr key={c.id}>
-                      <td>
-                        <div className="flex flex-col text-slate-600 text-xs">
-                          <h4 className="font-bold text-slate-800">{c.student?.user?.name}</h4>
-                          <span className="text-[10px] text-slate-400 mt-0.5">Room {c.student?.room?.roomNumber || 'N/A'}</span>
-                        </div>
-                      </td>
-                      <td><strong className="text-xs font-bold text-slate-800">{c.category}</strong></td>
-                      <td>
-                        <span className="text-xs text-slate-500 font-medium max-w-[220px] inline-block truncate" title={c.description}>
-                          {c.description}
-                        </span>
-                      </td>
-                      <td>
+            <div className="flex flex-col gap-4 animate-fade-in">
+              {/* Responsive Mobile Cards */}
+              <div className="grid grid-cols-1 gap-4 md:hidden">
+                {complaints.map((c) => (
+                  <div key={c.id} className="glass-card p-5 shadow-sm flex flex-col gap-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Student</span>
+                        <h4 className="text-xs font-bold text-slate-800 mt-0.5">{c.student?.user?.name}</h4>
+                        <span className="text-[10px] text-slate-500">Room {c.student?.room?.roomNumber || 'N/A'}</span>
+                      </div>
+                      <span className={`badge shrink-0 ${
+                        c.status === 'RESOLVED' ? 'badge-success' :
+                        c.status === 'IN_PROGRESS' ? 'badge-info' : 'badge-warning'
+                      }`}>
+                        {c.status.toLowerCase()}
+                      </span>
+                    </div>
+                    
+                    <div className="py-3 border-t border-b border-slate-100 text-xs flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Category</span>
+                        <span className="text-xs font-bold text-slate-800">{c.category}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Priority</span>
                         <span className={`text-xs font-bold ${
                           c.priority === 'URGENT' ? 'text-red-500' :
                           c.priority === 'HIGH' ? 'text-amber-500' :
@@ -292,27 +289,84 @@ const Complaints = () => {
                         }`}>
                           {c.priority}
                         </span>
-                      </td>
-                      <td className="text-xs text-slate-600 font-medium">{new Date(c.createdAt).toLocaleDateString()}</td>
-                      <td>
-                        <span className={`badge ${
-                          c.status === 'RESOLVED' ? 'badge-success' :
-                          c.status === 'IN_PROGRESS' ? 'badge-info' : 'badge-warning'
-                        }`}>
-                          {c.status.toLowerCase()}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex justify-end">
-                          <button className="btn-secondary h-9 px-3.5 text-xs font-bold shrink-0" onClick={() => openWardenActionModal(c)}>
-                            Manage
-                          </button>
-                        </div>
-                      </td>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Issue Description</span>
+                        <span className="text-xs text-slate-500 font-medium">{c.description}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+                      <span>Date Raised:</span>
+                      <span className="text-slate-600 normal-case">{new Date(c.createdAt).toLocaleDateString()}</span>
+                    </div>
+
+                    <button className="btn-secondary w-full justify-center mt-2" onClick={() => openWardenActionModal(c)}>
+                      Manage Ticket
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block custom-table-container">
+                <table className="custom-table">
+                  <thead>
+                    <tr>
+                      <th>Student & Room</th>
+                      <th>Category</th>
+                      <th>Issue Description</th>
+                      <th>Priority</th>
+                      <th>Date Raised</th>
+                      <th>Status</th>
+                      <th className="text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {complaints.map((c) => (
+                      <tr key={c.id}>
+                        <td>
+                          <div className="flex flex-col text-slate-600 text-xs">
+                            <h4 className="font-bold text-slate-800">{c.student?.user?.name}</h4>
+                            <span className="text-[10px] text-slate-400 mt-0.5">Room {c.student?.room?.roomNumber || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td><strong className="text-xs font-bold text-slate-800">{c.category}</strong></td>
+                        <td>
+                          <span className="text-xs text-slate-500 font-medium max-w-[220px] inline-block truncate" title={c.description}>
+                            {c.description}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`text-xs font-bold ${
+                            c.priority === 'URGENT' ? 'text-red-500' :
+                            c.priority === 'HIGH' ? 'text-amber-500' :
+                            c.priority === 'MEDIUM' ? 'text-blue-500' : 'text-slate-500'
+                          }`}>
+                            {c.priority}
+                          </span>
+                        </td>
+                        <td className="text-xs text-slate-600 font-medium">{new Date(c.createdAt).toLocaleDateString()}</td>
+                        <td>
+                          <span className={`badge ${
+                            c.status === 'RESOLVED' ? 'badge-success' :
+                            c.status === 'IN_PROGRESS' ? 'badge-info' : 'badge-warning'
+                          }`}>
+                            {c.status.toLowerCase()}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="flex justify-end">
+                            <button className="btn-secondary h-9 px-3.5 text-xs font-bold shrink-0" onClick={() => openWardenActionModal(c)}>
+                              Manage
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

@@ -358,113 +358,212 @@ const Leaves = () => {
           ) : leaves.length === 0 ? (
             <p className="text-center py-12 text-slate-400 text-sm">No requests in the queue.</p>
           ) : (
-            <div className="custom-table-container">
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Student Info</th>
-                    <th>Roll / Room</th>
-                    <th>Duration Dates</th>
-                    <th>Reason</th>
-                    <th>Status</th>
-                    <th className="text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaves.map((leave) => (
-                    <tr key={leave.id}>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 font-extrabold text-xs flex items-center justify-center border border-blue-100/60 shadow-sm shrink-0">
-                            {leave.student?.user?.name?.charAt(0).toUpperCase()}
-                          </div>
-                          <div className="flex flex-col overflow-hidden">
-                            <h4 className="text-xs font-bold text-slate-800 truncate">{leave.student?.user?.name}</h4>
-                            <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{leave.type.replace('_', ' ')}</span>
-                          </div>
+            <div className="flex flex-col gap-4">
+              {/* Responsive Mobile Cards */}
+              <div className="grid grid-cols-1 gap-4 md:hidden">
+                {leaves.map((leave) => (
+                  <div key={leave.id} className="glass-card p-5 shadow-sm flex flex-col gap-4">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 font-extrabold text-xs flex items-center justify-center border border-blue-100/60 shadow-sm shrink-0">
+                          {leave.student?.user?.name?.charAt(0).toUpperCase()}
                         </div>
-                      </td>
-                      <td>
-                        <div className="flex flex-col text-slate-600 text-xs">
-                          <code className="font-mono font-semibold text-slate-700">{leave.student?.rollNumber}</code>
-                          <span className="text-[10px] text-slate-400 mt-0.5">
-                            Room {leave.student?.room?.roomNumber || 'N/A'}
-                          </span>
+                        <div className="flex flex-col overflow-hidden">
+                          <h4 className="text-xs font-bold text-slate-800 truncate">{leave.student?.user?.name}</h4>
+                          <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{leave.type.replace('_', ' ')}</span>
                         </div>
-                      </td>
-                      <td>
-                        <div className="flex flex-col text-slate-600 text-xs">
+                      </div>
+                      <span className={`badge shrink-0 ${
+                        leave.status === 'APPROVED' ? 'badge-success' :
+                        leave.status === 'PENDING' ? 'badge-warning' :
+                        leave.status === 'REJECTED' ? 'badge-danger' : 'badge-info'
+                      }`}>
+                        {leave.status.toLowerCase()}
+                      </span>
+                    </div>
+
+                    <div className="py-3 border-t border-b border-slate-100 text-xs flex flex-col gap-2">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Roll Number</span>
+                        <code className="font-mono font-semibold text-slate-700">{leave.student?.rollNumber}</code>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Room</span>
+                        <span className="text-xs font-bold text-slate-800">{leave.student?.room?.roomNumber || 'N/A'}</span>
+                      </div>
+                      <div className="flex flex-col mt-1">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Duration</span>
+                        <div className="text-xs text-slate-600 flex flex-col gap-1">
                           <span><strong>Out:</strong> {new Date(leave.startDate).toLocaleDateString()} {new Date(leave.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          <span className="mt-0.5"><strong>In:</strong> {new Date(leave.endDate).toLocaleDateString()} {new Date(leave.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          <span><strong>In:</strong> {new Date(leave.endDate).toLocaleDateString()} {new Date(leave.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
-                      </td>
-                      <td>
-                        <span className="text-xs text-slate-500 font-medium max-w-[200px] inline-block truncate" title={leave.reason}>
-                          {leave.reason}
+                      </div>
+                      <div className="flex flex-col mt-1">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Reason</span>
+                        <span className="text-xs text-slate-500 font-medium">{leave.reason}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      {leave.status === 'PENDING' && user.role === 'ADMIN' && (
+                        <>
+                          <button 
+                            className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0 w-full sm:w-auto justify-center"
+                            onClick={() => openWardenActionModal(leave, 'APPROVED')}
+                          >
+                            <CheckCircle size={14} /> <span>Approve</span>
+                          </button>
+                          <button 
+                            className="btn-secondary h-9 px-3.5 text-xs font-bold text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0 w-full sm:w-auto justify-center"
+                            onClick={() => openWardenActionModal(leave, 'REJECTED')}
+                          >
+                            <XCircle size={14} /> <span>Reject</span>
+                          </button>
+                        </>
+                      )}
+                      
+                      {leave.status === 'APPROVED' && (
+                        <button 
+                          className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0 w-full sm:w-auto justify-center"
+                          onClick={() => handleLogCheckout(leave.id)}
+                        >
+                          <LogOut size={14} /> <span>Log Gate Out</span>
+                        </button>
+                      )}
+
+                      {leave.status === 'CHECKED_OUT' && (
+                        <button 
+                          className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto justify-center"
+                          onClick={() => handleLogCheckin(leave.id)}
+                        >
+                          <LogIn size={14} /> <span>Log Gate In</span>
+                        </button>
+                      )}
+
+                      {leave.status === 'RETURNED' && (
+                        <span className="text-[11px] text-emerald-600 font-extrabold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded w-full text-center sm:w-auto">
+                          Returned (Gate scan)
                         </span>
-                      </td>
-                      <td>
-                        <span className={`badge ${
-                          leave.status === 'APPROVED' ? 'badge-success' :
-                          leave.status === 'PENDING' ? 'badge-warning' :
-                          leave.status === 'REJECTED' ? 'badge-danger' : 'badge-info'
-                        }`}>
-                          {leave.status.toLowerCase()}
+                      )}
+                      {leave.status === 'REJECTED' && (
+                        <span className="text-[11px] text-red-500 font-extrabold bg-red-50 border border-red-100 px-2 py-0.5 rounded w-full text-center sm:w-auto">
+                          Rejected
                         </span>
-                      </td>
-                      <td>
-                        <div className="flex items-center justify-end gap-2">
-                          {leave.status === 'PENDING' && user.role === 'ADMIN' && (
-                            <>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden md:block custom-table-container">
+                <table className="custom-table">
+                  <thead>
+                    <tr>
+                      <th>Student Info</th>
+                      <th>Roll / Room</th>
+                      <th>Duration Dates</th>
+                      <th>Reason</th>
+                      <th>Status</th>
+                      <th className="text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaves.map((leave) => (
+                      <tr key={leave.id}>
+                        <td>
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-600 font-extrabold text-xs flex items-center justify-center border border-blue-100/60 shadow-sm shrink-0">
+                              {leave.student?.user?.name?.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="flex flex-col overflow-hidden">
+                              <h4 className="text-xs font-bold text-slate-800 truncate">{leave.student?.user?.name}</h4>
+                              <span className="text-[10px] text-slate-400 uppercase tracking-wider mt-0.5">{leave.type.replace('_', ' ')}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex flex-col text-slate-600 text-xs">
+                            <code className="font-mono font-semibold text-slate-700">{leave.student?.rollNumber}</code>
+                            <span className="text-[10px] text-slate-400 mt-0.5">
+                              Room {leave.student?.room?.roomNumber || 'N/A'}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <div className="flex flex-col text-slate-600 text-xs">
+                            <span><strong>Out:</strong> {new Date(leave.startDate).toLocaleDateString()} {new Date(leave.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            <span className="mt-0.5"><strong>In:</strong> {new Date(leave.endDate).toLocaleDateString()} {new Date(leave.endDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className="text-xs text-slate-500 font-medium max-w-[200px] inline-block truncate" title={leave.reason}>
+                            {leave.reason}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={`badge ${
+                            leave.status === 'APPROVED' ? 'badge-success' :
+                            leave.status === 'PENDING' ? 'badge-warning' :
+                            leave.status === 'REJECTED' ? 'badge-danger' : 'badge-info'
+                          }`}>
+                            {leave.status.toLowerCase()}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="flex items-center justify-end gap-2">
+                            {leave.status === 'PENDING' && user.role === 'ADMIN' && (
+                              <>
+                                <button 
+                                  className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0"
+                                  onClick={() => openWardenActionModal(leave, 'APPROVED')}
+                                >
+                                  <CheckCircle size={14} /> <span>Approve</span>
+                                </button>
+                                <button 
+                                  className="btn-secondary h-9 px-3.5 text-xs font-bold text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
+                                  onClick={() => openWardenActionModal(leave, 'REJECTED')}
+                                >
+                                  <XCircle size={14} /> <span>Reject</span>
+                                </button>
+                              </>
+                            )}
+                            
+                            {leave.status === 'APPROVED' && (
                               <button 
                                 className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0"
-                                onClick={() => openWardenActionModal(leave, 'APPROVED')}
+                                onClick={() => handleLogCheckout(leave.id)}
                               >
-                                <CheckCircle size={14} /> <span>Approve</span>
+                                <LogOut size={14} /> <span>Log Gate Out</span>
                               </button>
+                            )}
+
+                            {leave.status === 'CHECKED_OUT' && (
                               <button 
-                                className="btn-secondary h-9 px-3.5 text-xs font-bold text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
-                                onClick={() => openWardenActionModal(leave, 'REJECTED')}
+                                className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700"
+                                onClick={() => handleLogCheckin(leave.id)}
                               >
-                                <XCircle size={14} /> <span>Reject</span>
+                                <LogIn size={14} /> <span>Log Gate In</span>
                               </button>
-                            </>
-                          )}
-                          
-                          {leave.status === 'APPROVED' && (
-                            <button 
-                              className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0"
-                              onClick={() => handleLogCheckout(leave.id)}
-                            >
-                              <LogOut size={14} /> <span>Log Gate Out</span>
-                            </button>
-                          )}
+                            )}
 
-                          {leave.status === 'CHECKED_OUT' && (
-                            <button 
-                              className="btn-primary h-9 px-3.5 text-xs font-bold shrink-0 bg-emerald-600 hover:bg-emerald-700"
-                              onClick={() => handleLogCheckin(leave.id)}
-                            >
-                              <LogIn size={14} /> <span>Log Gate In</span>
-                            </button>
-                          )}
-
-                          {leave.status === 'RETURNED' && (
-                            <span className="text-[11px] text-emerald-600 font-extrabold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">
-                              Returned (Gate scan)
-                            </span>
-                          )}
-                          {leave.status === 'REJECTED' && (
-                            <span className="text-[11px] text-red-500 font-extrabold bg-red-50 border border-red-100 px-2 py-0.5 rounded">
-                              Rejected
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                            {leave.status === 'RETURNED' && (
+                              <span className="text-[11px] text-emerald-600 font-extrabold bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded">
+                                Returned (Gate scan)
+                              </span>
+                            )}
+                            {leave.status === 'REJECTED' && (
+                              <span className="text-[11px] text-red-500 font-extrabold bg-red-50 border border-red-100 px-2 py-0.5 rounded">
+                                Rejected
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

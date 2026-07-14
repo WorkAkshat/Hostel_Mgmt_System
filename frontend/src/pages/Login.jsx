@@ -187,6 +187,7 @@ const Login = () => {
                   background: loading ? '#94a3b8' : 'linear-gradient(135deg, #2563eb, #4f46e5)',
                   boxShadow: loading ? 'none' : '0 4px 14px rgba(37,99,235,0.3), inset 0 1px 0 rgba(255,255,255,0.2)',
                   transform: loading ? 'none' : undefined,
+                  color: '#ffffff',
                 }}
                 onMouseEnter={e => !loading && (e.currentTarget.style.transform = 'translateY(-2px)')}
                 onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}

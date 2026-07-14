@@ -82,13 +82,9 @@ const DashboardLayout = () => {
       />
 
       <div 
-        className="main-content transition-all duration-300 ease-in-out"
+        className={`main-content transition-all duration-300 ease-in-out ${isDesktop ? 'pl-8 pr-8' : 'pl-4 pr-4 pb-[112px]'} pt-[calc(var(--header-height)+32px)] lg:pt-[calc(var(--header-height)+32px)]`}
         style={{ 
-          marginLeft: isDesktop ? sidebarWidth : '0px', 
-          paddingLeft: isDesktop ? '32px' : '16px', 
-          paddingRight: isDesktop ? '32px' : '16px', 
-          paddingTop: 'calc(var(--header-height) + 32px)', 
-          paddingBottom: '40px' 
+          marginLeft: isDesktop ? sidebarWidth : '0px',
         }}
       >
         <Header 

@@ -27,23 +27,22 @@ const CustomModal = ({ isOpen, onClose, title, children }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 flex items-center justify-center z-[9999]" 
-          style={{ background: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+          className="fixed inset-0 flex items-end md:items-center justify-center z-[9999] p-0 md:p-4" 
+          style={{ background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
           onClick={onClose}
         >
           <motion.div 
             key="modal-content"
-            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, y: 100, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 100, scale: 0.98 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="w-[95%] max-w-[540px] rounded-[var(--border-radius-modal)] overflow-hidden shadow-2xl flex flex-col"
+            className="w-full md:w-[95%] max-w-full md:max-w-[540px] rounded-t-[24px] md:rounded-[var(--border-radius-modal)] overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] md:max-h-[85dvh] bg-white relative"
             style={{
-              background: 'rgba(255, 255, 255, 0.9)',
               backdropFilter: 'blur(24px)',
               WebkitBackdropFilter: 'blur(24px)',
-              border: '1px solid rgba(255, 255, 255, 0.6)',
-              boxShadow: '0 25px 60px rgba(15, 23, 42, 0.15)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.6)',
+              boxShadow: '0 -10px 40px rgba(15, 23, 42, 0.1)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -64,7 +63,7 @@ const CustomModal = ({ isOpen, onClose, title, children }) => {
                 <X size={16} />
               </button>
             </div>
-            <div className="p-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+            <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar flex-1 relative modal-scroll-area">
               {children}
             </div>
           </motion.div>

@@ -99,15 +99,16 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
                   : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 border border-transparent'
               }`
             }
+            style={({ isActive }) => (isActive ? { color: '#ffffff' } : {})}
             title={isCollapsed ? link.name : ''}
           >
             {({ isActive }) => (
               <>
-                <div className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-[var(--primary)]'}`}>
+                <div className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-[var(--primary)]'}`} style={isActive ? { color: '#ffffff' } : {}}>
                   {link.icon}
                 </div>
                 {!isCollapsed && (
-                  <span className="truncate transition-all duration-200">{link.name}</span>
+                  <span className="truncate transition-all duration-200" style={isActive ? { color: '#ffffff' } : {}}>{link.name}</span>
                 )}
               </>
             )}
@@ -189,7 +190,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="w-[280px] h-screen bg-white/90 backdrop-blur-xl p-4 flex flex-col shadow-2xl relative"
+              className="w-[85vw] max-w-[280px] h-screen bg-white/90 backdrop-blur-xl p-4 flex flex-col shadow-2xl relative"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close button */}

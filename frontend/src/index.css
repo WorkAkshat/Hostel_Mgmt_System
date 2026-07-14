@@ -438,3 +438,16 @@ a {
     font-size: 26px;
   }
 }
+  
+@media (max-width: 768px) {  
+  .modal-scroll-area form > .flex.justify-end.border-t, .modal-scroll-area > div > .flex.justify-end.border-t {  
+    position: sticky;  
+    bottom: -16px;  
+    margin: 16px -16px -16px -16px;  
+    padding: 16px;  
+    background: rgba(255, 255, 255, 0.95);  
+    backdrop-filter: blur(12px);  
+    z-index: 10;  
+    box-shadow: 0 -4px 12px rgba(15, 23, 42, 0.05);  
+  }  
+} 
