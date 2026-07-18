@@ -1,5 +1,8 @@
 const getBaseUrl = () => {
   const { hostname } = window.location;
+  if (hostname === 'hms.geotree.in' || hostname.endsWith('geotree.in')) {
+    return 'https://hms.geotree.io/api';
+  }
   return `http://${hostname}:5000/api`;
 };
 
