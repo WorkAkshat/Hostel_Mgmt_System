@@ -3,14 +3,14 @@ const getBaseUrl = () => {
   if (hostname === 'hms.geotree.in' || hostname.endsWith('geotree.in')) {
     return 'https://hms.geotree.io/api';
   }
-  return `http://${hostname}:5000/api`;
+  return `http://${hostname}:9000/api`;
 };
 
 const BASE_URL = getBaseUrl();
 
 const api = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
-  
+
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
@@ -30,7 +30,7 @@ const api = async (endpoint, options = {}) => {
   }
 
   const response = await fetch(`${BASE_URL}${endpoint}`, config);
-  
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     const error = new Error(errorData.message || 'Something went wrong');
