@@ -1,7 +1,7 @@
 {
   "name": "hostel-management-system",
   "version": "1.0.0",
-  "description": "Full-Stack Hostel Management System Workspace",
+  "description": "Full-Stack Hari Pushap PG Girls Hostel Workspace",
   "scripts": {
     "install:all": "npm install && npm install --prefix backend && npm install --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",

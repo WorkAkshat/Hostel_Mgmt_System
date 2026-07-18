@@ -1,7 +1,7 @@
 {
   "name": "hms-backend",
   "version": "1.0.0",
-  "description": "Backend API server for Hostel Management System",
+  "description": "Backend API server for Hari Pushap PG Girls Hostel",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

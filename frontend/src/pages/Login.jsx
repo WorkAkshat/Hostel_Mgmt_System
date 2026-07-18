@@ -77,7 +77,7 @@ const Login = () => {
               <Home size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-[17px] font-bold text-slate-800 tracking-tight leading-none">GHMS Portal</h2>
+              <h2 className="text-[17px] font-bold text-slate-800 tracking-tight leading-none">Hari Pushap PG</h2>
               <p className="text-[12px] text-slate-500 font-medium mt-0.5">Girls Hostel Management</p>
             </div>
           </div>
@@ -117,7 +117,7 @@ const Login = () => {
             <div className="w-10 h-10 rounded-[14px] flex items-center justify-center shadow-md" style={{background: 'linear-gradient(135deg, #2563eb, #4f46e5)'}}>
               <Home size={18} className="text-white" />
             </div>
-            <h2 className="text-[18px] font-bold text-slate-800 tracking-tight">GHMS Portal</h2>
+            <h2 className="text-[18px] font-bold text-slate-800 tracking-tight">Hari Pushap PG</h2>
           </div>
 
           {/* Card */}
@@ -134,7 +134,7 @@ const Login = () => {
             {/* Header */}
             <div className="flex flex-col mb-8">
               <h2 className="text-[24px] font-bold text-slate-800 tracking-tight">Welcome back</h2>
-              <p className="text-[14px] text-slate-500 font-medium mt-1.5">Sign in to your GHMS account to continue</p>
+              <p className="text-[14px] text-slate-500 font-medium mt-1.5">Sign in to your Hari Pushap PG account to continue</p>
             </div>
 
             {/* Error */}
@@ -153,7 +153,7 @@ const Login = () => {
                   <Mail size={16} className="absolute left-4 text-slate-400" />
                   <input
                     type="email"
-                    placeholder="name@ghms.edu"
+                    placeholder="name@haripushappg.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
@@ -212,9 +212,9 @@ const Login = () => {
 
             <div className="grid grid-cols-3 gap-2.5">
               {[
-                { label: 'Admin', sublabel: 'Chief Warden', email: 'warden@hms.com', color: '#2563eb', bg: 'rgba(37,99,235,0.06)' },
-                { label: 'Student', sublabel: 'Ananya', email: 'ananya@hms.com', color: '#10b981', bg: 'rgba(16,185,129,0.06)' },
-                { label: 'Staff', sublabel: 'Security', email: 'guard@hms.com', color: '#f59e0b', bg: 'rgba(245,158,11,0.06)' },
+                { label: 'Admin', sublabel: 'Chief Warden', email: 'warden@haripushappg.com', color: '#2563eb', bg: 'rgba(37,99,235,0.06)' },
+                { label: 'Student', sublabel: 'Ananya', email: 'ananya@haripushappg.com', color: '#10b981', bg: 'rgba(16,185,129,0.06)' },
+                { label: 'Staff', sublabel: 'Security', email: 'guard@haripushappg.com', color: '#f59e0b', bg: 'rgba(245,158,11,0.06)' },
               ].map((d) => (
                 <button
                   key={d.email}
@@ -234,7 +234,7 @@ const Login = () => {
 
           {/* Footer */}
           <p className="text-center text-[12px] text-slate-400 font-medium">
-            GHMS Portal &mdash; Enterprise Hostel Management Platform
+            Hari Pushap PG &mdash; Enterprise Hostel Management Platform
           </p>
         </div>
       </div>

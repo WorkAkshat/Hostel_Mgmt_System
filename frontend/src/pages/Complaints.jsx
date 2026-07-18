@@ -109,7 +109,7 @@ const Complaints = () => {
           </h1>
           <p className="page-subtitle mb-0 mt-1">
             {user.role === 'ADMIN' ? 'Manage hostel issues, assign support staff, and log resolution feedback.' :
-             'GHMS hostellers asset repair and support ticketing helpline'}
+             'Hari Pushap PG hostellers asset repair and support ticketing helpline'}
           </p>
         </div>
       </div>

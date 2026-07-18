@@ -152,7 +152,7 @@ const Leaves = () => {
           <p className="page-subtitle mb-0 mt-1">
             {user.role === 'ADMIN' ? 'Approve or reject leave applications and monitor campus check-ins.' :
              user.role === 'STAFF' ? 'Register exit check-outs and check-in arrivals for hostel residents.' :
-             'GHMS out/in leave pass control system'}
+             'Hari Pushap PG out/in leave pass control system'}
           </p>
         </div>
       </div>

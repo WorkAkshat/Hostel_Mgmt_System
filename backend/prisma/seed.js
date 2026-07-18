@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding Girls Hostel Management System (GHMS) database...');
+  console.log('Seeding Hari Pushap PG Girls Hostel database...');
 
   // 1. Clear existing data
   await prisma.messAttendance.deleteMany({});
@@ -27,7 +27,7 @@ async function main() {
   // Warden User (ADMIN)
   const adminUser = await prisma.user.create({
     data: {
-      email: 'warden@hms.com',
+      email: 'warden@haripushappg.com',
       password: hashedPassword,
       name: 'Dr. Shalini Sharma',
       role: 'ADMIN',
@@ -37,7 +37,7 @@ async function main() {
   // Student Users (STUDENT - Girls names)
   const studentUser1 = await prisma.user.create({
     data: {
-      email: 'pooja@hms.com',
+      email: 'pooja@haripushappg.com',
       password: hashedPassword,
       name: 'Pooja Sharma',
       role: 'STUDENT',
@@ -46,7 +46,7 @@ async function main() {
 
   const studentUser2 = await prisma.user.create({
     data: {
-      email: 'ananya@hms.com',
+      email: 'ananya@haripushappg.com',
       password: hashedPassword,
       name: 'Ananya Mehta',
       role: 'STUDENT',
@@ -55,7 +55,7 @@ async function main() {
 
   const studentUser3 = await prisma.user.create({
     data: {
-      email: 'sneha@hms.com',
+      email: 'sneha@haripushappg.com',
       password: hashedPassword,
       name: 'Sneha Patel',
       role: 'STUDENT',
@@ -65,7 +65,7 @@ async function main() {
   // Staff User (STAFF - Security Guard / Warden Assistant)
   const securityUser = await prisma.user.create({
     data: {
-      email: 'guard@hms.com',
+      email: 'guard@haripushappg.com',
       password: hashedPassword,
       name: 'Sunita Devi',
       role: 'STAFF',

@@ -230,7 +230,7 @@ const Mess = () => {
             </h1>
             <p className="page-subtitle mb-0 mt-1 text-sm sm:text-base">
               {user.role === 'ADMIN' ? 'Inspect the weekly dining menu, verify dining log-ins, and review satisfaction indexes.' :
-               'GHMS biometric mess logs and daily satisfaction surveys'}
+               'Hari Pushap PG biometric mess logs and daily satisfaction surveys'}
             </p>
           </div>
         </div>

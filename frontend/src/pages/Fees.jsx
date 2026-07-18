@@ -65,14 +65,14 @@ const Fees = () => {
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('GHMS PORTAL', 14, 22);
+    doc.text('HARI PUSHAP PG', 14, 22);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-    doc.text('Global Hostel Management System', 14, 28);
+    doc.text('Hari Pushap PG Girls Hostel', 14, 28);
     doc.text('123 University Campus Road, Education City, 400001', 14, 33);
-    doc.text('Phone: +91 800 123 4567 | Web: www.ghms-portal.edu', 14, 38);
+    doc.text('Phone: +91 800 123 4567 | Web: www.haripushappg.com', 14, 38);
 
     // Invoice Meta
     doc.setFontSize(20);
@@ -195,7 +195,7 @@ const Fees = () => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text('Please make the payment before the due date to avoid late fees.', 14, finalY + 26);
-    doc.text('For bank transfers: A/C: 1234567890, IFSC: GHMS0001234, Bank of Hostel.', 14, finalY + 32);
+    doc.text('For bank transfers: A/C: 1234567890, IFSC: HARIPUSHAP001, Bank of Hostel.', 14, finalY + 32);
 
     doc.setDrawColor(textDark[0], textDark[1], textDark[2]);
     doc.line(14, 270, pageWidth - 14, 270);
