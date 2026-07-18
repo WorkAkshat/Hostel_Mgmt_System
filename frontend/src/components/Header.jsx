@@ -110,7 +110,7 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
       <div className="flex items-center gap-2 sm:gap-4">
         {/* Notices Bell */}
         <div className="relative">
-          <button 
+          <button
             onClick={() => {
               setShowNoticesDropdown(!showNoticesDropdown);
               setShowProfileDropdown(false);
@@ -171,7 +171,7 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
 
         {/* Profile Avatar & Dropdown */}
         <div className="relative">
-          <div 
+          <div
             onClick={() => {
               setShowProfileDropdown(!showProfileDropdown);
               setShowNoticesDropdown(false);

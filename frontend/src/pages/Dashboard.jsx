@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { 
@@ -44,10 +44,10 @@ const Dashboard = () => {
           const totalBeds = rooms.reduce((acc, r) => acc + r.sharingType, 0);
           const occupiedBeds = students.filter(s => s.roomId !== null).length;
           const occupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
-          
+
           const pendingComplaints = complaints.filter(c => c.status !== 'RESOLVED').length;
           const activeVisitors = visitors.filter(v => v.checkOutTime === null).length;
-          
+
           const unpaidInvoicesAmount = invoices
             .filter(i => i.status === 'UNPAID')
             .reduce((acc, i) => acc + i.amount, 0);
@@ -59,7 +59,7 @@ const Dashboard = () => {
             acc[block].occupied += r.students.length;
             return acc;
           }, {});
-          
+
           const complaintStatusCounts = complaints.reduce((acc, c) => {
             acc[c.status] = (acc[c.status] || 0) + 1;
             return acc;
@@ -106,6 +106,7 @@ const Dashboard = () => {
 
             const activeLeaves = leaves.filter(l => ['PENDING', 'APPROVED', 'CHECKED_OUT'].includes(l.status)).length;
             
+
             const todayStr = new Date().toISOString().split('T')[0];
             const checkedInToday = diningLogs.filter(d => d.date === todayStr).length;
 
@@ -143,13 +144,13 @@ const Dashboard = () => {
   // WARDEN DASHBOARD VIEW
   if (user.role === 'ADMIN') {
     const { summary, charts, recentComplaints, recentVisitors } = stats || {};
-    
+
     return (
       <div className="animate-fade-in flex flex-col gap-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
           <div>
             <h1 className="text-[28px] font-bold text-slate-800 tracking-tight leading-tight">Dashboard</h1>
-            <p className="text-[14px] text-slate-500 font-medium">Overview of girls hostel operations and analytics</p>
+            <p className="text-[14px] text-slate-500 font-medium">Overview of Hari Pushap PG Girls Hostel operations and analytics</p>
           </div>
           <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-[12px] text-[13px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
             <CalendarDays size={16} className="text-slate-500" />
@@ -340,15 +341,15 @@ const Dashboard = () => {
   }
 
   // STUDENT PORTAL VIEW
-  const { 
-    studentProfile = null, 
-    activeComplaint = 0, 
-    outstandingFees = 0, 
-    activeLeaves = 0, 
-    checkedInToday = 0, 
-    recentComplaints = [], 
-    recentInvoices = [], 
-    recentLeaves = [] 
+  const {
+    studentProfile = null,
+    activeComplaint = 0,
+    outstandingFees = 0,
+    activeLeaves = 0,
+    checkedInToday = 0,
+    recentComplaints = [],
+    recentInvoices = [],
+    recentLeaves = []
   } = stats || {};
   const allocatedRoom = studentProfile?.room;
 
@@ -366,7 +367,7 @@ const Dashboard = () => {
   return (
     <div className="animate-fade-in flex flex-col gap-8">
       {/* Latest Announcement Banner */}
-      <div 
+      <div
         onClick={() => setShowAnnouncementModal(true)}
         className="bg-[var(--primary)] text-white rounded-3xl p-8 relative overflow-hidden shadow-lg cursor-pointer hover:scale-[1.01] hover:shadow-xl transition-all duration-300 text-left border border-white/5"
       >
@@ -485,21 +486,21 @@ const Dashboard = () => {
         <form onSubmit={handleGuestSubmit} className="form-grid">
           <div className="form-group mb-0 full-width">
             <label className="form-label">Guest Full Name</label>
-            <input 
-              type="text" 
-              className="form-input" 
-              required 
+            <input
+              type="text"
+              className="form-input"
+              required
               placeholder="e.g. Rakesh Kumar"
               value={guestForm.name}
-              onChange={(e) => setGuestForm({...guestForm, name: e.target.value})}
+              onChange={(e) => setGuestForm({ ...guestForm, name: e.target.value })}
             />
           </div>
           <div className="form-group mb-0 full-width">
             <label className="form-label">Relationship</label>
-            <select 
+            <select
               className="form-input"
               value={guestForm.relationship}
-              onChange={(e) => setGuestForm({...guestForm, relationship: e.target.value})}
+              onChange={(e) => setGuestForm({ ...guestForm, relationship: e.target.value })}
             >
               <option value="Father">Father</option>
               <option value="Mother">Mother</option>
@@ -510,23 +511,23 @@ const Dashboard = () => {
           </div>
           <div className="form-group mb-0 full-width">
             <label className="form-label">Contact Number</label>
-            <input 
-              type="text" 
-              className="form-input" 
-              required 
+            <input
+              type="text"
+              className="form-input"
+              required
               placeholder="+91 XXXXX XXXXX"
               value={guestForm.phone}
-              onChange={(e) => setGuestForm({...guestForm, phone: e.target.value})}
+              onChange={(e) => setGuestForm({ ...guestForm, phone: e.target.value })}
             />
           </div>
           <div className="form-group mb-0 full-width">
             <label className="form-label">Date of Visit</label>
-            <input 
-              type="date" 
-              className="form-input" 
-              required 
+            <input
+              type="date"
+              className="form-input"
+              required
               value={guestForm.date}
-              onChange={(e) => setGuestForm({...guestForm, date: e.target.value})}
+              onChange={(e) => setGuestForm({ ...guestForm, date: e.target.value })}
             />
           </div>
           <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 full-width">

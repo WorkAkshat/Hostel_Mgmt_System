@@ -7,7 +7,7 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState(null);
-  
+
   const { login, loading, error, setError } = useAuth();
   const navigate = useNavigate();
 
@@ -15,7 +15,7 @@ const Login = () => {
     e.preventDefault();
     setLocalError(null);
     setError(null);
-    
+
     if (!email || !password) {
       setLocalError('Please enter both email and password.');
       return;
