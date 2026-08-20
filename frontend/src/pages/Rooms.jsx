@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import api from '../utils/api';
+import { rooms as roomsApi } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Trash2, Home, ShieldAlert, ClipboardCheck, Users, HelpCircle } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
@@ -31,7 +31,7 @@ const Rooms = () => {
   const fetchRooms = async () => {
     try {
       setLoading(true);
-      const data = await api('/rooms');
+      const data = await roomsApi.getAll();
       setRooms(data);
     } catch (error) {
       console.error('Error fetching rooms:', error);
@@ -55,10 +55,7 @@ const Rooms = () => {
     e.preventDefault();
     setAddError(null);
     try {
-      await api('/rooms', {
-        method: 'POST',
-        body: addForm
-      });
+      await roomsApi.create(addForm);
       setIsAddModalOpen(false);
       setAddForm({ roomNumber: '', block: 'Block A', sharingType: 2, isAc: false });
       fetchRooms();
@@ -87,11 +84,8 @@ const Rooms = () => {
   const saveAssetsChanges = async () => {
     try {
       setIsUpdatingAssets(true);
-      await api(`/rooms/${selectedRoom.id}`, {
-        method: 'PUT',
-        body: {
-          assets: assetsList
-        }
+      await roomsApi.update(selectedRoom.id, {
+        assets: assetsList
       });
       setIsDetailsModalOpen(false);
       fetchRooms();
@@ -105,9 +99,7 @@ const Rooms = () => {
   const handleDeleteRoom = async (id) => {
     if (window.confirm('Are you sure you want to delete this room? This cannot be undone.')) {
       try {
-        await api(`/rooms/${id}`, {
-          method: 'DELETE'
-        });
+        await roomsApi.remove(id);
         fetchRooms();
       } catch (error) {
         alert(error.message || 'Failed to delete room');

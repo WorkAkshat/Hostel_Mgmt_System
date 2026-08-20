@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Pages
 import Login from './pages/Login';
+import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Students from './pages/Students';
 import Rooms from './pages/Rooms';
@@ -16,8 +17,9 @@ import Fees from './pages/Fees';
 import Complaints from './pages/Complaints';
 import Visitors from './pages/Visitors';
 import Staff from './pages/Staff';
+import Approvals from './pages/Approvals';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import { Home as HomeIcon, FileText, Sparkles, Wrench, User, LogOut, LayoutGrid, CalendarDays } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -61,11 +63,11 @@ const DashboardLayout = () => {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
   // Keep desktop tracking reactive to window resize
-  useState(() => {
+  useEffect(() => {
     const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  });
+  }, []);
 
   // Must match the width values in Sidebar.jsx
   const SIDEBAR_EXPANDED = '280px';
@@ -133,38 +135,40 @@ const DashboardLayout = () => {
       {/* Profile/Account Modal */}
       {showProfileModal && (
         <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-center justify-center z-[99999]"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-[99999] p-4"
           onClick={() => setShowProfileModal(false)}
         >
           <div 
-            className="glass-card w-[90%] max-w-[340px] p-6 flex flex-col items-center gap-4 text-center animate-fade-in"
+            className="glass-card w-full max-w-[360px] p-6 flex flex-col items-center gap-4 text-center animate-fade-in rounded-[24px]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-16 h-16 rounded-full bg-[var(--accent)] text-white flex items-center justify-center font-bold text-3xl shadow-lg">
+            {/* Avatar with indigo gradient — matches primary brand color */}
+            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#4f46e5] to-[#2563eb] text-white flex items-center justify-center font-bold text-3xl shadow-[0_8px_24px_rgba(79,70,229,0.35)]">
               {user.name.charAt(0).toUpperCase()}
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-[var(--text-primary)]">{user.name}</h3>
-              <p className="text-xs text-[var(--text-tertiary)]">{user.email}</p>
-              <span className="inline-block mt-2 bg-[var(--accent-light)] text-[var(--accent)] px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">
+            <div className="flex flex-col items-center gap-1.5">
+              <h3 className="text-lg font-bold text-[var(--text-primary)] leading-tight">{user.name}</h3>
+              <p className="text-xs text-[var(--text-tertiary)] font-medium">{user.email}</p>
+              {/* Role badge — indigo to match brand, not green */}
+              <span className="inline-flex items-center mt-1 bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">
                 {user.role === 'ADMIN' ? 'Chief Warden' : user.role === 'STAFF' ? 'Staff' : 'Student'}
               </span>
             </div>
-            <div className="w-full h-[1px] bg-[var(--border-color)] my-1"></div>
+            <div className="w-full h-px bg-[var(--border-color)]"></div>
             <button
               onClick={() => {
                 setShowProfileModal(false);
                 logout();
                 navigate('/login');
               }}
-              className="flex items-center justify-center gap-2 w-full py-3 bg-[var(--danger-bg)] text-[var(--danger)] border-none rounded-lg font-semibold cursor-pointer transition-colors"
+              className="flex items-center justify-center gap-2 w-full py-3 bg-red-50 text-red-600 border border-red-100 rounded-[14px] font-semibold cursor-pointer transition-colors hover:bg-red-100"
             >
               <LogOut size={18} />
               <span>Sign Out</span>
             </button>
             <button
               onClick={() => setShowProfileModal(false)}
-              className="w-full py-2 bg-transparent text-[var(--text-secondary)] border border-[var(--border-color)] rounded-lg font-medium cursor-pointer"
+              className="w-full py-2.5 bg-transparent text-[var(--text-secondary)] border border-[var(--border-color)] rounded-[14px] font-medium cursor-pointer hover:bg-slate-50 transition-colors"
             >
               Close
             </button>
@@ -207,6 +211,7 @@ const App = () => {
         <Routes>
           {/* Public Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
           {/* Secure Role Protected Routes */}
           <Route element={<DashboardLayout />}>
@@ -214,6 +219,10 @@ const App = () => {
             <Route 
               path="/admin/dashboard" 
               element={<PrivateRoute allowedRoles={['ADMIN']}><Dashboard /></PrivateRoute>} 
+            />
+            <Route 
+              path="/admin/approvals" 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><Approvals /></PrivateRoute>} 
             />
             <Route 
               path="/admin/students" 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
+import { fees as feesApi } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { CreditCard, Receipt, Calendar, FileText, CheckCircle, ShieldAlert, ArrowLeft, Download } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
@@ -35,10 +35,10 @@ const Fees = () => {
     try {
       setLoading(true);
       if (user.role === 'ADMIN') {
-        const data = await api('/invoices');
+        const data = await feesApi.getAll();
         setInvoices(data);
       } else {
-        const data = await api('/invoices/my-invoices');
+        const data = await feesApi.getMyInvoices();
         setInvoices(data);
       }
     } catch (error) {
@@ -65,14 +65,14 @@ const Fees = () => {
     doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text('HARI PUSHAP PG', 14, 22);
+    doc.text('HARI PUSHP PG', 14, 22);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(textGray[0], textGray[1], textGray[2]);
-    doc.text('Hari Pushap PG Girls Hostel', 14, 28);
+    doc.text('Hari Pushp PG Girls Hostel', 14, 28);
     doc.text('123 University Campus Road, Education City, 400001', 14, 33);
-    doc.text('Phone: +91 800 123 4567 | Web: www.haripushappg.com', 14, 38);
+    doc.text('Phone: +91 800 123 4567 | Web: www.haripushppg.com', 14, 38);
 
     // Invoice Meta
     doc.setFontSize(20);
@@ -195,7 +195,7 @@ const Fees = () => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
     doc.text('Please make the payment before the due date to avoid late fees.', 14, finalY + 26);
-    doc.text('For bank transfers: A/C: 1234567890, IFSC: HARIPUSHAP001, Bank of Hostel.', 14, finalY + 32);
+    doc.text('For bank transfers: A/C: 1234567890, IFSC: HARIPUSHP001, Bank of Hostel.', 14, finalY + 32);
 
     doc.setDrawColor(textDark[0], textDark[1], textDark[2]);
     doc.line(14, 270, pageWidth - 14, 270);
@@ -223,10 +223,7 @@ const Fees = () => {
     setGenerateError(null);
     try {
       setGenerateLoading(true);
-      const response = await api('/invoices', {
-        method: 'POST',
-        body: generateForm
-      });
+      const response = await feesApi.create(generateForm);
       setIsGenerateModalOpen(false);
       fetchInvoices();
       alert('Invoice generated successfully. Downloading PDF...');
@@ -269,9 +266,7 @@ const Fees = () => {
     e.preventDefault();
     try {
       setPaymentLoading(true);
-      await api(`/invoices/${selectedInvoice.id}/pay`, {
-        method: 'PUT'
-      });
+      await feesApi.pay(selectedInvoice.id);
       setIsPayModalOpen(false);
       fetchInvoices();
       alert('Payment successful! Invoice status has been updated to PAID.');

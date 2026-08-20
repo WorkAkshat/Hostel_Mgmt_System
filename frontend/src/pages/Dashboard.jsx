@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
+import {
+  rooms as roomsApi,
+  students as studentsApi,
+  complaints as complaintsApi,
+  fees as feesApi,
+  visitors as visitorsApi,
+  mess as messApi,
+  leaves as leavesApi,
+  dashboard as dashboardApi
+} from '../utils/api';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
@@ -33,12 +42,12 @@ const Dashboard = () => {
         setLoading(true);
         if (user.role === 'ADMIN') {
           const [rooms, students, complaints, invoices, visitors, messStats] = await Promise.all([
-            api('/rooms'),
-            api('/students'),
-            api('/complaints'),
-            api('/invoices'),
-            api('/visitors'),
-            api('/mess/stats')
+            roomsApi.getAll(),
+            studentsApi.getAll(),
+            complaintsApi.getAll(),
+            feesApi.getAll(),
+            visitorsApi.getAll(),
+            messApi.getStats()
           ]);
 
           const totalBeds = rooms.reduce((acc, r) => acc + r.sharingType, 0);
@@ -88,39 +97,24 @@ const Dashboard = () => {
             recentComplaints: complaints.slice(0, 5),
             recentVisitors: visitors.slice(0, 5)
           });
-        } else {
-          const studentId = user.studentDetails?.id;
-          if (studentId) {
-            const [studentProfile, complaints, leaves, invoices, diningLogs] = await Promise.all([
-              api(`/students/${studentId}`),
-              api('/complaints/my-complaints'),
-              api('/leaves/my-leaves'),
-              api('/invoices/my-invoices'),
-              api('/mess/my-attendance')
-            ]);
+        } else if (user.role === 'STUDENT') {
+          const dashData = await dashboardApi.getDashboard();
+          const studentProfile = dashData.profile;
+          const activeComplaint = dashData.stats.pendingComplaints;
+          const outstandingFees = dashData.stats.totalDue;
+          const activeLeaves = dashData.stats.pendingLeaves;
+          const checkedInToday = dashData.messAttendance.filter(d => d.date === new Date().toISOString().split('T')[0]).length;
 
-            const activeComplaint = complaints.filter(c => c.status !== 'RESOLVED').length;
-            const outstandingFees = invoices
-              .filter(i => i.status === 'UNPAID')
-              .reduce((acc, i) => acc + i.amount, 0);
-
-            const activeLeaves = leaves.filter(l => ['PENDING', 'APPROVED', 'CHECKED_OUT'].includes(l.status)).length;
-            
-
-            const todayStr = new Date().toISOString().split('T')[0];
-            const checkedInToday = diningLogs.filter(d => d.date === todayStr).length;
-
-            setStats({
-              studentProfile,
-              activeComplaint,
-              outstandingFees,
-              activeLeaves,
-              checkedInToday,
-              recentComplaints: complaints.slice(0, 3),
-              recentInvoices: invoices.slice(0, 3),
-              recentLeaves: leaves.slice(0, 3)
-            });
-          }
+          setStats({
+            studentProfile,
+            activeComplaint,
+            outstandingFees,
+            activeLeaves,
+            checkedInToday,
+            recentComplaints: dashData.complaints.slice(0, 3),
+            recentInvoices: dashData.invoices.slice(0, 3),
+            recentLeaves: dashData.leaves.slice(0, 3)
+          });
         }
       } catch (error) {
         console.error('Error fetching dashboard statistics:', error);
@@ -150,11 +144,11 @@ const Dashboard = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
           <div>
             <h1 className="text-[28px] font-bold text-slate-800 tracking-tight leading-tight">Dashboard</h1>
-            <p className="text-[14px] text-slate-500 font-medium">Overview of Hari Pushap PG Girls Hostel operations and analytics</p>
+            <p className="text-[14px] text-slate-500 font-medium">Overview of Hari Pushp PG Girls Hostel operations and analytics</p>
           </div>
           <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-[12px] text-[13px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
             <CalendarDays size={16} className="text-slate-500" />
-            May 24, 2025
+            {new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
             <ChevronDown size={14} className="text-slate-400 ml-1" />
           </button>
         </div>
@@ -277,7 +271,9 @@ const Dashboard = () => {
                 </ResponsiveContainer>
                 <div className="absolute top-[60%] left-[28%] sm:top-[60%] sm:left-[35%] transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
                   <span className="block text-xs font-bold text-slate-500">Total</span>
-                  <span className="block text-2xl font-extrabold text-slate-800">2</span>
+                  <span className="block text-2xl font-extrabold text-slate-800">
+                    {(charts?.complaintChartData || []).reduce((sum, e) => sum + e.value, 0)}
+                  </span>
                 </div>
               </div>
               <div className="flex flex-col gap-3 w-full sm:w-[40%] pr-4 text-left">
@@ -366,23 +362,95 @@ const Dashboard = () => {
 
   return (
     <div className="animate-fade-in flex flex-col gap-8">
+
+      {/* Student Profile Hero Card */}
+      <div className="bg-gradient-to-br from-[#4f46e5] to-[#2563eb] text-white rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-[0_8px_32px_rgba(79,70,229,0.3)] border border-white/10">
+        {/* Decorative background circles */}
+        <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute -bottom-12 -right-4 w-36 h-36 rounded-full bg-white/5 pointer-events-none" />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
+          {/* Avatar */}
+          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center font-bold text-3xl text-white shadow-inner shrink-0">
+            {user.name.charAt(0).toUpperCase()}
+          </div>
+
+          {/* Name & Details */}
+          <div className="flex flex-col gap-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight leading-tight">{user.name}</h2>
+              {/* Role badge — white/translucent on indigo, no green clash */}
+              <span className="inline-flex items-center bg-white/15 border border-white/25 text-white/90 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                Student
+              </span>
+            </div>
+            {studentProfile?.enrollmentNumber && (
+              <p className="text-white/70 text-sm font-medium">{studentProfile.enrollmentNumber}</p>
+            )}
+            <p className="text-white/60 text-xs font-medium truncate">{user.email}</p>
+          </div>
+
+          {/* Room info — top-right on desktop */}
+          {allocatedRoom && (
+            <div className="sm:ml-auto shrink-0 bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-center sm:text-right">
+              <p className="text-[10px] text-white/60 font-semibold uppercase tracking-wider">Room</p>
+              <p className="text-lg font-extrabold text-white leading-tight">{allocatedRoom.roomNumber}</p>
+              <p className="text-[11px] text-white/70 font-medium">{allocatedRoom.block} Block • {allocatedRoom.sharingType}-sharing</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Stats Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="glass-card p-4 flex flex-col gap-1 text-left">
+          <div className="w-8 h-8 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center text-orange-500 mb-1">
+            <Wrench size={15} />
+          </div>
+          <span className="text-2xl font-extrabold text-slate-800 leading-none">{activeComplaint}</span>
+          <span className="text-[11px] text-slate-400 font-semibold">Open Complaints</span>
+        </div>
+        <div className="glass-card p-4 flex flex-col gap-1 text-left">
+          <div className="w-8 h-8 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 mb-1">
+            <Receipt size={15} />
+          </div>
+          <span className="text-2xl font-extrabold text-slate-800 leading-none">
+            {outstandingFees > 0 ? `₹${outstandingFees.toLocaleString()}` : '₹0'}
+          </span>
+          <span className="text-[11px] text-slate-400 font-semibold">Outstanding Fees</span>
+        </div>
+        <div className="glass-card p-4 flex flex-col gap-1 text-left">
+          <div className="w-8 h-8 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-500 mb-1">
+            <CalendarDays size={15} />
+          </div>
+          <span className="text-2xl font-extrabold text-slate-800 leading-none">{activeLeaves}</span>
+          <span className="text-[11px] text-slate-400 font-semibold">Active Leaves</span>
+        </div>
+        <div className="glass-card p-4 flex flex-col gap-1 text-left">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 mb-1">
+            <UtensilsCrossed size={15} />
+          </div>
+          <span className="text-2xl font-extrabold text-slate-800 leading-none">{checkedInToday}</span>
+          <span className="text-[11px] text-slate-400 font-semibold">Meals Today</span>
+        </div>
+      </div>
+
       {/* Latest Announcement Banner */}
       <div
         onClick={() => setShowAnnouncementModal(true)}
-        className="bg-[var(--primary)] text-white rounded-3xl p-8 relative overflow-hidden shadow-lg cursor-pointer hover:scale-[1.01] hover:shadow-xl transition-all duration-300 text-left border border-white/5"
+        className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-lg cursor-pointer hover:scale-[1.005] hover:shadow-xl transition-all duration-300 text-left border border-white/5"
       >
         <div className="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none flex items-center pr-12">
-          <Megaphone size={140} />
+          <Megaphone size={120} />
         </div>
         <div className="flex items-center gap-2 mb-3">
-          <span className="bg-blue-500/20 border border-blue-400/20 text-blue-300 text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+          <span className="bg-indigo-500/20 border border-indigo-400/20 text-indigo-300 text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider">
             Latest Announcement
           </span>
-          <span className="text-white/60 text-xs font-medium">Oct 24, 2024</span>
         </div>
-        <h2 className="text-xl font-bold tracking-tight">Annual Sports Meet 2024</h2>
-        <p className="text-white/80 text-xs mt-1.5 leading-relaxed max-w-md">Registrations are open until this Friday. Visit the Notice Board for details.</p>
-        <div className="flex items-center gap-1 mt-6 text-xs font-bold text-blue-300 hover:text-blue-200 transition-all">
+        <h2 className="text-lg font-bold tracking-tight">Annual Sports Meet 2024</h2>
+        <p className="text-white/70 text-xs mt-1.5 leading-relaxed max-w-md">Registrations are open until this Friday. Visit the Notice Board for details.</p>
+        <div className="flex items-center gap-1 mt-5 text-xs font-bold text-indigo-300 hover:text-indigo-200 transition-all">
           <span>Read notice</span>
           <ArrowRight size={14} />
         </div>

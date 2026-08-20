@@ -178,7 +178,7 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
             }}
             className="flex items-center gap-2 cursor-pointer p-1.5 pr-2 rounded-full border border-transparent hover:bg-white hover:border-slate-200 hover:shadow-sm transition-all"
           >
-            <img src={`https://ui-avatars.com/api/?name=${user.name}&background=10b981&color=fff`} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+            <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4f46e5&color=fff`} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
             <span className="hidden sm:block text-[13px] font-semibold text-slate-700 pl-1">{user.name}</span>
             <ChevronDown size={14} className="text-slate-500 hidden sm:inline ml-1" />
           </div>

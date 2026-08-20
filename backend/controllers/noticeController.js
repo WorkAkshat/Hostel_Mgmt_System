@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { broadcastPushNotification } = require('../services/pushService');
 const prisma = new PrismaClient();
 
 // @desc    Post a new notice (Warden only)
@@ -17,9 +18,17 @@ const createNotice = async (req, res) => {
         title,
         content,
         priority: priority || 'INFO',
-        postedBy: req.user.name
+        postedBy: req.user?.name || req.user?.email || 'Dr. Shalini Sharma'
       }
     });
+
+    // Broadcast high-priority push notification to all registered devices
+    broadcastPushNotification({
+      title: `📢 ${title}`,
+      body: content.length > 120 ? content.substring(0, 117) + '...' : content,
+      data: { type: 'NOTICE', noticeId: notice.id },
+      channelId: 'urgent-alerts',
+    }).catch(err => console.warn('[Notice Push Error]', err.message));
 
     res.status(201).json(notice);
   } catch (error) {

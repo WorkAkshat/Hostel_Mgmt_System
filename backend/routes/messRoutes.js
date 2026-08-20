@@ -2,14 +2,20 @@ const express = require('express');
 const {
   biometricVerifyMess,
   getMessStats,
-  getMyMessAttendance
+  getMyMessAttendance,
+  getMessMenu,
+  updateMessMenu
 } = require('../controllers/messController');
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
 
-router.post('/biometric-verify', biometricVerifyMess);
-router.get('/stats', protect, authorize('ADMIN'), getMessStats);
+router.post('/biometric-verify', protect, biometricVerifyMess);
+router.get('/stats', protect, authorize('ADMIN', 'STAFF'), getMessStats);
 router.get('/my-attendance', protect, getMyMessAttendance);
+
+// Mess Menu endpoints
+router.get('/menu', protect, getMessMenu);
+router.post('/menu', protect, authorize('ADMIN'), updateMessMenu);
 
 module.exports = router;

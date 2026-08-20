@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../utils/api';
+import { staff as staffApi } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { UserPlus, Phone, Mail, ShieldAlert, Trash2 } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
@@ -51,7 +51,7 @@ const Staff = () => {
   const fetchStaff = async () => {
     try {
       setLoading(true);
-      const data = await api('/staff');
+      const data = await staffApi.getAll();
       if (data && data.length > 0) {
         // Append MOCK_STAFF to show more content as requested
         setStaff([...data, ...MOCK_STAFF.filter(m => !data.find(d => d.user?.email === m.user?.email))]);
@@ -75,10 +75,7 @@ const Staff = () => {
     setFormError(null);
     try {
       setActionLoading(true);
-      await api('/staff', {
-        method: 'POST',
-        body: form
-      });
+      await staffApi.create(form);
       setIsAddModalOpen(false);
       setForm({ name: '', email: '', password: '', department: 'Warden', designation: 'Assistant Warden', phoneNumber: '' });
       fetchStaff();
@@ -92,9 +89,7 @@ const Staff = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this staff member? This will disable their login credentials.')) {
       try {
-        await api(`/staff/${id}`, {
-          method: 'DELETE'
-        });
+        await staffApi.remove(id);
         fetchStaff();
       } catch (error) {
         alert(error.message || 'Failed to delete staff member');

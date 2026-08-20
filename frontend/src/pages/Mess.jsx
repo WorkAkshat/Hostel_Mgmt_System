@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import api from '../utils/api';
+import { mess as messApi } from '../utils/api';
 import { Sparkles, Utensils, Star, Edit3, Save, TrendingUp, Fingerprint, ArrowLeft, CheckCircle, Package, AlertTriangle, Check, XCircle, Megaphone, Plus, MessageSquare, Image as ImageIcon } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import CustomModal from '../components/CustomModal';
@@ -87,7 +87,7 @@ const Mess = () => {
   const fetchWardenAnalytics = async () => {
     try {
       setLoadingAnalytics(true);
-      const data = await api('/mess/stats');
+      const data = await messApi.getStats();
       setAnalytics(data);
     } catch (error) {
       console.error('Error fetching mess analytics:', error);
@@ -99,7 +99,7 @@ const Mess = () => {
   const fetchStudentAttendance = async () => {
     try {
       setLoadingAttendance(true);
-      const logs = await api('/mess/my-attendance');
+      const logs = await messApi.getMyAttendance();
       setMyAttendance(logs);
       
       // Check if student rated today
@@ -230,7 +230,7 @@ const Mess = () => {
             </h1>
             <p className="page-subtitle mb-0 mt-1 text-sm sm:text-base">
               {user.role === 'ADMIN' ? 'Inspect the weekly dining menu, verify dining log-ins, and review satisfaction indexes.' :
-               'Hari Pushap PG biometric mess logs and daily satisfaction surveys'}
+               'Hari Pushp PG biometric mess logs and daily satisfaction surveys'}
             </p>
           </div>
         </div>

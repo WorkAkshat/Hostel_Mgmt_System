@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import api from '../utils/api';
+import { leaves as leavesApi } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { CalendarDays, CheckCircle, XCircle, LogOut, LogIn, Clock, ShieldAlert, Fingerprint, Home, MapPin, Plane, ArrowLeft } from 'lucide-react';
@@ -32,10 +32,10 @@ const Leaves = () => {
     try {
       setLoading(true);
       if (user.role === 'ADMIN' || user.role === 'STAFF') {
-        const data = await api('/leaves');
+        const data = await leavesApi.getAll();
         setLeaves(data);
       } else {
-        const data = await api('/leaves/my-leaves');
+        const data = await leavesApi.getMyLeaves();
         setLeaves(data);
       }
     } catch (error) {
@@ -59,10 +59,7 @@ const Leaves = () => {
         return;
       }
 
-      await api('/leaves', {
-        method: 'POST',
-        body: form
-      });
+      await leavesApi.create(form);
       setForm({ startDate: '', endDate: '', type: 'NIGHT_OUT', reason: '' });
       fetchLeaves();
       alert('Leave request submitted successfully. Awaiting Warden approval.');
@@ -84,13 +81,7 @@ const Leaves = () => {
     e.preventDefault();
     try {
       setActionLoading(true);
-      await api(`/leaves/${selectedLeave.id}/status`, {
-        method: 'PUT',
-        body: {
-          status: actionType,
-          comments
-        }
-      });
+      await leavesApi.updateStatus(selectedLeave.id, actionType, comments);
       setIsCommentModalOpen(false);
       fetchLeaves();
     } catch (error) {
@@ -104,9 +95,7 @@ const Leaves = () => {
   const handleLogCheckout = async (id) => {
     if (window.confirm('Confirm student checkout departure at the security gate?')) {
       try {
-        await api(`/leaves/${id}/checkout`, {
-          method: 'PUT'
-        });
+        await leavesApi.logCheckout(id);
         fetchLeaves();
       } catch (error) {
         alert(error.message || 'Failed to log gate check-out');
@@ -118,9 +107,7 @@ const Leaves = () => {
   const handleLogCheckin = async (id) => {
     if (window.confirm('Confirm student check-in return arrival at the security gate?')) {
       try {
-        await api(`/leaves/${id}/checkin`, {
-          method: 'PUT'
-        });
+        await leavesApi.logCheckin(id);
         fetchLeaves();
       } catch (error) {
         alert(error.message || 'Failed to log gate check-in');
@@ -152,7 +139,7 @@ const Leaves = () => {
           <p className="page-subtitle mb-0 mt-1">
             {user.role === 'ADMIN' ? 'Approve or reject leave applications and monitor campus check-ins.' :
              user.role === 'STAFF' ? 'Register exit check-outs and check-in arrivals for hostel residents.' :
-             'Hari Pushap PG out/in leave pass control system'}
+             'Hari Pushp PG out/in leave pass control system'}
           </p>
         </div>
       </div>

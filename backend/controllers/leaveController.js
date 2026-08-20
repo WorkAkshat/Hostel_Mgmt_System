@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { sendPushNotification } = require('../services/pushService');
 const prisma = new PrismaClient();
 
 // @desc    Apply for a leave / gate pass (Student only)
@@ -44,7 +45,10 @@ const createLeaveRequest = async (req, res) => {
 // @access  Private (Admin/Warden/Staff only)
 const getAllLeaveRequests = async (req, res) => {
   try {
-    const leaves = await prisma.leaveRequest.findMany({
+    const limit = req.query.limit ? parseInt(req.query.limit) : null;
+    const cursor = req.query.cursor;
+
+    const queryOptions = {
       include: {
         student: {
           include: {
@@ -58,10 +62,34 @@ const getAllLeaveRequests = async (req, res) => {
           }
         }
       },
-      orderBy: {
-        createdAt: 'desc'
+      orderBy: { id: 'desc' }
+    };
+
+    if (limit !== null) {
+      queryOptions.take = limit + 1;
+      if (cursor) {
+        queryOptions.cursor = { id: cursor };
+        queryOptions.skip = 1;
       }
-    });
+    }
+
+    const leaves = await prisma.leaveRequest.findMany(queryOptions);
+
+    if (limit !== null) {
+      let nextCursor = null;
+      let hasMore = false;
+      if (leaves.length > limit) {
+        hasMore = true;
+        nextCursor = leaves[limit - 1].id;
+        leaves.pop();
+      }
+      return res.json({
+        data: leaves,
+        nextCursor,
+        hasMore
+      });
+    }
+
     res.json(leaves);
   } catch (error) {
     console.error('Error fetching leave requests:', error);
@@ -106,7 +134,18 @@ const updateLeaveRequestStatus = async (req, res) => {
   }
 
   try {
-    const leave = await prisma.leaveRequest.findUnique({ where: { id } });
+    const leave = await prisma.leaveRequest.findUnique({
+      where: { id },
+      include: {
+        student: {
+          include: {
+            user: {
+              select: { id: true, pushToken: true }
+            }
+          }
+        }
+      }
+    });
 
     if (!leave) {
       return res.status(404).json({ message: 'Leave request not found' });
@@ -120,6 +159,20 @@ const updateLeaveRequestStatus = async (req, res) => {
         approvedBy: req.user.name
       }
     });
+
+    // Send targeted push notification to student about leave status
+    if (leave.student?.user?.pushToken) {
+      const isApproved = status === 'APPROVED';
+      sendPushNotification({
+        pushTokens: leave.student.user.pushToken,
+        title: isApproved ? '✅ Leave Approved!' : '❌ Leave Declined',
+        body: isApproved
+          ? `Your leave request has been approved by ${req.user.name}. Have a safe trip!`
+          : `Your leave request was declined by ${req.user.name}.${comments ? ' ' + comments : ''}`,
+        data: { type: 'LEAVE_STATUS', leaveId: leave.id, status },
+        channelId: 'leave-status',
+      }).catch(err => console.warn('[Leave Push Error]', err.message));
+    }
 
     res.json(updatedLeave);
   } catch (error) {

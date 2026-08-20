@@ -17,7 +17,8 @@ import {
   ChevronDown,
   X,
   PlusCircle,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck
 } from 'lucide-react';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
@@ -36,6 +37,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
       case 'ADMIN':
         return [
           { path: '/admin/dashboard', name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+          { path: '/admin/approvals', name: 'User Approvals', icon: <ShieldCheck size={18} /> },
           { path: '/admin/students', name: 'Students Directory', icon: <Users size={18} /> },
           { path: '/admin/rooms', name: 'Rooms & Assets', icon: <Home size={18} /> },
           { path: '/admin/leaves', name: 'Leave Approvals', icon: <FileCheck size={18} /> },
@@ -120,7 +122,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
 
       <div className="mt-auto pt-4 px-2">
         <div className={`flex items-center gap-3 p-3 rounded-[18px] bg-white border border-slate-200 shadow-sm mb-4 overflow-hidden ${isCollapsed ? 'justify-center p-2 mx-auto w-12 h-12' : ''}`}>
-          <img src={`https://ui-avatars.com/api/?name=${user.name}&background=10b981&color=fff`} alt="Profile" className="w-10 h-10 min-w-[40px] rounded-full object-cover flex-shrink-0" />
+          <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4f46e5&color=fff`} alt="Profile" className="w-10 h-10 min-w-[40px] rounded-full object-cover flex-shrink-0" />
           {!isCollapsed && (
             <div className="flex flex-col overflow-hidden transition-all duration-300 w-full">
               <div className="flex justify-between items-center w-full">

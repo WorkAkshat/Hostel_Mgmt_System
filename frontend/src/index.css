@@ -251,7 +251,7 @@ a {
   .form-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  .form-group.full-width {
+  .form-group.full-width, .full-width {
     grid-column: span 2;
   }
 }

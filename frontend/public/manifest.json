@@ -1,24 +1,16 @@
 {
-  "short_name": "Hari Pushap PG",
-  "name": "Hari Pushap PG Girls Hostel",
-  "description": "Hari Pushap PG Girls Hostel biometric check-ins and dining ledger portal.",
+  "short_name": "Hari Pushp PG",
+  "name": "Hari Pushp PG Girls Hostel",
+  "description": "Hari Pushp PG Girls Hostel biometric check-ins and dining ledger portal.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#7F56D9",
+  "theme_color": "#7F56D9",
   "icons": [
     {
       "src": "/favicon.svg",
-      "type": "image/svg+xml",
       "sizes": "any",
-      "purpose": "any"
-    },
-    {
-      "src": "/favicon.svg",
-      "type": "image/svg+xml",
-      "sizes": "512x512",
-      "purpose": "maskable"
+      "type": "image/svg+xml"
     }
-  ],
-  "start_url": "/",
-  "background_color": "#f8fafc",
-  "theme_color": "#ec4899",
-  "display": "standalone",
-  "orientation": "portrait"
+  ]
 }

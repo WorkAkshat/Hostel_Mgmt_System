@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import api from '../utils/api';
-import { Search, UserPlus, Edit, Trash2, Mail, Phone, Home, ShieldAlert } from 'lucide-react';
+import { students as studentsApi, rooms as roomsApi } from '../utils/api';
+import { Search, UserPlus, Edit, Trash2, Mail, Phone, Home, ShieldAlert, Hash } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
 
 const Students = () => {
@@ -19,7 +19,7 @@ const Students = () => {
 
   // Add Form state
   const [addForm, setAddForm] = useState({
-    name: '', email: '', password: '', rollNumber: '', phoneNumber: '', parentContact: '', roomId: ''
+    name: '', email: '', password: '', phoneNumber: '', parentContact: '', roomId: ''
   });
   const [addError, setAddError] = useState(null);
 
@@ -34,8 +34,8 @@ const Students = () => {
     try {
       setLoading(true);
       const [studentsData, roomsData] = await Promise.all([
-        api('/students'),
-        api('/rooms')
+        studentsApi.getAll(),
+        roomsApi.getAll()
       ]);
       setStudents(studentsData);
       setRooms(roomsData);
@@ -61,8 +61,10 @@ const Students = () => {
   const filteredStudents = students.filter(student => {
     const matchesSearch = 
       student.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.rollNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.room?.roomNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+      student.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.room?.roomNumber?.toString().includes(searchTerm) ||
+      student.phoneNumber?.includes(searchTerm);
       
     const matchesStatus = statusFilter === '' || student.status === statusFilter;
     
@@ -74,12 +76,9 @@ const Students = () => {
     e.preventDefault();
     setAddError(null);
     try {
-      await api('/students', {
-        method: 'POST',
-        body: addForm
-      });
+      await studentsApi.create(addForm);
       setIsAddModalOpen(false);
-      setAddForm({ name: '', email: '', password: '', rollNumber: '', phoneNumber: '', parentContact: '', roomId: '' });
+      setAddForm({ name: '', email: '', password: '', phoneNumber: '', parentContact: '', roomId: '' });
       fetchInitialData();
     } catch (err) {
       setAddError(err.message || 'Failed to create student');
@@ -104,10 +103,7 @@ const Students = () => {
     e.preventDefault();
     setEditError(null);
     try {
-      await api(`/students/${selectedStudent.id}`, {
-        method: 'PUT',
-        body: editForm
-      });
+      await studentsApi.update(selectedStudent.id, editForm);
       setIsEditModalOpen(false);
       fetchInitialData();
     } catch (err) {
@@ -119,9 +115,7 @@ const Students = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this student? This will also remove their user account, invoice history, and complaints.')) {
       try {
-        await api(`/students/${id}`, {
-          method: 'DELETE'
-        });
+        await studentsApi.remove(id);
         fetchInitialData();
       } catch (error) {
         alert(error.message || 'Failed to delete student');
@@ -178,158 +172,93 @@ const Students = () => {
         </div>
       ) : (
         <>
-          {/* Desktop Table View */}
-          <div className="hidden md:block custom-table-container">
-            <table className="custom-table">
-              <thead>
-                <tr>
-                  <th>Student Info</th>
-                  <th>Roll Number</th>
-                  <th>Contact Details</th>
-                  <th>Assigned Room</th>
-                  <th>Status</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredStudents.map((student) => (
-                  <tr key={student.id}>
-                    <td>
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-extrabold text-sm flex items-center justify-center border border-blue-100/60 shadow-sm shrink-0">
-                          {student.user?.name?.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="flex flex-col overflow-hidden">
-                          <h4 className="text-sm font-bold text-slate-800 truncate">{student.user?.name}</h4>
-                          <span className="text-xs text-slate-400 truncate mt-0.5">{student.user?.email}</span>
-                        </div>
+          {/* Card Grid View (Unified for Desktop and Mobile) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredStudents.map((student) => {
+              const displayId = student.id ? student.id.substring(0, 8).toUpperCase() : 'N/A';
+              return (
+                <div 
+                  key={student.id} 
+                  className="glass-card hover-lift p-6 shadow-sm flex flex-col justify-between border border-slate-100 bg-white/90 relative overflow-hidden transition-all duration-300 group"
+                >
+                  {/* Card Header & Profile */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-extrabold text-lg flex items-center justify-center shadow-md shadow-blue-500/10 group-hover:scale-105 transition-transform shrink-0">
+                        {student.user?.name?.charAt(0).toUpperCase()}
                       </div>
-                    </td>
-                    <td>
-                      <code className="bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded text-slate-600 font-mono text-xs font-semibold">
-                        {student.rollNumber}
-                      </code>
-                    </td>
-                    <td>
-                      <div className="flex flex-col gap-1 text-slate-600 text-xs">
-                        <span className="flex items-center gap-1"><Phone size={12} className="text-slate-400" />{student.phoneNumber}</span>
-                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Parent: {student.parentContact}</span>
+                      <div className="flex flex-col overflow-hidden text-left">
+                        <h4 className="text-base font-bold text-slate-800 truncate">{student.user?.name}</h4>
+                        <span className="text-xs text-slate-400 truncate mt-0.5">{student.user?.email}</span>
                       </div>
-                    </td>
-                    <td>
+                    </div>
+                    <span className={`badge shrink-0 ${
+                      student.status === 'CHECKED_IN' ? 'badge-success' : 
+                      student.status === 'CHECKED_OUT' ? 'badge-warning' : 'badge-danger'
+                    }`}>
+                      {student.status.replace('_', ' ').toLowerCase()}
+                    </span>
+                  </div>
+
+                  <div className="h-[1px] bg-slate-100/80 my-4" />
+
+                  {/* Student Specs */}
+                  <div className="flex flex-col gap-2.5 text-xs text-slate-600 text-left flex-1">
+                    <div className="flex justify-between items-center bg-slate-50 border border-slate-100 p-2 rounded-xl">
+                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] flex items-center gap-1">
+                        <Hash size={11} className="text-slate-400" />
+                        <span>Student ID</span>
+                      </span>
+                      <code className="font-mono font-extrabold text-blue-600 text-[11px]">#{displayId}</code>
+                    </div>
+
+                    <div className="flex justify-between items-center bg-slate-50 border border-slate-100 p-2 rounded-xl">
+                      <span className="font-bold text-slate-400 uppercase tracking-wider text-[9px] flex items-center gap-1">
+                        <Home size={11} className="text-slate-400" />
+                        <span>Assigned Room</span>
+                      </span>
                       {student.room ? (
-                        <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-600 px-3 py-1 rounded-xl text-xs font-bold border border-blue-100">
-                          <Home size={12} />
-                          <span>Room {student.room.roomNumber} ({student.room.block})</span>
+                        <span className="inline-flex items-center gap-1 text-slate-700 text-[11px] font-bold">
+                          Room {student.room.roomNumber} ({student.room.block})
                         </span>
                       ) : (
-                        <span className="text-slate-400 italic text-xs">Unallocated</span>
+                        <span className="text-slate-400 italic text-[11px]">Unallocated</span>
                       )}
-                    </td>
-                    <td>
-                      <span className={`badge ${
-                        student.status === 'CHECKED_IN' ? 'badge-success' : 
-                        student.status === 'CHECKED_OUT' ? 'badge-warning' : 'badge-danger'
-                      }`}>
-                        {student.status.replace('_', ' ').toLowerCase()}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => openEditModal(student)}
-                          className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 cursor-pointer transition-all hover:text-slate-800" 
-                          title="Edit Student"
-                        >
-                          <Edit size={14} />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(student.id)}
-                          className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 flex items-center justify-center text-red-500 cursor-pointer transition-all" 
-                          title="Delete Record"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Card Grid View */}
-          <div className="grid grid-cols-1 gap-4 md:hidden">
-            {filteredStudents.map((student) => (
-              <div 
-                key={student.id} 
-                className="glass-card p-5 shadow-sm flex flex-col gap-4"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 font-extrabold text-sm flex items-center justify-center border border-blue-100/60 shadow-sm shrink-0">
-                      {student.user?.name?.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex flex-col overflow-hidden">
-                      <h4 className="text-sm font-bold text-slate-800 truncate">{student.user?.name}</h4>
-                      <span className="text-[11px] text-slate-400 truncate mt-0.5">{student.user?.email}</span>
+
+                    <div className="flex justify-between items-center px-1 mt-1">
+                      <span className="font-semibold text-slate-400 text-[10px]">Student Phone:</span>
+                      <span className="font-semibold text-slate-700">{student.phoneNumber}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center px-1">
+                      <span className="font-semibold text-slate-400 text-[10px]">Emergency Phone:</span>
+                      <span className="font-semibold text-slate-700">{student.parentContact}</span>
                     </div>
                   </div>
-                  <span className={`badge shrink-0 ${
-                    student.status === 'CHECKED_IN' ? 'badge-success' : 
-                    student.status === 'CHECKED_OUT' ? 'badge-warning' : 'badge-danger'
-                  }`}>
-                    {student.status.replace('_', ' ').toLowerCase()}
-                  </span>
-                </div>
 
-                <div className="h-[1px] bg-slate-100" />
+                  <div className="h-[1px] bg-slate-100/80 my-4" />
 
-                <div className="flex flex-col gap-2.5 text-xs text-slate-600">
-                  <div className="flex justify-between">
-                    <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Roll Number:</span>
-                    <span className="font-mono bg-slate-50 border border-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-semibold">{student.rollNumber}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Student Phone:</span>
-                    <span className="font-medium">{student.phoneNumber}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Parent Phone:</span>
-                    <span className="font-medium">{student.parentContact}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-slate-400 uppercase tracking-wider text-[10px]">Assigned Room:</span>
-                    {student.room ? (
-                      <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 rounded-lg text-[11px] font-bold border border-blue-100/50">
-                        <Home size={10} />
-                        <span>Room {student.room.roomNumber} ({student.room.block})</span>
-                      </span>
-                    ) : (
-                      <span className="text-slate-400 italic text-[11px]">Unallocated</span>
-                    )}
+                  {/* Actions */}
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={() => openEditModal(student)}
+                      className="flex-1 h-10 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all bg-white"
+                    >
+                      <Edit size={14} />
+                      <span>Edit Profile</span>
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(student.id)}
+                      className="w-10 h-10 border border-red-100 hover:border-red-200 hover:bg-red-50 text-red-500 rounded-xl flex items-center justify-center cursor-pointer transition-all bg-white"
+                      title="Delete Student"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </div>
-
-                <div className="h-[1px] bg-slate-100 mt-1" />
-
-                <div className="flex justify-end gap-3 mt-1">
-                  <button 
-                    onClick={() => openEditModal(student)}
-                    className="flex-grow h-10 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all bg-white"
-                  >
-                    <Edit size={14} />
-                    <span>Edit Profile</span>
-                  </button>
-                  <button 
-                    onClick={() => handleDelete(student.id)}
-                    className="w-10 h-10 border border-red-200 hover:bg-red-50 text-red-500 rounded-xl flex items-center justify-center cursor-pointer transition-all bg-white"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
@@ -376,17 +305,7 @@ const Students = () => {
               onChange={(e) => setAddForm({...addForm, password: e.target.value})}
             />
           </div>
-          <div className="form-group">
-            <label className="form-label">University Roll Number</label>
-            <input 
-              type="text" 
-              className="form-input" 
-              required
-              placeholder="e.g. 2024CS001"
-              value={addForm.rollNumber}
-              onChange={(e) => setAddForm({...addForm, rollNumber: e.target.value})}
-            />
-          </div>
+
           <div className="form-group">
             <label className="form-label">Student Phone</label>
             <input 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../utils/api';
+import { complaints as complaintsApi } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { Wrench, ShieldAlert, CheckCircle, Clock, AlertTriangle, ArrowLeft } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
@@ -28,10 +28,10 @@ const Complaints = () => {
     try {
       setLoading(true);
       if (user.role === 'ADMIN') {
-        const data = await api('/complaints');
+        const data = await complaintsApi.getAll();
         setComplaints(data);
       } else {
-        const data = await api('/complaints/my-complaints');
+        const data = await complaintsApi.getMyComplaints();
         setComplaints(data);
       }
     } catch (error) {
@@ -50,10 +50,7 @@ const Complaints = () => {
     e.preventDefault();
     setFormError(null);
     try {
-      await api('/complaints', {
-        method: 'POST',
-        body: form
-      });
+      await complaintsApi.create(form);
       setForm({ category: 'Electrical', description: '', priority: 'MEDIUM' });
       fetchComplaints();
       alert('Complaint ticket submitted successfully to Warden Office.');
@@ -75,12 +72,9 @@ const Complaints = () => {
     e.preventDefault();
     try {
       setActionLoading(true);
-      await api(`/complaints/${selectedComplaint.id}`, {
-        method: 'PUT',
-        body: {
-          status,
-          wardenNotes
-        }
+      await complaintsApi.update(selectedComplaint.id, {
+        status,
+        wardenNotes
       });
       setIsActionModalOpen(false);
       fetchComplaints();
@@ -109,7 +103,7 @@ const Complaints = () => {
           </h1>
           <p className="page-subtitle mb-0 mt-1">
             {user.role === 'ADMIN' ? 'Manage hostel issues, assign support staff, and log resolution feedback.' :
-             'Hari Pushap PG hostellers asset repair and support ticketing helpline'}
+             'Hari Pushp PG hostellers asset repair and support ticketing helpline'}
           </p>
         </div>
       </div>

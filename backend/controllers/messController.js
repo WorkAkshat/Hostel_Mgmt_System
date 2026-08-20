@@ -155,8 +155,52 @@ const getMyMessAttendance = async (req, res) => {
   }
 };
 
+const fs = require('fs');
+const path = require('path');
+const MENU_FILE_PATH = path.join(__dirname, '../mess_menu.json');
+
+const DEFAULT_MENU = {
+  Monday:    { breakfast: 'Poha + Chai', lunch: 'Dal Tadka + Roti + Rice', snacks: 'Samosa + Tea', dinner: 'Paneer Butter Masala + Naan' },
+  Tuesday:   { breakfast: 'Idli + Sambar', lunch: 'Rajma Chawal + Salad', snacks: 'Biscuits + Chai', dinner: 'Aloo Gobi + Roti + Dal' },
+  Wednesday: { breakfast: 'Paratha + Curd', lunch: 'Chana Masala + Rice + Roti', snacks: 'Pakoda + Tea', dinner: 'Mix Veg + Phulka + Rice' },
+  Thursday:  { breakfast: 'Upma + Chutney', lunch: 'Dal Makhani + Jeera Rice', snacks: 'Bread Pakoda + Tea', dinner: 'Shahi Paneer + Laccha Paratha' },
+  Friday:    { breakfast: 'Puri + Bhaji', lunch: 'Chole + Rice + Roti', snacks: 'Chakli + Tea', dinner: 'Dal Tadka + Roti + Rice' },
+  Saturday:  { breakfast: 'Aloo Paratha + Pickle', lunch: 'Veg Biryani + Raita', snacks: 'Popcorn + Chai', dinner: 'Kadhi Pakoda + Rice + Roti' },
+  Sunday:    { breakfast: 'Dosa + Chutney + Sambar', lunch: 'Special Thali (Puri, Dal, Sabzi, Sweet)', snacks: 'French Fries + Sauce', dinner: 'Veg Pulao + Butter Naan + Raita' },
+};
+
+const getMessMenu = async (req, res) => {
+  try {
+    if (!fs.existsSync(MENU_FILE_PATH)) {
+      fs.writeFileSync(MENU_FILE_PATH, JSON.stringify(DEFAULT_MENU, null, 2));
+      return res.json(DEFAULT_MENU);
+    }
+    const data = fs.readFileSync(MENU_FILE_PATH, 'utf8');
+    res.json(JSON.parse(data));
+  } catch (error) {
+    console.error('Error fetching mess menu:', error);
+    res.status(500).json({ message: 'Server error retrieving mess menu' });
+  }
+};
+
+const updateMessMenu = async (req, res) => {
+  try {
+    const newMenu = req.body;
+    if (!newMenu || typeof newMenu !== 'object') {
+      return res.status(400).json({ message: 'Invalid menu data provided' });
+    }
+    fs.writeFileSync(MENU_FILE_PATH, JSON.stringify(newMenu, null, 2));
+    res.json({ message: 'Mess menu updated successfully', menu: newMenu });
+  } catch (error) {
+    console.error('Error updating mess menu:', error);
+    res.status(500).json({ message: 'Server error saving mess menu' });
+  }
+};
+
 module.exports = {
   biometricVerifyMess,
   getMessStats,
-  getMyMessAttendance
+  getMyMessAttendance,
+  getMessMenu,
+  updateMessMenu
 };

@@ -6,7 +6,10 @@ const prisma = new PrismaClient();
 // @access  Private
 const getAllRooms = async (req, res) => {
   try {
-    const rooms = await prisma.room.findMany({
+    const limit = req.query.limit ? parseInt(req.query.limit) : null;
+    const cursor = req.query.cursor;
+
+    const queryOptions = {
       include: {
         students: {
           select: {
@@ -19,8 +22,35 @@ const getAllRooms = async (req, res) => {
             }
           }
         }
+      },
+      orderBy: { id: 'asc' }
+    };
+
+    if (limit !== null) {
+      queryOptions.take = limit + 1;
+      if (cursor) {
+        queryOptions.cursor = { id: cursor };
+        queryOptions.skip = 1;
       }
-    });
+    }
+
+    const rooms = await prisma.room.findMany(queryOptions);
+
+    if (limit !== null) {
+      let nextCursor = null;
+      let hasMore = false;
+      if (rooms.length > limit) {
+        hasMore = true;
+        nextCursor = rooms[limit - 1].id;
+        rooms.pop();
+      }
+      return res.json({
+        data: rooms,
+        nextCursor,
+        hasMore
+      });
+    }
+
     res.json(rooms);
   } catch (error) {
     console.error('Error fetching rooms:', error);

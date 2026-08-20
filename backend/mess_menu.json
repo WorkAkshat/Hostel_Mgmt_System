@@ -1,0 +1,44 @@
+{
+  "Monday": {
+    "breakfast": "Poha + Chai",
+    "lunch": "Dal Tadka + Roti + Rice",
+    "snacks": "Samosa + Tea",
+    "dinner": "Paneer Butter Masala + Naan"
+  },
+  "Tuesday": {
+    "breakfast": "Idli + Sambar",
+    "lunch": "Rajma Chawal + Salad",
+    "snacks": "Biscuits + Chai",
+    "dinner": "Aloo Gobi + Roti + Dal"
+  },
+  "Wednesday": {
+    "breakfast": "Paratha + Curd",
+    "lunch": "Chana Masala + Rice + Roti",
+    "snacks": "Pakoda + Tea",
+    "dinner": "Mix Veg + Phulka + Rice"
+  },
+  "Thursday": {
+    "breakfast": "Upma + Chutney",
+    "lunch": "Dal Makhani + Jeera Rice",
+    "snacks": "Bread Pakoda + Tea",
+    "dinner": "Shahi Paneer + Laccha Paratha"
+  },
+  "Friday": {
+    "breakfast": "Puri + Bhaji",
+    "lunch": "Chole + Rice + Roti",
+    "snacks": "Chakli + Tea",
+    "dinner": "Dal Tadka + Roti + Rice"
+  },
+  "Saturday": {
+    "breakfast": "Aloo Paratha + Pickle",
+    "lunch": "Veg Biryani + Raita",
+    "snacks": "Popcorn + Chai",
+    "dinner": "Kadhi Pakoda + Rice + Roti"
+  },
+  "Sunday": {
+    "breakfast": "Dosa + Chutney + Sambar",
+    "lunch": "Special Thali (Puri, Dal, Sabzi, Sweet)",
+    "snacks": "French Fries + Sauce",
+    "dinner": "Veg Pulao + Butter Naan + Raita"
+  }
+}

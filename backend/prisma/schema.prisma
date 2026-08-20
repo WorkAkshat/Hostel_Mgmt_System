@@ -1,6 +1,6 @@
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 generator client {
@@ -13,11 +13,13 @@ model User {
   password  String
   name      String
   role      String   @default("STUDENT") // "ADMIN", "STUDENT", "STAFF"
+  pushToken String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   student   Student?
   staff     Staff?
+  votes     PollVote[]
 }
 
 model Student {
@@ -30,6 +32,16 @@ model Student {
   status         String         @default("CHECKED_IN") // "CHECKED_IN", "CHECKED_OUT", "SUSPENDED"
   roomId         String?
   room           Room?          @relation(fields: [roomId], references: [id])
+  
+  // Registration Personal Details
+  dateOfJoining    DateTime?
+  maritalStatus    String?
+  fatherName       String?
+  dob              DateTime?
+  permanentAddress String?
+  state            String?
+  pincode          String?
+  coachingCollege  String?
   
   leaveRequests  LeaveRequest[]
   complaints     Complaint[]
@@ -126,5 +138,27 @@ model MessAttendance {
   date        String   // "YYYY-MM-DD"
   timestamp   DateTime @default(now())
   verifiedBy  String   // "BIOMETRIC_FINGERPRINT", "BIOMETRIC_FACE"
+}
+
+model Poll {
+  id          String     @id @default(uuid())
+  question    String
+  options     String     // JSON string array of options, e.g. '["Option A", "Option B"]'
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  votes       PollVote[]
+}
+
+model PollVote {
+  id        String   @id @default(uuid())
+  pollId    String
+  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  option    String   // The voted option string
+  createdAt DateTime @default(now())
+
+  @@unique([pollId, userId])
 }
 

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const CustomModal = ({ isOpen, onClose, title, children }) => {
+const CustomModal = ({ isOpen, onClose, title, size = 'md', children }) => {
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -15,6 +15,9 @@ const CustomModal = ({ isOpen, onClose, title, children }) => {
       document.body.style.overflow = 'unset';
     };
   }, [isOpen]);
+
+  // Determine modal width based on size
+  const maxWClass = size === 'lg' ? 'md:max-w-[720px]' : size === 'xl' ? 'md:max-w-[880px]' : 'md:max-w-[540px]';
 
   // We must always return the portal (even if empty) to keep AnimatePresence working properly,
   // or wrap AnimatePresence around the conditionally rendered modal.
@@ -37,7 +40,7 @@ const CustomModal = ({ isOpen, onClose, title, children }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 100, scale: 0.98 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="w-full md:w-[95%] max-w-full md:max-w-[540px] rounded-t-[24px] md:rounded-[var(--border-radius-modal)] overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] md:max-h-[85dvh] bg-white relative"
+            className={`w-full md:w-[95%] max-w-full ${maxWClass} rounded-t-[24px] md:rounded-[var(--border-radius-modal)] overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] md:max-h-[85dvh] bg-white relative`}
             style={{
               backdropFilter: 'blur(24px)',
               WebkitBackdropFilter: 'blur(24px)',

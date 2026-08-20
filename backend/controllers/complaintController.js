@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { sendPushNotification } = require('../services/pushService');
 const prisma = new PrismaClient();
 
 // @desc    Submit a complaint (Student only)
@@ -103,7 +104,18 @@ const updateComplaint = async (req, res) => {
   }
 
   try {
-    const complaint = await prisma.complaint.findUnique({ where: { id } });
+    const complaint = await prisma.complaint.findUnique({
+      where: { id },
+      include: {
+        student: {
+          include: {
+            user: {
+              select: { id: true, pushToken: true }
+            }
+          }
+        }
+      }
+    });
 
     if (!complaint) {
       return res.status(404).json({ message: 'Complaint ticket not found' });
@@ -117,6 +129,16 @@ const updateComplaint = async (req, res) => {
       }
     });
 
+    // Send High-Priority Targeted Push Notification to Student
+    if (complaint.student && complaint.student.user && complaint.student.user.pushToken) {
+      sendPushNotification({
+        pushTokens: complaint.student.user.pushToken,
+        title: `🛠️ Complaint Ticket Update (${status})`,
+        body: `Your complaint for "${complaint.category}" is now ${status.toLowerCase().replace('_', ' ')}.`,
+        data: { type: 'COMPLAINT_STATUS', complaintId: complaint.id }
+      }).catch(err => console.warn('[Complaint Push Error]', err.message));
+    }
+
     res.json(updatedComplaint);
   } catch (error) {
     console.error('Error updating complaint:', error);
@@ -124,9 +146,87 @@ const updateComplaint = async (req, res) => {
   }
 };
 
+const { sendMail } = require('../utils/mail');
+
+const forwardDeveloperComplaint = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const complaint = await prisma.complaint.findUnique({
+      where: { id },
+      include: {
+        student: {
+          include: {
+            user: {
+              select: { name: true, email: true }
+            },
+            room: true
+          }
+        }
+      }
+    });
+
+    if (!complaint) {
+      return res.status(404).json({ message: 'Complaint ticket not found' });
+    }
+
+    const devEmail = process.env.DEVELOPER_EMAIL || 'developer.hms@gmail.com';
+    const emailSubject = `[HMS Bug Report] Ticket #${complaint.id.slice(0, 8)} - ${complaint.category}`;
+    
+    const emailBody = `
+Dear Developer,
+
+A new technical/app issue has been reported in the Hostel Management System and forwarded to you.
+
+=================== COMPLAINT TICKET DETAILS ===================
+Ticket ID:   ${complaint.id}
+Category:    ${complaint.category}
+Priority:    ${complaint.priority}
+Filed Date:  ${new Date(complaint.createdAt).toLocaleString()}
+Status:      ${complaint.status}
+
+=================== STUDENT REPORTING DETAILS ==================
+Student Name:  ${complaint.student?.user?.name || 'N/A'}
+Roll Number:   ${complaint.student?.rollNumber || 'N/A'}
+Email:         ${complaint.student?.user?.email || 'N/A'}
+Room Details:  Room ${complaint.student?.room?.roomNumber || 'N/A'} (${complaint.student?.room?.block || 'N/A'} Block)
+
+====================== ISSUE DESCRIPTION =======================
+"${complaint.description}"
+================================================================
+
+Please investigate this report.
+
+Regards,
+HMS Warden Panel
+`;
+
+    // Send the email
+    await sendMail({
+      to: devEmail,
+      subject: emailSubject,
+      text: emailBody
+    });
+
+    // Update complaint notes
+    const updated = await prisma.complaint.update({
+      where: { id },
+      data: {
+        wardenNotes: `[Escalated to Developer on ${new Date().toLocaleDateString()}] ${complaint.wardenNotes || ''}`.trim()
+      }
+    });
+
+    res.json({ message: 'Ticket successfully forwarded to Developer email queue', complaint: updated });
+  } catch (error) {
+    console.error('Error forwarding developer complaint:', error);
+    res.status(500).json({ message: 'Failed to forward ticket to Developer' });
+  }
+};
+
 module.exports = {
   createComplaint,
   getAllComplaints,
   getMyComplaints,
-  updateComplaint
+  updateComplaint,
+  forwardDeveloperComplaint
 };

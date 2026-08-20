@@ -3,7 +3,8 @@ const {
   createComplaint,
   getAllComplaints,
   getMyComplaints,
-  updateComplaint
+  updateComplaint,
+  forwardDeveloperComplaint
 } = require('../controllers/complaintController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -18,5 +19,8 @@ router.route('/my-complaints')
 
 router.route('/:id')
   .put(protect, authorize('ADMIN'), updateComplaint);
+
+router.route('/:id/forward-developer')
+  .post(protect, authorize('ADMIN'), forwardDeveloperComplaint);
 
 module.exports = router;

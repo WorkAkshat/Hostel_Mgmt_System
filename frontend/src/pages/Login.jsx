@@ -77,7 +77,7 @@ const Login = () => {
               <Home size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-[17px] font-bold text-slate-800 tracking-tight leading-none">Hari Pushap PG</h2>
+              <h2 className="text-[17px] font-bold text-slate-800 tracking-tight leading-none">Hari Pushp PG</h2>
               <p className="text-[12px] text-slate-500 font-medium mt-0.5">Girls Hostel Management</p>
             </div>
           </div>
@@ -117,7 +117,7 @@ const Login = () => {
             <div className="w-10 h-10 rounded-[14px] flex items-center justify-center shadow-md" style={{background: 'linear-gradient(135deg, #2563eb, #4f46e5)'}}>
               <Home size={18} className="text-white" />
             </div>
-            <h2 className="text-[18px] font-bold text-slate-800 tracking-tight">Hari Pushap PG</h2>
+            <h2 className="text-[18px] font-bold text-slate-800 tracking-tight">Hari Pushp PG</h2>
           </div>
 
           {/* Card */}
@@ -134,7 +134,7 @@ const Login = () => {
             {/* Header */}
             <div className="flex flex-col mb-8">
               <h2 className="text-[24px] font-bold text-slate-800 tracking-tight">Welcome back</h2>
-              <p className="text-[14px] text-slate-500 font-medium mt-1.5">Sign in to your Hari Pushap PG account to continue</p>
+              <p className="text-[14px] text-slate-500 font-medium mt-1.5">Sign in to your Hari Pushp PG account to continue</p>
             </div>
 
             {/* Error */}
@@ -153,7 +153,7 @@ const Login = () => {
                   <Mail size={16} className="absolute left-4 text-slate-400" />
                   <input
                     type="email"
-                    placeholder="name@haripushappg.com"
+                    placeholder="name@haripushppg.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
@@ -212,9 +212,9 @@ const Login = () => {
 
             <div className="grid grid-cols-3 gap-2.5">
               {[
-                { label: 'Admin', sublabel: 'Chief Warden', email: 'warden@haripushappg.com', color: '#2563eb', bg: 'rgba(37,99,235,0.06)' },
-                { label: 'Student', sublabel: 'Ananya', email: 'ananya@haripushappg.com', color: '#10b981', bg: 'rgba(16,185,129,0.06)' },
-                { label: 'Staff', sublabel: 'Security', email: 'guard@haripushappg.com', color: '#f59e0b', bg: 'rgba(245,158,11,0.06)' },
+                { label: 'Admin', sublabel: 'Chief Warden', email: 'warden@haripushppg.com', color: '#2563eb', bg: 'rgba(37,99,235,0.06)' },
+                { label: 'Student', sublabel: 'Ananya', email: 'ananya@haripushppg.com', color: '#10b981', bg: 'rgba(16,185,129,0.06)' },
+                { label: 'Staff', sublabel: 'Security', email: 'guard@haripushppg.com', color: '#f59e0b', bg: 'rgba(245,158,11,0.06)' },
               ].map((d) => (
                 <button
                   key={d.email}
@@ -230,11 +230,22 @@ const Login = () => {
                 </button>
               ))}
             </div>
+
+            <div className="flex items-center justify-center gap-1.5 mt-6 text-[13px] font-medium text-slate-500">
+              <span>Don't have an account?</span>
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="bg-transparent border-none text-blue-600 hover:text-blue-700 font-semibold underline cursor-pointer p-0 text-[13px] outline-none"
+              >
+                Sign Up
+              </button>
+            </div>
           </div>
 
           {/* Footer */}
           <p className="text-center text-[12px] text-slate-400 font-medium">
-            Hari Pushap PG &mdash; Enterprise Hostel Management Platform
+            Hari Pushp PG &mdash; Enterprise Hostel Management Platform
           </p>
         </div>
       </div>

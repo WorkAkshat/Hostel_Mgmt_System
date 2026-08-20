@@ -1,5 +1,12 @@
 const jwt = require('jsonwebtoken');
 
+// Fail fast if JWT_SECRET is not configured — never fall back to a weak key
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('[Auth] FATAL: JWT_SECRET environment variable is not set. Shutting down.');
+  process.exit(1);
+}
+
 // Verify JWT Token Middleware
 const protect = (req, res, next) => {
   let token;
@@ -10,7 +17,7 @@ const protect = (req, res, next) => {
   ) {
     try {
       token = req.headers.authorization.split(' ')[1];
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'super_secret_hostel_key_2026_xyz');
+      const decoded = jwt.verify(token, JWT_SECRET);
 
       // Attach decoded user info (id, email, role) to the request object
       req.user = decoded;
@@ -25,6 +32,7 @@ const protect = (req, res, next) => {
     return res.status(401).json({ message: 'Not authorized, no token provided' });
   }
 };
+
 
 // Role Authorization Middleware
 const authorize = (...roles) => {

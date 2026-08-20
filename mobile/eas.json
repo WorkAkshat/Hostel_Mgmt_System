@@ -1,0 +1,41 @@
+{
+  "cli": {
+    "version": ">= 12.0.0"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "",
+        "EXPO_PUBLIC_LOCAL_IP": "192.168.1.78",
+        "EXPO_PUBLIC_API_PORT": "9000"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "",
+        "EXPO_PUBLIC_LOCAL_IP": "192.168.1.78",
+        "EXPO_PUBLIC_API_PORT": "9000"
+      }
+    },
+    "production": {
+      "distribution": "store",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://YOUR_VPS_IP:9000/api/v1",
+        "EXPO_PUBLIC_LOCAL_IP": "",
+        "EXPO_PUBLIC_API_PORT": "9000"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

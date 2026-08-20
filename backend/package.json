@@ -1,13 +1,17 @@
 {
   "name": "hms-backend",
   "version": "1.0.0",
-  "description": "Backend API server for Hari Pushap PG Girls Hostel",
+  "description": "Backend API server for Hari Pushp PG Girls Hostel",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
     "db:migrate": "npx prisma migrate dev",
-    "db:seed": "node prisma/seed.js"
+    "db:migrate:prod": "npx prisma migrate deploy",
+    "db:generate": "npx prisma generate",
+    "db:seed": "node prisma/seed.js",
+    "db:reset": "npx prisma migrate reset",
+    "db:studio": "npx prisma studio"
   },
   "keywords": [],
   "author": "",
@@ -18,7 +22,11 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2"
+    "express-rate-limit": "^8.6.2",
+    "firebase-admin": "^14.2.0",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^9.0.3"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",

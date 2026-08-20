@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import api from '../utils/api';
+import { visitors as visitorsApi } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import { UserPlus, Calendar, Clock, UserCheck, ShieldAlert, LogOut } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
@@ -61,7 +61,7 @@ const Visitors = () => {
   const fetchVisitors = async () => {
     try {
       setLoading(true);
-      const data = await api('/visitors');
+      const data = await visitorsApi.getAll();
       if (data && data.length > 0) {
         // Append MOCK_VISITORS to show more content as requested
         setVisitors([...data, ...MOCK_VISITORS.filter(m => !data.find(d => d.name === m.name))]);
@@ -92,10 +92,7 @@ const Visitors = () => {
     setFormError(null);
     try {
       setActionLoading(true);
-      await api('/visitors', {
-        method: 'POST',
-        body: form
-      });
+      await visitorsApi.create(form);
       setIsAddModalOpen(false);
       setForm({ studentRollNumber: '', name: '', phone: '', relationship: 'Father' });
       fetchVisitors();
@@ -109,9 +106,7 @@ const Visitors = () => {
   const handleCheckout = async (id) => {
     if (window.confirm('Are you sure you want to log checkout for this visitor?')) {
       try {
-        await api(`/visitors/${id}/checkout`, {
-          method: 'PUT'
-        });
+        await visitorsApi.checkOut(id);
         fetchVisitors();
       } catch (error) {
         alert(error.message || 'Failed to check-out visitor');
