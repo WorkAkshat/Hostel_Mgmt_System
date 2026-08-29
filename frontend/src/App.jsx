@@ -20,6 +20,7 @@ import Staff from './pages/Staff';
 import Approvals from './pages/Approvals';
 import FloorDirectory from './pages/FloorDirectory';
 import ModulesView from './pages/ModulesView';
+import TallyAccounting from './pages/TallyAccounting';
 
 import { useState, useEffect } from 'react';
 
@@ -221,6 +222,10 @@ const App = () => {
             <Route 
               path="/admin/dashboard" 
               element={<PrivateRoute allowedRoles={['ADMIN']}><Dashboard /></PrivateRoute>} 
+            />
+            <Route 
+              path="/admin/tally" 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><TallyAccounting /></PrivateRoute>} 
             />
             <Route 
               path="/admin/floors" 

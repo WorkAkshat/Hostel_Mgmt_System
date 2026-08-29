@@ -422,6 +422,66 @@ async function main() {
   });
   console.log('✓ Created initial notices.');
 
+  // ── 19. Tally ERP Account Heads & Initial Vouchers ──────────────────────────
+  await prisma.voucherEntry.deleteMany({});
+  await prisma.voucher.deleteMany({});
+  await prisma.accountHead.deleteMany({});
+
+  const headsData = [
+    { code: 'REV-HOSTEL',        name: 'Hostel Accommodation Income',        group: 'INCOME',    category: 'DIRECT' },
+    { code: 'REV-MESS',          name: 'Mess & Catering Income',             group: 'INCOME',    category: 'DIRECT' },
+    { code: 'REV-ELEC',          name: 'Electricity Charges Reimbursement',  group: 'INCOME',    category: 'DIRECT' },
+    { code: 'EXP-ELEC-UTIL',     name: 'Electricity Utility Bill (State)',   group: 'EXPENSE',   category: 'DIRECT' },
+    { code: 'EXP-MESS-PAYMENT',  name: 'Meenakshi Catering Payment',         group: 'EXPENSE',   category: 'DIRECT' },
+    { code: 'EXP-MAINT',         name: 'Hostel Repairs & Maintenance',       group: 'EXPENSE',   category: 'INDIRECT' },
+    { code: 'EXP-STAFF-SALARY',  name: 'Staff & Security Salaries',          group: 'EXPENSE',   category: 'INDIRECT' },
+    { code: 'ASSET-BANK',        name: 'HDFC Bank Account (Current)',        group: 'ASSET',     category: 'CURRENT' },
+    { code: 'ASSET-CASH',        name: 'Cash in Hand',                       group: 'ASSET',     category: 'CURRENT' },
+    { code: 'LIAB-SECURITY',     name: 'Student Refundable Security Deposit',group: 'LIABILITY', category: 'CURRENT' },
+    { code: 'LIAB-VENDOR-PAYABLE', name: 'Sundry Creditors / Vendor Payables', group: 'LIABILITY', category: 'CURRENT' },
+  ];
+
+  const headsMap = {};
+  for (const hd of headsData) {
+    const head = await prisma.accountHead.create({ data: hd });
+    headsMap[hd.code] = head;
+  }
+  console.log('✓ Created 11 Tally Account Heads.');
+
+  // Initial Vouchers across Floor Firms
+  const sampleVouchers = [
+    { vNo: 'VCH-RJK-2026-001', type: 'RECEIPT', fNum: 1, cName: 'Rajken Enterprises',           amt: 14200, desc: 'Hostel Rent & Elec Receipt - Pooja Sharma', crHead: 'REV-HOSTEL', drHead: 'ASSET-BANK' },
+    { vNo: 'VCH-VAN-2026-001', type: 'RECEIPT', fNum: 2, cName: 'Vandana Enterprises',          amt: 14240, desc: 'Hostel Rent & Elec Receipt - Sneha Patel',  crHead: 'REV-HOSTEL', drHead: 'ASSET-BANK' },
+    { vNo: 'VCH-PSH-2026-001', type: 'RECEIPT', fNum: 3, cName: 'Pushpa Enterprises',           amt: 16320, desc: 'Hostel Rent & Elec Receipt - Kavya Reddy',  crHead: 'REV-HOSTEL', drHead: 'ASSET-BANK' },
+    { vNo: 'VCH-HCE-2026-001', type: 'RECEIPT', fNum: 4, cName: 'Harish Chandra Enterprises',   amt: 14224, desc: 'Hostel Rent & Elec Receipt - Neha Tiwari',  crHead: 'REV-HOSTEL', drHead: 'ASSET-BANK' },
+    { vNo: 'VCH-RME-2026-001', type: 'RECEIPT', fNum: 5, cName: 'Ramesh Enterprises',           amt: 14256, desc: 'Hostel Rent & Elec Receipt - Meera Chauhan', crHead: 'REV-HOSTEL', drHead: 'ASSET-BANK' },
+    { vNo: 'VCH-ME-2026-001',  type: 'PAYMENT', fNum: null, cName: 'Meenakshi Enterprises',     amt: 33000, desc: 'August Mess Provision & Catering Payment',   crHead: 'ASSET-BANK', drHead: 'EXP-MESS-PAYMENT' },
+    { vNo: 'VCH-GEN-2026-001', type: 'PAYMENT', fNum: null, cName: 'Consolidated Operations',   amt: 18500, desc: 'Monthly Electric Substation Utility Bill',   crHead: 'ASSET-BANK', drHead: 'EXP-ELEC-UTIL' },
+  ];
+
+  for (const v of sampleVouchers) {
+    const vch = await prisma.voucher.create({
+      data: {
+        voucherNo: v.vNo,
+        voucherType: v.type,
+        date: new Date(),
+        floorNumber: v.fNum,
+        companyName: v.cName,
+        narration: v.desc,
+        amount: v.amt,
+        createdBy: 'warden@haripushppg.com'
+      }
+    });
+
+    await prisma.voucherEntry.createMany({
+      data: [
+        { voucherId: vch.id, accountHeadId: headsMap[v.drHead].id, type: 'DEBIT', amount: v.amt },
+        { voucherId: vch.id, accountHeadId: headsMap[v.crHead].id, type: 'CREDIT', amount: v.amt },
+      ]
+    });
+  }
+  console.log('✓ Created initial Tally Accounting Vouchers.');
+
   console.log('\n==================================================');
   console.log('🎉 SEEDING COMPLETED SUCCESSFULLY!');
   console.log('==================================================');

@@ -278,3 +278,39 @@ model PollVote {
 
   @@unique([pollId, userId])
 }
+
+// ─── Tally ERP Accounting Models ─────────────────────────────────────────────
+model AccountHead {
+  id        String         @id @default(uuid())
+  code      String         @unique // e.g. "REV-HOSTEL", "EXP-ELEC", "LIAB-SEC"
+  name      String         // e.g. "Hostel Rent Income", "Electricity Expense"
+  group     String         // "INCOME", "EXPENSE", "ASSET", "LIABILITY"
+  category  String?        // "DIRECT", "INDIRECT"
+  entries   VoucherEntry[]
+  createdAt DateTime       @default(now())
+}
+
+model Voucher {
+  id          String         @id @default(uuid())
+  voucherNo   String         @unique // e.g. "VCH-2026-0001"
+  voucherType String         // "RECEIPT", "PAYMENT", "JOURNAL"
+  date        DateTime
+  floorNumber Int?           // 1-5 or null (Consolidated)
+  companyName String?        // "Rajken Enterprises", "Vandana Enterprises", etc.
+  narration   String         // Description e.g. "August hostel fee receipt"
+  amount      Float
+  createdBy   String         // Warden / Admin email
+  createdAt   DateTime       @default(now())
+  entries     VoucherEntry[]
+}
+
+model VoucherEntry {
+  id            String      @id @default(uuid())
+  voucherId     String
+  voucher       Voucher     @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  accountHeadId String
+  accountHead   AccountHead @relation(fields: [accountHeadId], references: [id])
+  type          String      // "DEBIT" or "CREDIT"
+  amount        Float
+}
+

@@ -38,6 +38,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
       case 'ADMIN':
         return [
           { path: '/admin/dashboard', name: 'Dashboard',          icon: <LayoutDashboard size={18} /> },
+          { path: '/admin/tally',     name: 'Tally ERP Ledger 📖', icon: <Receipt size={18} /> },
           { path: '/admin/floors',    name: 'Floor Directory 🏢',  icon: <Building2 size={18} /> },
           { path: '/admin/reports',   name: 'Financial Reports 📊', icon: <FileCheck size={18} /> },
           { path: '/admin/demand-notes', name: 'Demand Notes & Sub-meters 🧾', icon: <Receipt size={18} /> },

@@ -1,0 +1,55 @@
+name: Continuous Integration (CI)
+
+on:
+  push:
+    branches: [ prod, main, master ]
+  pull_request:
+    branches: [ prod, main, master ]
+
+jobs:
+  test-and-build:
+    name: Build & Lint Checks (Backend, Web Frontend & Mobile)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+            mobile/package-lock.json
+
+      # 1. Backend Syntax & Check
+      - name: Check Backend Dependencies & Syntax
+        run: |
+          cd backend
+          npm ci
+          node -c server.js
+          node -c controllers/*.js
+          node -c routes/*.js
+        env:
+          JWT_SECRET: "ci_test_secret_key_1234567890_abcdefghijklmnopqrstuvwxyz"
+
+      # 2. Frontend Web App Build Check
+      - name: Build Web Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: "https://hms-api.haripushphostel.in/api/v1"
+
+      # 3. Mobile App TypeScript Check
+      - name: Check Mobile TypeScript Compilation
+        run: |
+          cd mobile
+          npm ci
+          npx tsc --noEmit
+        env:
+          EXPO_PUBLIC_API_URL: "https://hms-api.haripushphostel.in/api/v1"
