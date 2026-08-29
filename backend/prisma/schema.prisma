@@ -1,6 +1,6 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 generator client {
@@ -8,18 +8,30 @@ generator client {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("STUDENT") // "ADMIN", "STUDENT", "STAFF"
-  pushToken String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  name          String
+  role          String   @default("STUDENT") // "ADMIN", "STUDENT", "STAFF"
+  assignedFloor Int?     // null = Consolidated Super Admin across all floors, 1-5 = Floor Specific Warden
+  pushToken     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-  student   Student?
-  staff     Staff?
-  votes     PollVote[]
+  student         Student?
+  staff           Staff?
+  votes           PollVote[]
+  nightAttendance NightAttendance[] @relation("MarkedByUser")
+}
+
+model Floor {
+  id           String  @id @default(uuid())
+  floorNumber  Int     @unique // 1-5
+  companyName  String  // English company name e.g. "Rajken Enterprises"
+  hostelName   String  // English hostel name e.g. "Hari Pushp Girls Hostel"
+  shortName    String  // English short label e.g. "Floor 1 – Rajken"
+  floorLabel   String  // English display e.g. "First Floor"
+  rooms        Room[]
 }
 
 model Student {
@@ -43,62 +55,173 @@ model Student {
   pincode          String?
   coachingCollege  String?
   
-  leaveRequests  LeaveRequest[]
-  complaints     Complaint[]
-  invoices       Invoice[]
-  visitors       Visitor[]
-  messAttendance MessAttendance[]
+  leaveRequests    LeaveRequest[]
+  complaints       Complaint[]
+  invoices         Invoice[]
+  visitors         Visitor[]
+  mealOptOuts      MealOptOut[]
+  demandNotes      DemandNote[]
+  nightAttendances NightAttendance[]
+  messAttendance   MessAttendance[]
+  suggestions      Suggestion[]
+}
+
+model Staff {
+  id          String   @id @default(uuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department  String
+  designation String
+  phoneNumber String
 }
 
 model Room {
-  id          String   @id @default(uuid())
-  roomNumber  String   @unique
-  block       String   // e.g., "A", "B"
-  sharingType Int      // 1, 2, 3 sharing
-  isAc        Boolean  @default(false)
-  status      String   @default("AVAILABLE") // "AVAILABLE", "FULL", "MAINTENANCE"
-  assets      String   // JSON string of furniture items & condition (e.g. beds, tables)
-  
-  students    Student[]
+  id                  String               @id @default(uuid())
+  roomNumber          String               @unique
+  block               String
+  floorId             String?
+  floor               Floor?               @relation(fields: [floorId], references: [id])
+  floorNumber         Int?                 @default(1)
+  sharingType         Int                  @default(2) // 1 = Single (16k), 2 = Twin (14k), 3 = Triple (12k)
+  capacity            Int                  @default(2)
+  isAc                Boolean              @default(false)
+  status              String               @default("AVAILABLE") // "AVAILABLE", "OCCUPIED", "MAINTENANCE"
+  assets              String               @default("[]") // JSON string of room assets
+  students            Student[]
+  electricityReadings ElectricityReading[]
 }
 
 model LeaveRequest {
-  id          String      @id @default(uuid())
-  studentId   String
-  student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  startDate   DateTime
-  endDate     DateTime
-  type        String      @default("NIGHT_OUT") // "NIGHT_OUT", "OUT_OF_STATION", "EMERGENCY"
-  reason      String
-  status      String      @default("PENDING") // "PENDING", "APPROVED", "REJECTED", "CHECKED_OUT", "RETURNED"
-  approvedBy  String?     // Warden ID or name
-  comments    String?
-  checkOutTime DateTime?
-  checkInTime  DateTime?
-  createdAt   DateTime    @default(now())
+  id                 String    @id @default(uuid())
+  studentId          String
+  student            Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type               String    // "OUTING", "HOME_LEAVE", "EMERGENCY"
+  reason             String
+  destination        String?   // Outing / Destination address
+  startDate          DateTime
+  endDate            DateTime
+  departureTime      String?   // "HH:mm"
+  expectedReturnTime String?   // "HH:mm"
+  checkoutTime       DateTime?
+  checkinTime        DateTime?
+  parentNotified     Boolean   @default(false)
+  parentNotifiedAt   DateTime?
+  status             String    @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  comments           String?
+  createdAt          DateTime  @default(now())
 }
 
 model Complaint {
-  id          String          @id @default(uuid())
+  id          String    @id @default(uuid())
   studentId   String
-  student     Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  category    String          // Electrical, Plumbing, HVAC, Wi-Fi, Structural, etc.
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  category    String    // "PLUMBING", "ELECTRICAL", "INTERNET", "CLEANING", "FOOD", "OTHER"
   description String
-  priority    String          @default("MEDIUM") // "LOW", "MEDIUM", "HIGH", "URGENT"
-  status      String          @default("PENDING") // "PENDING", "IN_PROGRESS", "RESOLVED"
+  location    String?   // Room/area description
+  photoUrl    String?   // Path to uploaded photo
+  priority    String    @default("MEDIUM") // "LOW", "MEDIUM", "HIGH", "URGENT"
+  status      String    @default("PENDING") // "PENDING", "IN_PROGRESS", "RESOLVED"
   wardenNotes String?
-  createdAt   DateTime        @default(now())
+  createdAt   DateTime  @default(now())
+}
+
+model Suggestion {
+  id        String   @id @default(uuid())
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  content   String
+  status    String   @default("PENDING") // "PENDING", "READ", "RESOLVED"
+  createdAt DateTime @default(now())
 }
 
 model Invoice {
-  id          String        @id @default(uuid())
+  id          String    @id @default(uuid())
   studentId   String
-  student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
   amount      Float
   dueDate     DateTime
-  status      String        @default("UNPAID") // "UNPAID", "PAID"
+  status      String    @default("UNPAID") // "UNPAID", "PAID"
   paidAt      DateTime?
-  createdAt   DateTime      @default(now())
+  floorNumber Int?      // 1-5
+  companyName String?   // "Rajken Enterprises", "Vandana Enterprises", etc.
+  createdAt   DateTime  @default(now())
+}
+
+model DemandNote {
+  id                String   @id @default(uuid())
+  studentId         String
+  student           Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  billingMonth      String   // "YYYY-MM" e.g. "2026-08"
+  cycleStart        DateTime // 10th of month
+  cycleEnd          DateTime // 9th of next month
+  floorNumber       Int?     // 1-5
+  companyName       String?  // e.g. "Rajken Enterprises"
+  hostelFee         Float    // based on sharing type
+  electricityUnits  Float    @default(0)
+  electricityRate   Float    @default(0)
+  electricityAmount Float    @default(0)
+  messFee           Float    @default(3000)
+  otherCharges      Float    @default(0)
+  totalAmount       Float
+  status            String   @default("PENDING") // "PENDING", "SENT", "PAID"
+  paidAt            DateTime?
+  sentAt            DateTime?
+  createdAt         DateTime @default(now())
+
+  @@unique([studentId, billingMonth])
+}
+
+model ElectricityReading {
+  id              String   @id @default(uuid())
+  roomId          String
+  room            Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  readingMonth    String   // "YYYY-MM"
+  readingDate     DateTime
+  previousReading Float
+  currentReading  Float
+  unitsConsumed   Float
+  ratePerUnit     Float    @default(8.0) // ₹ per unit
+  totalAmount     Float
+  enteredBy       String   // warden name/id
+  createdAt       DateTime @default(now())
+
+  @@unique([roomId, readingMonth])
+}
+
+model MealOptOut {
+  id         String   @id @default(uuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date       String   // "YYYY-MM-DD"
+  mealType   String   // "BREAKFAST", "LUNCH", "SNACKS", "DINNER"
+  createdAt  DateTime @default(now())
+
+  @@unique([studentId, date, mealType])
+}
+
+model MessAttendance {
+  id          String   @id @default(uuid())
+  studentId   String
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  mealType    String   // "BREAKFAST", "LUNCH", "SNACKS", "DINNER"
+  date        String   // "YYYY-MM-DD"
+  timestamp   DateTime @default(now())
+  verifiedBy  String   @default("BIOMETRIC_FINGERPRINT")
+}
+
+model NightAttendance {
+  id             String   @id @default(uuid())
+  studentId      String
+  student        Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date           String   // "YYYY-MM-DD"
+  status         String   // "PRESENT", "ABSENT", "ON_LEAVE"
+  floorNumber    Int      // 1-5
+  markedByUserId String
+  markedByUser   User     @relation("MarkedByUser", fields: [markedByUserId], references: [id])
+  parentNotified Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@unique([studentId, date])
 }
 
 model Visitor {
@@ -112,41 +235,33 @@ model Visitor {
   checkOutTime DateTime?
 }
 
-model Staff {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  department  String   // Warden, Mess, Security, Cleaning, Maintenance
-  designation String
-  phoneNumber String
-}
-
 model Notice {
   id        String   @id @default(uuid())
   title     String
   content   String
-  priority  String   @default("INFO") // INFO, WARNING, URGENT
-  postedBy  String   // Warden Name
+  category  String   @default("GENERAL")
+  target    String   @default("ALL") // "ALL", "STUDENTS", "STAFF"
+  postedBy  String
   createdAt DateTime @default(now())
 }
 
-model MessAttendance {
-  id          String   @id @default(uuid())
-  studentId   String
-  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  mealType    String   // "BREAKFAST", "LUNCH", "SNACKS", "DINNER"
-  date        String   // "YYYY-MM-DD"
-  timestamp   DateTime @default(now())
-  verifiedBy  String   // "BIOMETRIC_FINGERPRINT", "BIOMETRIC_FACE"
+model MessMenu {
+  id        String   @id @default(uuid())
+  dayOfWeek String   @unique // "Monday", "Tuesday", etc.
+  breakfast String
+  lunch     String
+  snacks    String
+  dinner    String
+  updatedAt DateTime @updatedAt
 }
 
 model Poll {
   id          String     @id @default(uuid())
   question    String
-  options     String     // JSON string array of options, e.g. '["Option A", "Option B"]'
+  options     String     // JSON array string
   isActive    Boolean    @default(true)
+  createdById String
   createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
   votes       PollVote[]
 }
 
@@ -156,9 +271,8 @@ model PollVote {
   poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  option    String   // The voted option string
+  option    String
   createdAt DateTime @default(now())
 
   @@unique([pollId, userId])
 }
-

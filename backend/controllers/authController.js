@@ -5,9 +5,9 @@ const jwt = require('jsonwebtoken');
 const prisma = new PrismaClient();
 
 // Generate JWT Token Helper
-const generateToken = (userId, email, role, name) => {
+const generateToken = (userId, email, role, name, assignedFloor = null) => {
   return jwt.sign(
-    { id: userId, email, role, name },
+    { id: userId, email, role, name, assignedFloor },
     process.env.JWT_SECRET,
     { expiresIn: '30d' }
   );
@@ -54,7 +54,15 @@ const loginUser = async (req, res) => {
     }
 
     // 3. Return user data and token
-    const token = generateToken(user.id, user.email, user.role, user.name);
+    const token = generateToken(user.id, user.email, user.role, user.name, user.assignedFloor);
+
+    const COMPANY_MAP = {
+      1: 'Rajken Enterprises',
+      2: 'Vandana Enterprises',
+      3: 'Pushpa Enterprises',
+      4: 'Harish Chandra Enterprises',
+      5: 'Ramesh Enterprises',
+    };
 
     res.json({
       token,
@@ -63,6 +71,8 @@ const loginUser = async (req, res) => {
         email: user.email,
         name: user.name,
         role: user.role,
+        assignedFloor: user.assignedFloor || null,
+        companyName: user.assignedFloor ? COMPANY_MAP[user.assignedFloor] : 'Consolidated View (All Floors)',
         studentDetails: user.student ? {
           id: user.student.id,
           rollNumber: user.student.rollNumber,

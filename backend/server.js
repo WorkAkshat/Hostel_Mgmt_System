@@ -20,6 +20,11 @@ const noticeRoutes = require('./routes/noticeRoutes');
 const staffRoutes = require('./routes/staffRoutes');
 const messRoutes = require('./routes/messRoutes');
 const pollRoutes = require('./routes/pollRoutes');
+const floorRoutes = require('./routes/floorRoutes');
+const electricityRoutes = require('./routes/electricityRoutes');
+const demandNoteRoutes = require('./routes/demandNoteRoutes');
+const suggestionRoutes = require('./routes/suggestionRoutes');
+const nightAttendanceRoutes = require('./routes/nightAttendanceRoutes');
 
 const app = express();
 
@@ -81,6 +86,7 @@ app.use('/api/v1/notices', noticeRoutes);
 app.use('/api/v1/staff', staffRoutes);
 app.use('/api/v1/mess', messRoutes);
 app.use('/api/v1/polls', pollRoutes);
+app.use('/api/v1/floors', floorRoutes);
 
 // Legacy Backwards-Compatible Mounts (/api/...)
 app.use('/api/auth', authLimiter, authRoutes);
@@ -95,6 +101,14 @@ app.use('/api/notices', noticeRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/mess', messRoutes);
 app.use('/api/polls', pollRoutes);
+app.use('/api/v1/electricity', electricityRoutes);
+app.use('/api/electricity', electricityRoutes);
+app.use('/api/v1/demand-notes', demandNoteRoutes);
+app.use('/api/demand-notes', demandNoteRoutes);
+app.use('/api/v1/suggestions', suggestionRoutes);
+app.use('/api/suggestions', suggestionRoutes);
+app.use('/api/v1/attendance/night', nightAttendanceRoutes);
+app.use('/api/attendance/night', nightAttendanceRoutes);
 
 // Health Check Endpoint
 app.get('/api/v1/health', (req, res) => {

@@ -9,6 +9,11 @@ import * as fees from './api/fees';
 import * as mess from './api/mess';
 import * as staff from './api/staff';
 import * as dashboard from './api/dashboard';
+import * as demandNotes from './api/demandNotes';
+import * as electricity from './api/electricity';
+import * as suggestions from './api/suggestions';
+import * as nightAttendance from './api/nightAttendance';
+import * as floors from './api/floors';
 
 export default client;
 export {
@@ -22,5 +27,10 @@ export {
   fees,
   mess,
   staff,
-  dashboard
+  dashboard,
+  demandNotes,
+  electricity,
+  suggestions,
+  nightAttendance,
+  floors
 };

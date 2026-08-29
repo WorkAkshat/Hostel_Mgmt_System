@@ -19,13 +19,17 @@ import {
   leaves as leavesApi, mess as messApi, rooms as roomsApi,
   students as studentsApi, visitors as visitorsApi, auth as authApi,
   notices as noticesApi, dashboard as dashboardApi, polls as pollsApi,
+  floors as floorsApi, nightAttendance as nightAttendanceApi,
+  demandNotes as demandNotesApi, electricity as electricityApi,
+  suggestions as suggestionsApi,
 } from '../../utils/api';
 import {
   LogOut, Home, Users, FileText, Settings, Bell,
   CheckCircle, XCircle, Plus, Search, Coffee,
   DollarSign, UserCheck, TrendingUp, Shield,
-  ChevronRight, ArrowLeft, Filter, User,
+  ChevronRight, ArrowLeft, Filter, User, CreditCard,
   Bed, AlertCircle, Clock, BookOpen, Navigation, Quote,
+  Building2,
 } from 'lucide-react-native';
 import { getDailyQuote, getGreeting } from '../../utils/quotes';
 
@@ -127,9 +131,9 @@ const PickerTags = ({ options, value, onChange }: any) => (
 
 // ─── Form Modal ─────────────────────────────────────────────────────────
 const FormModal = ({ visible, title, onClose, onSubmit, children }: any) => (
-  <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen">
-    <View style={styles.modalOverlay}>
-      <View style={styles.modalSheet}>
+  <Modal visible={visible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={onClose}>
+    <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+      <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={styles.modalSheet}>
         <View style={styles.modalHandle} />
         <Text style={styles.modalTitle}>{title}</Text>
         <ScrollView showsVerticalScrollIndicator={false}>{children}</ScrollView>
@@ -141,10 +145,101 @@ const FormModal = ({ visible, title, onClose, onSubmit, children }: any) => (
             <Text style={[styles.actionBtnText, { color: '#4B5563' }]}>Cancel</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </View>
+      </TouchableOpacity>
+    </TouchableOpacity>
   </Modal>
 );
+
+const WORKSPACE_OPTIONS = [
+  { num: 1, name: 'Rajken Enterprises', label: 'Floor 1 Workspace', sub: 'Hari Pushp Girls Hostel', icon: '🏠', color: '#7F56D9' },
+  { num: 2, name: 'Vandana Enterprises', label: 'Floor 2 Workspace', sub: 'Vandana Girls Hostel', icon: '🏢', color: '#EC4899' },
+  { num: 3, name: 'Pushpa Enterprises', label: 'Floor 3 Workspace', sub: 'Pushpa Girls Hostel', icon: '🏙️', color: '#06B6D4' },
+  { num: 4, name: 'Harish Chandra Ent.', label: 'Floor 4 Workspace', sub: 'Harish Chandra Girls Hostel', icon: '🌿', color: '#10B981' },
+  { num: 5, name: 'Ramesh Enterprises', label: 'Floor 5 & 6 Workspace', sub: 'Ramesh Girls Hostel', icon: '⭐', color: '#F59E0B' },
+  { num: 'combined', name: 'Consolidated View', label: 'All 5 Floors Combined', sub: 'Meenakshi Enterprises Catering', icon: '🌐', color: '#2563EB' },
+];
+
+const WorkspaceOptionCard = ({ item, isSelected, onPress }: any) => {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    Animated.spring(scale, { toValue: 0.96, useNativeDriver: true, tension: 100, friction: 10 }).start();
+  };
+  const handlePressOut = () => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true, tension: 100, friction: 10 }).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={0.9}
+        style={[
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: 16,
+            borderRadius: 20,
+            borderWidth: 2,
+            backgroundColor: '#FFFFFF',
+            borderColor: '#F1F5F9',
+            marginBottom: 10,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 8,
+            elevation: 2,
+          },
+          isSelected && {
+            backgroundColor: '#F4F3FF',
+            borderColor: PURPLE,
+            shadowColor: PURPLE,
+            shadowOpacity: 0.15,
+            shadowRadius: 12,
+            elevation: 4,
+          }
+        ]}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, flex: 1 }}>
+          <View style={{
+            width: 48,
+            height: 48,
+            borderRadius: 16,
+            backgroundColor: item.color + '18',
+            borderWidth: 1,
+            borderColor: item.color + '35',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Text style={{ fontSize: 24 }}>{item.icon}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 10, fontWeight: '800', color: item.color, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {item.label}
+            </Text>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1E293B', marginTop: 1 }}>
+              {item.name}
+            </Text>
+            <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1, fontWeight: '500' }}>
+              {item.sub}
+            </Text>
+          </View>
+        </View>
+
+        {isSelected ? (
+          <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: PURPLE, alignItems: 'center', justifyContent: 'center' }}>
+            <CheckCircle size={18} color="#FFFFFF" />
+          </View>
+        ) : (
+          <View style={{ width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#CBD5E1' }} />
+        )}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -180,6 +275,22 @@ export default function DashboardScreen() {
   const [visitorsList, setVisitorsList] = useState<any[]>([]);
   const [messAttendance, setMessAttendance] = useState<any[]>([]);
   const [noticesList, setNoticesList] = useState<any[]>([]);
+  const [floorsList, setFloorsList] = useState<any[]>([]);
+
+  // Workspace Filter State for Admin (auto-scopes to assignedFloor if dedicated floor warden)
+  const [selectedWorkspaceFloor, setSelectedWorkspaceFloor] = useState<number | 'combined'>(() => {
+    return user?.assignedFloor ? user.assignedFloor : 'combined';
+  });
+  const [workspaceModalVisible, setWorkspaceModalVisible] = useState(false);
+
+  // Floor Directory States
+  const [selectedFloorNum, setSelectedFloorNum] = useState<number | 'combined' | null>(null);
+  const [floorModalVisible, setFloorModalVisible] = useState(false);
+  const [floorDetail, setFloorDetail] = useState<any>(null);
+  const [floorReport, setFloorReport] = useState<any>(null);
+  const [floorActiveTab, setFloorActiveTab] = useState<'directory' | 'report'>('directory');
+  const [floorLoading, setFloorLoading] = useState(false);
+  const [floorSearch, setFloorSearch] = useState('');
 
   // Polls States
   const [pollsList, setPollsList] = useState<any[]>([]);
@@ -195,6 +306,258 @@ export default function DashboardScreen() {
   const [complaintModalVisible, setComplaintModalVisible] = useState(false);
   const [visitorModalVisible, setVisitorModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [nightRoundModalVisible, setNightRoundModalVisible] = useState(false);
+  const [nightRoundFloor, setNightRoundFloor] = useState<number>(1);
+  const [nightRoundRooms, setNightRoundRooms] = useState<any[]>([]);
+  const [nightRoundStatus, setNightRoundStatus] = useState<Record<string, string>>({});
+  const [notifyParentsWhatsapp, setNotifyParentsWhatsapp] = useState(true);
+
+  const openNightRoundModal = async (floorNum?: number) => {
+    const targetFloor = floorNum || Number(selectedWorkspaceFloor === 'combined' ? 1 : selectedWorkspaceFloor);
+    setNightRoundFloor(targetFloor);
+    try {
+      const res = await nightAttendanceApi.getByDate({ floorNumber: targetFloor });
+      const rooms = res?.roomsChart || [];
+      setNightRoundRooms(rooms);
+      const initialStatus: Record<string, string> = {};
+      rooms.forEach((r: any) => {
+        r.students.forEach((s: any) => {
+          initialStatus[s.id] = s.status || 'PRESENT';
+        });
+      });
+      setNightRoundStatus(initialStatus);
+      setNightRoundModalVisible(true);
+    } catch (e: any) {
+      showAlert('Error', 'Failed to load night attendance sheet: ' + e.message, 'ERROR');
+    }
+  };
+
+  const handleSetStudentStatus = (studentId: string, status: string) => {
+    setNightRoundStatus(prev => ({ ...prev, [studentId]: status }));
+  };
+
+  const handleMarkAllRemainingPresent = () => {
+    const updated = { ...nightRoundStatus };
+    nightRoundRooms.forEach((r: any) => {
+      r.students.forEach((s: any) => {
+        if (!s.hasActiveLeave && updated[s.id] !== 'ABSENT') {
+          updated[s.id] = 'PRESENT';
+        }
+      });
+    });
+    setNightRoundStatus(updated);
+    showAlert('Done', 'Marked all non-absent residents as PRESENT.', 'SUCCESS');
+  };
+
+  const submitNightRoundAction = async () => {
+    try {
+      const recordsArray = Object.keys(nightRoundStatus).map(sId => ({
+        studentId: sId,
+        status: nightRoundStatus[sId]
+      }));
+      if (recordsArray.length === 0) {
+        showAlert('Info', 'No students to record.', 'INFO');
+        return;
+      }
+      await nightAttendanceApi.submitBulk({
+        floorNumber: nightRoundFloor,
+        records: recordsArray,
+        notifyParents: notifyParentsWhatsapp
+      });
+      setNightRoundModalVisible(false);
+      showAlert('Night Roll Call', `Floor ${nightRoundFloor} attendance submitted. Verified: ${recordsArray.length} residents.`, 'SUCCESS');
+    } catch (e: any) {
+      showAlert('Error', 'Failed to submit night round: ' + e.message, 'ERROR');
+    }
+  };
+
+  // ─── Module 4: Demand Notes & Sub-meter State ───
+  const [demandNotesModalVisible, setDemandNotesModalVisible] = useState(false);
+  const [demandNotesList, setDemandNotesList] = useState<any[]>([]);
+  const [demandNotesLoading, setDemandNotesLoading] = useState(false);
+  const [selectedNoteReceipt, setSelectedNoteReceipt] = useState<any>(null);
+  const [receiptModalTab, setReceiptModalTab] = useState<'HOSTEL' | 'CATERING'>('HOSTEL');
+  const [payingNoteModalVisible, setPayingNoteModalVisible] = useState(false);
+  const [payingNoteItem, setPayingNoteItem] = useState<any>(null);
+  const [payingMethod, setPayingMethod] = useState<'UPI' | 'CARD' | 'NETBANKING'>('UPI');
+  const [payingProcessing, setPayingProcessing] = useState(false);
+  const [subMeterModalVisible, setSubMeterModalVisible] = useState(false);
+  const [subMeterForm, setSubMeterForm] = useState({ roomId: '101', readingMonth: '2026-08', previousReading: '150', currentReading: '210' });
+
+  const handleProcessMobilePayment = async () => {
+    if (!payingNoteItem) return;
+    setPayingProcessing(true);
+    try {
+      const res = await demandNotesApi.payOnline(payingNoteItem.id, {
+        paymentMethod: payingMethod,
+        gateway: 'Razorpay PG',
+        transactionId: `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`
+      });
+      setPayingNoteModalVisible(false);
+      showAlert('Payment Successful!', `₹${payingNoteItem.totalAmount?.toLocaleString()} paid via Razorpay ${payingMethod}. Ref: ${res.transactionId}`, 'SUCCESS');
+      openDemandNotesModal();
+    } catch (e: any) {
+      showAlert('Error', 'Payment failed: ' + e.message, 'ERROR');
+    } finally {
+      setPayingProcessing(false);
+    }
+  };
+
+  // ─── Module 7 & 8: Gate Logs & Visitors State ───
+  const [gateLogsModalVisible, setGateLogsModalVisible] = useState(false);
+  const [gateLogsList, setGateLogsList] = useState<any[]>([]);
+  const [gateLogsLoading, setGateLogsLoading] = useState(false);
+  const [visitorPassModalVisible, setVisitorPassModalVisible] = useState(false);
+
+  const openGateLogsModal = async () => {
+    setGateLogsModalVisible(true);
+    setGateLogsLoading(true);
+    try {
+      // Simulate/fetch latest biometric entry gate logs
+      setGateLogsList([
+        { id: 'g1', studentName: 'Priya Sharma', roomNumber: '102', action: 'ENTRY', timestamp: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), method: 'Biometric QR' },
+        { id: 'g2', studentName: 'Ananya Verma', roomNumber: '201', action: 'EXIT', timestamp: '06:15 PM', method: 'Biometric Scanner' },
+        { id: 'g3', studentName: 'Riya Gupta', roomNumber: '305', action: 'ENTRY', timestamp: '05:45 PM', method: 'Biometric Scanner' },
+      ]);
+    } catch (e: any) {
+      showAlert('Error', 'Failed to load gate logs: ' + e.message, 'ERROR');
+    } finally {
+      setGateLogsLoading(false);
+    }
+  };
+
+  const openVisitorPassModal = async () => {
+    setVisitorPassModalVisible(true);
+  };
+
+  const openDemandNotesModal = async () => {
+    setDemandNotesModalVisible(true);
+    setDemandNotesLoading(true);
+    try {
+      const data = await demandNotesApi.getAll();
+      setDemandNotesList(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      showAlert('Error', 'Failed to load demand notes: ' + e.message, 'ERROR');
+    } finally {
+      setDemandNotesLoading(false);
+    }
+  };
+
+  const handleGenerateDemandNotesAction = async () => {
+    try {
+      const res = await demandNotesApi.generate('2026-08', selectedWorkspaceFloor === 'combined' ? undefined : Number(selectedWorkspaceFloor));
+      showAlert('Success', res.message || 'Demand notes generated!', 'SUCCESS');
+      openDemandNotesModal();
+    } catch (e: any) {
+      showAlert('Error', 'Failed to generate demand notes: ' + e.message, 'ERROR');
+    }
+  };
+
+  const handleMarkDemandNotePaidAction = async (id: string) => {
+    try {
+      await demandNotesApi.markPaid(id);
+      showAlert('Success', 'Demand note marked as PAID!', 'SUCCESS');
+      openDemandNotesModal();
+    } catch (e: any) {
+      showAlert('Error', 'Failed to update demand note: ' + e.message, 'ERROR');
+    }
+  };
+
+  const handleSubmitSubMeterReading = async () => {
+    if (!subMeterForm.roomId || !subMeterForm.previousReading || !subMeterForm.currentReading) {
+      showAlert('Error', 'Please fill all sub-meter fields.', 'ERROR');
+      return;
+    }
+    try {
+      await electricityApi.submitReading({
+        roomId: subMeterForm.roomId,
+        readingMonth: subMeterForm.readingMonth || '2026-08',
+        previousReading: Number(subMeterForm.previousReading),
+        currentReading: Number(subMeterForm.currentReading),
+        ratePerUnit: 12.0
+      });
+      setSubMeterModalVisible(false);
+      showAlert('Success', 'Sub-meter reading saved!', 'SUCCESS');
+      openDemandNotesModal();
+    } catch (e: any) {
+      showAlert('Error', 'Failed to save sub-meter reading: ' + e.message, 'ERROR');
+    }
+  };
+
+  // ─── Module 5: Cook Dashboard & Mess Opt-Out State ───
+  const [cookDashboardModalVisible, setCookDashboardModalVisible] = useState(false);
+  const [cookData, setCookData] = useState<any>(null);
+  const [cookLoading, setCookLoading] = useState(false);
+  const [optOutMealType, setOptOutMealType] = useState('DINNER');
+
+  const openCookDashboardModal = async () => {
+    setCookDashboardModalVisible(true);
+    setCookLoading(true);
+    try {
+      const data = await messApi.getCookDashboard();
+      setCookData(data);
+    } catch (e: any) {
+      showAlert('Error', 'Failed to load cook dashboard: ' + e.message, 'ERROR');
+    } finally {
+      setCookLoading(false);
+    }
+  };
+
+  const handleSubmitMealOptOut = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      await messApi.optOutMeal({ date: today, mealType: optOutMealType });
+      showAlert('Success', `Successfully opted out of ${optOutMealType} for today!`, 'SUCCESS');
+      openCookDashboardModal();
+    } catch (e: any) {
+      showAlert('Error', 'Failed to submit meal opt-out: ' + e.message, 'ERROR');
+    }
+  };
+
+  // ─── Module 6: Suggestion Box State ───
+  const [suggestionsModalVisible, setSuggestionsModalVisible] = useState(false);
+  const [suggestionsList, setSuggestionsList] = useState<any[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionInput, setSuggestionInput] = useState('');
+
+  const openSuggestionsModal = async () => {
+    setSuggestionsModalVisible(true);
+    setSuggestionsLoading(true);
+    try {
+      const data = await suggestionsApi.getAll();
+      setSuggestionsList(Array.isArray(data) ? data : []);
+    } catch (e: any) {
+      showAlert('Error', 'Failed to load suggestions: ' + e.message, 'ERROR');
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
+
+  const handleSubmitSuggestion = async () => {
+    if (!suggestionInput.trim()) {
+      showAlert('Info', 'Please write a suggestion first.', 'INFO');
+      return;
+    }
+    try {
+      await suggestionsApi.create(suggestionInput.trim());
+      setSuggestionInput('');
+      showAlert('Success', 'Your suggestion has been submitted!', 'SUCCESS');
+      openSuggestionsModal();
+    } catch (e: any) {
+      showAlert('Error', 'Failed to submit suggestion: ' + e.message, 'ERROR');
+    }
+  };
+
+  const handleUpdateSuggestionStatus = async (id: string, status: string) => {
+    try {
+      await suggestionsApi.updateStatus(id, status);
+      showAlert('Success', `Suggestion status updated to ${status}!`, 'SUCCESS');
+      openSuggestionsModal();
+    } catch (e: any) {
+      showAlert('Error', 'Failed to update suggestion: ' + e.message, 'ERROR');
+    }
+  };
+
   const [detailItem, setDetailItem] = useState<any>(null);
   const [detailType, setDetailType] = useState<string>('');
 
@@ -340,6 +703,13 @@ export default function DashboardScreen() {
     ]).start();
   }, []);
 
+  // Auto scope workspace floor if dedicated floor warden login
+  useEffect(() => {
+    if (user?.role === 'ADMIN' && user?.assignedFloor) {
+      setSelectedWorkspaceFloor(user.assignedFloor);
+    }
+  }, [user]);
+
   const loadDashboardData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -365,6 +735,15 @@ export default function DashboardScreen() {
         setPollPopupVisible(true);
       }
 
+      // Fetch demand notes for student/admin
+      let dNotes: any[] = [];
+      try {
+        const dRes = await demandNotesApi.getAll();
+        dNotes = Array.isArray(dRes) ? dRes : [];
+      } catch (err) {
+        console.warn('[Dashboard] Failed to fetch demand notes:', err);
+      }
+
       if (user.role === 'ADMIN' && dashData.role === 'ADMIN') {
         // Map aggregated admin data to state
         setAllRooms(dashData.rooms || []);
@@ -373,15 +752,52 @@ export default function DashboardScreen() {
         setPendingApprovals(dashData.pendingApprovals || []);
         setAllStudents(dashData.students || []);
         setVisitorsList(dashData.activeVisitors || []);
-        setInvoicesList(dashData.recentInvoices || []);
-        // Profile requests would need to be added to backend if needed
+        
+        const combinedInvoices = [
+          ...dNotes.map(n => ({
+            id: n.id,
+            amount: n.totalAmount,
+            description: `${n.companyName || 'Hostel Accommodation'} + Meenakshi Catering (${n.billingMonth || '10-to-10 Cycle'})`,
+            dueDate: n.cycleEnd || n.createdAt,
+            status: n.status,
+            paidAt: n.paidAt,
+            isDemandNote: true,
+            rawNote: n
+          })),
+          ...(dashData.recentInvoices || [])
+        ];
+        setInvoicesList(combinedInvoices);
+        setDemandNotesList(dNotes);
         setProfileRequestsList([]);
+        
+        // Fetch floors list for Admin
+        try {
+          const fRes = await floorsApi.getAll();
+          setFloorsList(Array.isArray(fRes) ? fRes : []);
+        } catch (fErr) {
+          console.warn('[Dashboard] Failed to fetch floors:', fErr);
+        }
         
       } else if (user.role === 'STUDENT' && dashData.role === 'STUDENT') {
         // Map aggregated student data to state
         setLeavesList(dashData.leaves || []);
         setComplaintsList(dashData.complaints || []);
-        setInvoicesList(dashData.invoices || []);
+        
+        const combinedInvoices = [
+          ...dNotes.map(n => ({
+            id: n.id,
+            amount: n.totalAmount,
+            description: `${n.companyName || 'Hostel Accommodation'} + Meenakshi Catering (${n.billingMonth || '10-to-10 Cycle'})`,
+            dueDate: n.cycleEnd || n.createdAt,
+            status: n.status,
+            paidAt: n.paidAt,
+            isDemandNote: true,
+            rawNote: n
+          })),
+          ...(dashData.invoices || [])
+        ];
+        setInvoicesList(combinedInvoices);
+        setDemandNotesList(dNotes);
         setMessAttendance(dashData.messAttendance || []);
         setUploadedDocsList(dashData.documents || []);
         
@@ -496,6 +912,35 @@ export default function DashboardScreen() {
         setLoading(false);
       }
     });
+  };
+
+  // ─── Floor Modal Opener ───────────────────────────────────────────────────
+  const openFloorModal = async (floorNum: number | 'combined') => {
+    setSelectedFloorNum(floorNum);
+    setFloorModalVisible(true);
+    setFloorLoading(true);
+    setFloorDetail(null);
+    setFloorReport(null);
+    setFloorSearch('');
+    try {
+      if (floorNum === 'combined') {
+        setFloorActiveTab('report');
+        const reportData = await floorsApi.getConsolidatedReport();
+        setFloorReport(reportData);
+      } else {
+        setFloorActiveTab('directory');
+        const [studentData, reportData] = await Promise.all([
+          floorsApi.getStudents(floorNum).catch(() => null),
+          floorsApi.getReport(floorNum).catch(() => null),
+        ]);
+        setFloorDetail(studentData);
+        setFloorReport(reportData);
+      }
+    } catch (err: any) {
+      showAlert('Error', err.message || 'Failed to load floor directory.', 'ERROR');
+    } finally {
+      setFloorLoading(false);
+    }
   };
 
   // ─── Admin Actions ──────────────────────────────────────────────────────
@@ -820,23 +1265,153 @@ export default function DashboardScreen() {
 
   // ─── ADMIN: Home Overview ───────────────────────────────────────────────
   const renderAdminHome = () => {
-    const occupancy = allRooms.length > 0
-      ? Math.round((allRooms.filter(r => r.status === 'OCCUPIED').length / allRooms.length) * 100)
+    const activeRooms = selectedWorkspaceFloor === 'combined'
+      ? allRooms
+      : allRooms.filter(r => r.floorNumber === Number(selectedWorkspaceFloor));
+    const activeRoomIds = new Set(activeRooms.map(r => r.id));
+    const activeStudents = selectedWorkspaceFloor === 'combined'
+      ? allStudents
+      : allStudents.filter(s => activeRoomIds.has(s.roomId));
+
+    const occupancy = activeRooms.length > 0
+      ? Math.round((activeRooms.filter(r => r.status === 'FULL' || r.status === 'OCCUPIED').length / activeRooms.length) * 100)
       : 0;
     const pendingLeaves = leavesList.filter(l => l.status === 'PENDING').length;
     const openComplaints = complaintsList.filter(c => c.status !== 'RESOLVED').length;
 
+    const workspaceLabel = selectedWorkspaceFloor === 'combined'
+      ? '🌐 Consolidated View (All Floors)'
+      : `Floor ${selectedWorkspaceFloor} Workspace`;
+
     return (
       <View>
+        {/* Workspace Switcher Pill */}
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            backgroundColor: '#F4F3FF', borderWidth: 1, borderColor: '#D9D6FE',
+            borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
+          }}
+          onPress={() => setWorkspaceModalVisible(true)}
+          activeOpacity={0.7}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Building2 size={18} color="#7F56D9" />
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#6941C6' }}>{workspaceLabel}</Text>
+          </View>
+          <View style={{ backgroundColor: '#7F56D9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: '#FFFFFF' }}>Switch ▼</Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Hero Grid */}
         <View style={styles.heroGrid}>
-          <StatHero icon={Users}      count={allStudents.length}      label="Students"       color="#7F56D9" delay={0}   onPress={() => setActiveTab('Students')}   showArrow={false} />
-          <StatHero icon={Bed}        count={allRooms.length}         label="Rooms"          color="#10B981" delay={60}  onPress={() => setActiveTab('Rooms')}      showArrow={false} />
+          <StatHero icon={Users}      count={activeStudents.length}   label="Students"       color="#7F56D9" delay={0}   onPress={() => setActiveTab('Students')}   showArrow={false} />
+          <StatHero icon={Bed}        count={activeRooms.length}      label="Rooms"          color="#10B981" delay={60}  onPress={() => setActiveTab('Rooms')}      showArrow={false} />
           <StatHero icon={UserCheck}  count={pendingApprovals.length} label="Approvals"      color="#F59E0B" delay={120} onPress={() => setActiveTab('Requests')}   sub={pendingApprovals.length > 0 ? 'Pending' : 'All Clear'} showArrow={false} />
           <StatHero icon={Navigation}    count={pendingLeaves}           label="Leave Requests" color="#3B82F6" delay={180} onPress={() => setActiveTab('Requests')}   sub={pendingLeaves > 0 ? `${pendingLeaves} pending` : 'All clear'} showArrow={false} />
           <StatHero icon={AlertCircle} count={openComplaints}         label="Open Issues"    color="#EF4444" delay={240} onPress={() => setActiveTab('Requests')}   sub={openComplaints > 0 ? 'Pending action' : 'All Clear'} showArrow={false} />
           <StatHero icon={TrendingUp} count={`${occupancy}%`}         label="Occupancy"      color="#8B5CF6" delay={300} onPress={() => setActiveTab('Rooms')} showArrow={false} />
         </View>
+
+        {/* Floor Directory & Company Setup Section */}
+        <SH title="Floor & Company Directory" count={floorsList.length || 5} onAction={() => openFloorModal('combined')} actionLabel="Consolidated Report" />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 10, marginBottom: 20 }}>
+          {[
+            { num: 1, name: 'Rajken Ent.', label: 'Floor 1', sub: 'Hari Pushp PG', color: '#7F56D9', icon: '🏠' },
+            { num: 2, name: 'Vandana Ent.', label: 'Floor 2', sub: 'Vandana PG', color: '#EC4899', icon: '🏢' },
+            { num: 3, name: 'Pushpa Ent.', label: 'Floor 3', sub: 'Pushpa PG', color: '#06B6D4', icon: '🏙️' },
+            { num: 4, name: 'Harish Chandra', label: 'Floor 4', sub: 'Harish Chandra PG', color: '#10B981', icon: '🌿' },
+            { num: 5, name: 'Ramesh Ent.', label: 'Floor 5&6', sub: 'Ramesh PG', color: '#F59E0B', icon: '⭐' },
+            { num: 'combined', name: 'Consolidated', label: 'All 5 Floors', sub: 'Meenakshi Catering', color: '#2563EB', icon: '🌐' },
+          ].map((item) => (
+            <TouchableOpacity
+              key={item.label}
+              style={[styles.listCard, { width: 140, padding: 14, borderLeftWidth: 4, borderLeftColor: item.color }]}
+              onPress={() => openFloorModal(item.num as any)}
+              activeOpacity={0.7}
+            >
+              <Text style={{ fontSize: 22, marginBottom: 6 }}>{item.icon}</Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase' }}>{item.label}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1F2937', marginTop: 2 }} numberOfLines={1}>{item.name}</Text>
+              <Text style={{ fontSize: 10, fontWeight: '500', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>{item.sub}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Modules Operations Quick Access */}
+        <SH title="Hostel Operations & Modules" count={7} />
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 10, marginBottom: 20 }}>
+          <TouchableOpacity
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#7F56D9' }]}
+            onPress={() => openFloorModal(selectedWorkspaceFloor)}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 20, marginBottom: 4 }}>📊</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Financial Reports</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Floor PDF & Dues</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#F59E0B' }]}
+            onPress={openDemandNotesModal}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 20, marginBottom: 4 }}>🧾</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Demand Notes</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Electricity & Cycle</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#10B981' }]}
+            onPress={openCookDashboardModal}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 20, marginBottom: 4 }}>🍽️</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Cook Dashboard</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Meal Opt-Out Counts</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#06B6D4' }]}
+            onPress={openSuggestionsModal}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 20, marginBottom: 4 }}>💬</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Suggestion Box</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Student Feedback</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#3B82F6' }]}
+            onPress={() => openNightRoundModal(selectedWorkspaceFloor === 'combined' ? 1 : Number(selectedWorkspaceFloor))}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 20, marginBottom: 4 }}>🌙</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Night Roll Call</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Attendance</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#8B5CF6' }]}
+            onPress={openGateLogsModal}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 20, marginBottom: 4 }}>🚪</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Gate Entry Logs</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Biometric Entry/Exit</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#EC4899' }]}
+            onPress={() => setActiveTab('Visitors')}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 20, marginBottom: 4 }}>🛡️</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Visitor Passes</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Guest Approvals</Text>
+          </TouchableOpacity>
+        </ScrollView>
 
         {/* Recent Approvals Preview */}
         {pendingApprovals.length > 0 && (
@@ -1553,18 +2128,32 @@ export default function DashboardScreen() {
     const pendingInvoices = invoicesList.filter((inv: any) => inv.status !== 'PAID');
     const paidInvoices = invoicesList.filter((inv: any) => inv.status === 'PAID');
     const filteredInvoices = feeFilter === 'PENDING' ? pendingInvoices : paidInvoices;
-    const totalDue = pendingInvoices.reduce((s: number, inv: any) => s + (inv.amount || 0), 0);
+    const totalDue = pendingInvoices.reduce((s: number, inv: any) => s + (inv.amount || inv.totalAmount || 0), 0);
 
     return (
       <View>
-        {totalDue > 0 && (
-          <AnimatedCard delay={0}>
-            <View style={[styles.listCard, { backgroundColor: '#FEF2F2', borderLeftWidth: 4, borderLeftColor: '#EF4444' }]}>
-              <Text style={styles.cardPrimary}>Total Outstanding</Text>
-              <Text style={{ fontSize: 28, fontWeight: '900', color: '#EF4444', marginTop: 4 }}>₹{totalDue}</Text>
+        {/* Banner with Total Due */}
+        <AnimatedCard delay={0}>
+          <View style={[styles.listCard, { backgroundColor: totalDue > 0 ? '#FEF2F2' : '#ECFDF5', borderLeftWidth: 4, borderLeftColor: totalDue > 0 ? '#EF4444' : '#10B981' }]}>
+            <View style={styles.rowBetween}>
+              <View>
+                <Text style={styles.cardPrimary}>Total Outstanding Dues</Text>
+                <Text style={{ fontSize: 26, fontWeight: '900', color: totalDue > 0 ? '#EF4444' : '#047857', marginTop: 2 }}>
+                  ₹{totalDue.toLocaleString()}
+                </Text>
+              </View>
+              {totalDue > 0 ? (
+                <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>DUE NOW</Text>
+                </View>
+              ) : (
+                <View style={{ backgroundColor: '#10B981', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>ALL CLEAR ✓</Text>
+                </View>
+              )}
             </View>
-          </AnimatedCard>
-        )}
+          </View>
+        </AnimatedCard>
 
         {/* Invoice Filters */}
         <View style={styles.subTabRow}>
@@ -1573,7 +2162,7 @@ export default function DashboardScreen() {
             onPress={() => setFeeFilter('PENDING')}
           >
             <Text style={[styles.subTabText, feeFilter === 'PENDING' && styles.subTabTextActive]}>
-              Pending ({pendingInvoices.length})
+              Pending Bills ({pendingInvoices.length})
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -1590,27 +2179,60 @@ export default function DashboardScreen() {
           ? <Empty icon={DollarSign} title="No invoices found" sub="No matching bills in this filter." />
           : filteredInvoices.map((inv: any, i: number) => (
             <AnimatedCard key={inv.id} delay={Math.min(i * 60, 400)}>
-              <TouchableOpacity style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: inv.status === 'PAID' ? '#10B981' : '#EF4444' }]} onPress={() => openDetails(inv, 'invoice')} activeOpacity={0.75}>
+              <View style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: inv.status === 'PAID' ? '#10B981' : '#EF4444' }]}>
                 <View style={styles.rowBetween}>
-                  <Text style={styles.cardPrimary}>₹{inv.amount}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: PURPLE, textTransform: 'uppercase' }}>
+                      {inv.rawNote?.companyName || 'Hari Pushp PG Accommodation & Meenakshi Catering'}
+                    </Text>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#1F2937', marginTop: 2 }}>
+                      ₹{(inv.amount || inv.totalAmount)?.toLocaleString()}
+                    </Text>
+                  </View>
                   <Badge label={inv.status} color={inv.status === 'PAID' ? '#10B981' : '#EF4444'} />
                 </View>
-                <Text style={styles.cardSecondary}>{inv.description || 'Hostel Fee'}</Text>
-                <Text style={styles.cardTiny}>Due: {new Date(inv.dueDate).toLocaleDateString()}</Text>
-                
-                {inv.status !== 'PAID' && (
-                  <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { marginTop: 12, alignSelf: 'flex-start' }]} onPress={() => payInvoice(inv.id)}>
-                    <DollarSign size={14} color="#FFF" style={{ marginRight: 4 }} />
-                    <Text style={styles.actionBtnText}>Pay ₹{inv.amount} Now</Text>
-                  </TouchableOpacity>
-                )}
 
-                {inv.status === 'PAID' && (
-                  <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#F3F4F6', marginTop: 12, alignSelf: 'flex-start' }]} onPress={() => downloadReceipt(inv)}>
-                    <Text style={[styles.actionBtnText, { color: '#4B5563' }]}>Download PDF Receipt</Text>
+                <Text style={[styles.cardSecondary, { marginTop: 4 }]}>
+                  {inv.description || '10-to-10 Cycle Demand Note (Hostel Accommodation + Mess)'}
+                </Text>
+                
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                  <Text style={styles.cardTiny}>Due: {inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-IN') : '10-Sep-2026'}</Text>
+                  {inv.paidAt && (
+                    <Text style={[styles.cardTiny, { color: '#10B981', fontWeight: '700' }]}>
+                      · Paid on: {new Date(inv.paidAt).toLocaleDateString('en-IN')}
+                    </Text>
+                  )}
+                </View>
+                
+                {/* ACTION BUTTONS FOR STUDENT */}
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                  {inv.status !== 'PAID' && (
+                    <TouchableOpacity
+                      style={[styles.actionBtn, styles.btnPurple, { flex: 1, backgroundColor: PURPLE, paddingVertical: 10 }]}
+                      onPress={() => {
+                        setPayingNoteItem(inv.rawNote || inv);
+                        setPayingNoteModalVisible(true);
+                      }}
+                    >
+                      <CreditCard size={15} color="#FFF" style={{ marginRight: 6 }} />
+                      <Text style={[styles.actionBtnText, { fontSize: 12, fontWeight: '800' }]}>Pay Online Now</Text>
+                    </TouchableOpacity>
+                  )}
+
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { flex: 1, backgroundColor: '#EEF2FF', borderColor: '#C7D2FE', borderWidth: 1, paddingVertical: 10 }]}
+                    onPress={() => {
+                      setSelectedNoteReceipt(inv.rawNote || inv);
+                    }}
+                  >
+                    <FileText size={15} color={PURPLE} style={{ marginRight: 6 }} />
+                    <Text style={[styles.actionBtnText, { color: PURPLE, fontSize: 12, fontWeight: '800' }]}>
+                      Official Dual Receipt
+                    </Text>
                   </TouchableOpacity>
-                )}
-              </TouchableOpacity>
+                </View>
+              </View>
             </AnimatedCard>
           ))
         }
@@ -2096,9 +2718,9 @@ export default function DashboardScreen() {
       </FormModal>
 
       {/* ── Poll Popup Modal for Students ── */}
-      <Modal visible={pollPopupVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
+      <Modal visible={pollPopupVisible} animationType="slide" transparent onRequestClose={() => setPollPopupVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPollPopupVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, { color: PURPLE, marginBottom: 8 }]}>New Hostel Poll! ✿</Text>
             <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 20 }}>
@@ -2127,8 +2749,8 @@ export default function DashboardScreen() {
             >
               <Text style={[styles.actionBtnText, { color: '#4B5563', fontSize: 14 }]}>Vote Later</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
 
       {/* ── Mess Menu Modal ── */}
@@ -2178,6 +2800,786 @@ export default function DashboardScreen() {
         ))}
       </FormModal>
 
+      {/* ── Night Roll Call Modal ── */}
+      <Modal visible={nightRoundModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setNightRoundModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setNightRoundModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { maxHeight: '92%', height: '92%' }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.rowBetween}>
+              <View>
+                <Text style={[styles.modalTitle, { color: PURPLE, marginBottom: 2 }]}>Night Roll Call</Text>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#6B7280' }}>Floor {nightRoundFloor} — Student Attendance</Text>
+              </View>
+              <TouchableOpacity onPress={() => setNightRoundModalVisible(false)} style={{ padding: 6 }}>
+                <XCircle size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Floor Selector */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginVertical: 10 }}>
+              {[1, 2, 3, 4, 5].map((f) => (
+                <TouchableOpacity
+                  key={f}
+                  onPress={() => openNightRoundModal(f)}
+                  style={{
+                    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 8,
+                    backgroundColor: nightRoundFloor === f ? PURPLE : '#F3F4F6',
+                  }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '700', color: nightRoundFloor === f ? '#FFFFFF' : '#4B5563' }}>Floor {f}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Controls Row */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <TouchableOpacity
+                onPress={handleMarkAllRemainingPresent}
+                style={{ backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', borderWidth: 1, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8 }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#047857' }}>Mark All Present</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setNotifyParentsWhatsapp(!notifyParentsWhatsapp)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F8FAFC', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 8, borderWidth: 1, borderColor: '#E2E8F0' }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#334155' }}>
+                  {notifyParentsWhatsapp ? 'Notify: ON' : 'Notify: OFF'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Room-by-Room Student List */}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
+              {nightRoundRooms.length === 0 ? (
+                <Text style={{ textAlign: 'center', color: '#9CA3AF', marginVertical: 30, fontWeight: '500' }}>No residents found on Floor {nightRoundFloor}.</Text>
+              ) : (
+                nightRoundRooms.map((room: any) => (
+                  <View key={room.roomId} style={{ marginBottom: 12, borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', overflow: 'hidden', backgroundColor: '#FFFFFF' }}>
+                    {/* Room Header */}
+                    <View style={{ backgroundColor: '#F9FAFB', paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1F2937' }}>
+                        Room {room.roomNumber}
+                      </Text>
+                      <Text style={{ fontSize: 10, fontWeight: '600', color: '#9CA3AF' }}>{room.studentsCount} resident(s)</Text>
+                    </View>
+
+                    {/* Students */}
+                    <View style={{ padding: 10 }}>
+                      {room.students.map((student: any, idx: number) => {
+                        const stId = student.id;
+                        const currentStat = nightRoundStatus[stId] || student.status || 'PRESENT';
+
+                        return (
+                          <View
+                            key={stId}
+                            style={{
+                              paddingVertical: 10, 
+                              borderBottomWidth: idx < room.students.length - 1 ? 1 : 0, 
+                              borderBottomColor: '#F3F4F6',
+                            }}
+                          >
+                            {/* Student Info */}
+                            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#EEF2FF', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: PURPLE }}>{student.name?.charAt(0)?.toUpperCase()}</Text>
+                              </View>
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1F2937' }}>{student.name}</Text>
+                                  {student.hasActiveLeave && (
+                                    <View style={{ backgroundColor: '#FFFBEB', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, borderWidth: 1, borderColor: '#FDE68A' }}>
+                                      <Text style={{ fontSize: 9, fontWeight: '600', color: '#92400E' }}>On Leave</Text>
+                                    </View>
+                                  )}
+                                </View>
+                                <Text style={{ fontSize: 10, color: '#9CA3AF', fontWeight: '500', marginTop: 1 }}>
+                                  Roll: {student.rollNumber} · Parent: {student.parentContact}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Status Buttons */}
+                            <View style={{ flexDirection: 'row', gap: 6 }}>
+                              <TouchableOpacity
+                                onPress={() => handleSetStudentStatus(stId, 'PRESENT')}
+                                style={{
+                                  flex: 1, paddingVertical: 7, borderRadius: 6, alignItems: 'center',
+                                  backgroundColor: currentStat === 'PRESENT' ? '#10B981' : '#F3F4F6',
+                                }}
+                              >
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: currentStat === 'PRESENT' ? '#FFFFFF' : '#6B7280' }}>Present</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                onPress={() => handleSetStudentStatus(stId, 'ABSENT')}
+                                style={{
+                                  flex: 1, paddingVertical: 7, borderRadius: 6, alignItems: 'center',
+                                  backgroundColor: currentStat === 'ABSENT' ? '#EF4444' : '#F3F4F6',
+                                }}
+                              >
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: currentStat === 'ABSENT' ? '#FFFFFF' : '#6B7280' }}>Absent</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                onPress={() => handleSetStudentStatus(stId, 'ON_LEAVE')}
+                                style={{
+                                  flex: 1, paddingVertical: 7, borderRadius: 6, alignItems: 'center',
+                                  backgroundColor: currentStat === 'ON_LEAVE' ? '#F59E0B' : '#F3F4F6',
+                                }}
+                              >
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: currentStat === 'ON_LEAVE' ? '#FFFFFF' : '#6B7280' }}>Leave</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+
+            {/* Submit Button */}
+            <TouchableOpacity
+              onPress={submitNightRoundAction}
+              style={{
+                position: 'absolute', bottom: 16, left: 16, right: 16,
+                backgroundColor: PURPLE, paddingVertical: 13, borderRadius: 12,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFFFFF' }}>Submit Floor {nightRoundFloor} Night Roll Call</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Demand Notes & Sub-meters Modal ── */}
+      <Modal visible={demandNotesModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setDemandNotesModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDemandNotesModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { maxHeight: '92%', height: '92%' }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.rowBetween}>
+              <View>
+                <Text style={[styles.modalTitle, { color: '#F59E0B', marginBottom: 2 }]}>Demand Notes & Sub-Meters</Text>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#6B7280' }}>10-to-10 Cycle Billing & Electricity Readings</Text>
+              </View>
+              <TouchableOpacity onPress={() => setDemandNotesModalVisible(false)} style={{ padding: 6 }}>
+                <XCircle size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Actions Bar */}
+            <View style={{ flexDirection: 'row', gap: 8, marginVertical: 12 }}>
+              <TouchableOpacity
+                onPress={() => setSubMeterModalVisible(true)}
+                style={{ flex: 1, backgroundColor: '#FEF3C7', borderColor: '#FDE68A', borderWidth: 1, paddingVertical: 9, borderRadius: 10, alignItems: 'center' }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#B45309' }}>⚡ Enter Sub-meter</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleGenerateDemandNotesAction}
+                style={{ flex: 1, backgroundColor: PURPLE, paddingVertical: 9, borderRadius: 10, alignItems: 'center' }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>➕ Generate Notes</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* List of Demand Notes */}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              {demandNotesLoading ? (
+                <ActivityIndicator size="large" color={PURPLE} style={{ marginVertical: 30 }} />
+              ) : demandNotesList.length === 0 ? (
+                <Text style={{ textAlign: 'center', color: '#9CA3AF', marginVertical: 30, fontWeight: '500' }}>No demand notes generated yet.</Text>
+              ) : (
+                demandNotesList.map((note: any) => (
+                  <View key={note.id} style={{ marginBottom: 10, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: PURPLE }}>{note.companyName || 'Hostel Fee'}</Text>
+                      </View>
+                      <View style={{ backgroundColor: note.status === 'PAID' ? '#ECFDF5' : '#FEF3C7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: note.status === 'PAID' ? '#047857' : '#B45309' }}>{note.status}</Text>
+                      </View>
+                    </View>
+
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#1F2937' }}>{note.student?.user?.name || 'Resident'}</Text>
+                    <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+                      Hostel: ₹{note.hostelFee} · Elec: ₹{note.electricityAmount} · Mess: ₹{note.messFee}
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: '#1F2937' }}>₹{note.totalAmount?.toLocaleString()}</Text>
+
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        <TouchableOpacity
+                          onPress={() => setSelectedNoteReceipt(note)}
+                          style={{ backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#374151' }}>View Invoice</Text>
+                        </TouchableOpacity>
+
+                        {note.status !== 'PAID' && (
+                          <>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setPayingNoteItem(note);
+                                setPayingNoteModalVisible(true);
+                              }}
+                              style={{ backgroundColor: PURPLE, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+                            >
+                              <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Pay Online</Text>
+                            </TouchableOpacity>
+
+                            {user?.role === 'ADMIN' && (
+                              <TouchableOpacity
+                                onPress={() => handleMarkDemandNotePaidAction(note.id)}
+                                style={{ backgroundColor: '#10B981', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}
+                              >
+                                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Mark Paid</Text>
+                              </TouchableOpacity>
+                            )}
+                          </>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Mobile Payment Gateway Checkout Modal ── */}
+      <Modal visible={payingNoteModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setPayingNoteModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setPayingNoteModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { maxHeight: '82%' }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.rowBetween}>
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={[styles.modalTitle, { color: PURPLE, marginBottom: 2 }]}>Razorpay Gateway</Text>
+                  <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#A7F3D0' }}>
+                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#047857' }}>🔒 256-BIT SSL</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#6B7280' }}>Merchant: {payingNoteItem?.companyName || 'Rajken Enterprises'}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setPayingNoteModalVisible(false)} style={{ padding: 6 }}>
+                <XCircle size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginVertical: 12 }}>
+              {/* Order Summary */}
+              <View style={{ backgroundColor: '#F4F3FF', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#D9D6FE', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: PURPLE, letterSpacing: 0.5 }}>TOTAL PAYABLE AMOUNT</Text>
+                  <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Cycle: 10-Aug to 10-Sep (Demand Note)</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ fontSize: 22, fontWeight: '900', color: PURPLE }}>₹{payingNoteItem?.totalAmount?.toLocaleString()}</Text>
+                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#10B981' }}>All Taxes Included</Text>
+                </View>
+              </View>
+
+              {/* Payment Methods Tabs */}
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Select Payment Mode</Text>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                {(['UPI', 'CARD', 'NETBANKING'] as const).map(m => (
+                  <TouchableOpacity
+                    key={m}
+                    onPress={() => setPayingMethod(m)}
+                    style={{
+                      flex: 1, paddingVertical: 11, borderRadius: 10, alignItems: 'center',
+                      backgroundColor: payingMethod === m ? PURPLE : '#F3F4F6',
+                      borderWidth: payingMethod === m ? 0 : 1, borderColor: '#E5E7EB'
+                    }}
+                  >
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: payingMethod === m ? '#FFFFFF' : '#4B5563' }}>
+                      {m === 'UPI' ? '📲 UPI App' : m === 'CARD' ? '💳 Card' : '🏦 NetBanking'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* UPI Option */}
+              {payingMethod === 'UPI' && (
+                <View style={{ backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', gap: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#374151' }}>Select Instant UPI App</Text>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    {['GPay', 'PhonePe', 'Paytm', 'BHIM'].map(app => (
+                      <View key={app} style={{ flex: 1, backgroundColor: '#FFFFFF', paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#D1D5DB', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#1F2937' }}>{app}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Card Option with Virtual Card Preview */}
+              {payingMethod === 'CARD' && (
+                <View style={{ gap: 10 }}>
+                  <View style={{ backgroundColor: '#1E1B4B', padding: 14, borderRadius: 14, gap: 10 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 9, fontWeight: '800', color: '#C7D2FE', letterSpacing: 1 }}>HOSTEL RESIDENT CARD</Text>
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: '#FBBF24', fontStyle: 'italic' }}>VISA</Text>
+                    </View>
+
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF', letterSpacing: 2, marginVertical: 4 }}>
+                      4532  8910  4421  9081
+                    </Text>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <View>
+                        <Text style={{ fontSize: 8, color: '#9CA3AF' }}>CARDHOLDER</Text>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF' }}>{payingNoteItem?.student?.user?.name?.toUpperCase() || 'PRIYA SHARMA'}</Text>
+                      </View>
+                      <View>
+                        <Text style={{ fontSize: 8, color: '#9CA3AF' }}>EXPIRES</Text>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF' }}>08/28</Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* NetBanking Option */}
+              {payingMethod === 'NETBANKING' && (
+                <View style={{ backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', gap: 6 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#374151' }}>Popular NetBanking Banks</Text>
+                  <Text style={{ fontSize: 10, color: '#6B7280' }}>HDFC Bank · State Bank of India · ICICI Bank · Axis Bank</Text>
+                </View>
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              onPress={handleProcessMobilePayment}
+              disabled={payingProcessing}
+              style={{ backgroundColor: '#10B981', paddingVertical: 14, borderRadius: 12, alignItems: 'center', shadowColor: '#10B981', shadowOpacity: 0.3, shadowRadius: 6, elevation: 4 }}
+            >
+              {payingProcessing ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#FFFFFF' }}>Pay ₹{payingNoteItem?.totalAmount?.toLocaleString()} via Razorpay</Text>
+              )}
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Sub-meter Entry Form Modal ── */}
+      <Modal visible={subMeterModalVisible} animationType="fade" transparent presentationStyle="overFullScreen" onRequestClose={() => setSubMeterModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSubMeterModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { maxHeight: '65%' }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.rowBetween}>
+              <Text style={[styles.modalTitle, { color: '#F59E0B' }]}>Sub-Meter Electricity Reading</Text>
+              <TouchableOpacity onPress={() => setSubMeterModalVisible(false)} style={{ padding: 6 }}>
+                <XCircle size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginVertical: 12 }}>
+              <View>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#374151', marginBottom: 4 }}>Room Number</Text>
+                <TextInput style={styles.formInputText} value={subMeterForm.roomId} onChangeText={t => setSubMeterForm(p => ({ ...p, roomId: t }))} placeholder="e.g. 101" />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#374151', marginBottom: 4 }}>Previous Reading</Text>
+                  <TextInput style={styles.formInputText} keyboardType="numeric" value={subMeterForm.previousReading} onChangeText={t => setSubMeterForm(p => ({ ...p, previousReading: t }))} placeholder="150" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#374151', marginBottom: 4 }}>Current Reading</Text>
+                  <TextInput style={styles.formInputText} keyboardType="numeric" value={subMeterForm.currentReading} onChangeText={t => setSubMeterForm(p => ({ ...p, currentReading: t }))} placeholder="210" />
+                </View>
+              </View>
+
+              <View style={{ backgroundColor: '#FEF3C7', padding: 12, borderRadius: 10 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400E' }}>
+                  Calculated Units: {Math.max(0, Number(subMeterForm.currentReading || 0) - Number(subMeterForm.previousReading || 0))} units @ ₹12.0/unit
+                </Text>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#B45309', marginTop: 2 }}>
+                  Amount: ₹{Math.max(0, Number(subMeterForm.currentReading || 0) - Number(subMeterForm.previousReading || 0)) * 12}
+                </Text>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity onPress={handleSubmitSubMeterReading} style={{ backgroundColor: '#F59E0B', paddingVertical: 12, borderRadius: 10, alignItems: 'center' }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>Save Sub-Meter Reading</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── View Demand Note Receipt Modal ── */}
+      <Modal visible={!!selectedNoteReceipt} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setSelectedNoteReceipt(null)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedNoteReceipt(null)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { maxHeight: '92%', height: '92%' }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.rowBetween}>
+              <View>
+                <Text style={[styles.modalTitle, { color: '#1F2937', marginBottom: 2 }]}>Demand Note Receipt</Text>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#6B7280' }}>Official Billing Receipt View</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedNoteReceipt(null)} style={{ padding: 6 }}>
+                <XCircle size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Tab Selector: Hostel vs Catering */}
+            <View style={{ flexDirection: 'row', gap: 6, marginVertical: 10 }}>
+              <TouchableOpacity
+                onPress={() => setReceiptModalTab('HOSTEL')}
+                style={{
+                  flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center',
+                  backgroundColor: receiptModalTab === 'HOSTEL' ? PURPLE : '#F3F4F6',
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '800', color: receiptModalTab === 'HOSTEL' ? '#FFFFFF' : '#4B5563' }}>Hostel Accommodation</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setReceiptModalTab('CATERING')}
+                style={{
+                  flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center',
+                  backgroundColor: receiptModalTab === 'CATERING' ? PURPLE : '#F3F4F6',
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '800', color: receiptModalTab === 'CATERING' ? '#FFFFFF' : '#4B5563' }}>Meenakshi Catering</Text>
+              </TouchableOpacity>
+            </View>
+
+            {selectedNoteReceipt && (() => {
+              const fNum: number = Number(selectedNoteReceipt.floorNumber || 1);
+              const companyMap: Record<number, any> = {
+                1: { companyName: 'RAJKEN ENTERPRISES', hostelName: 'HARI PUSHP GIRLS HOSTEL', floorLabel: 'First Floor', san: '[राजकेन SAN नंबर]', udyamRegNo: '[राजकेन उद्यम नंबर]', proprietorName: 'Kapil Sankhla', notePrefix: 'RJK' },
+                2: { companyName: 'VANDANA ENTERPRISES', hostelName: 'VANDANA GIRLS HOSTEL', floorLabel: 'Second Floor', san: '[वंदना SAN नंबर]', udyamRegNo: 'UDYAM-RJ-17-0654053', proprietorName: 'Vandana Sankhla', notePrefix: 'VAN' },
+                3: { companyName: 'PUSHPA ENTERPRISES', hostelName: 'PUSHPA GIRLS HOSTEL', floorLabel: 'Third Floor', san: '8007170053000004', udyamRegNo: 'UDYAM-RJ-17-0654175', proprietorName: 'Pushpa Sankhla', notePrefix: 'PSH' },
+                4: { companyName: 'HARISH CHANDRA ENTERPRISES', hostelName: 'HARISH CHANDRA GIRLS HOSTEL', floorLabel: 'Fourth Floor', san: '8007170053000006', udyamRegNo: 'UDYAM-RJ-17-0654078', proprietorName: 'Harish Chandra', notePrefix: 'HCE' },
+                5: { companyName: 'RAMESH ENTERPRISES', hostelName: 'RAMESH GIRLS HOSTEL', floorLabel: 'Fifth & Sixth Floor', san: '[रमेश SAN नंबर]', udyamRegNo: '[रमेश उद्यम नंबर]', proprietorName: 'Ramesh Sankhla', notePrefix: 'RME' },
+              };
+              const company = companyMap[fNum] || companyMap[1];
+
+              const catering = {
+                companyName: 'MEENAKSHI ENTERPRISES',
+                subtitle: '(Catering & Food Services Partner)',
+                san: '8007170053000003',
+                udyamRegNo: 'UDYAM-RJ-17-0662384',
+                fssai: '22226113000448',
+                proprietorName: 'Manisha Parihar',
+                notePrefix: 'ME'
+              };
+
+              const studentName = selectedNoteReceipt.student?.user?.name || 'Priya Sharma';
+              const fatherName = selectedNoteReceipt.student?.fatherName || 'Rameshwar Sharma';
+              const rollNumber = selectedNoteReceipt.student?.rollNumber || '108';
+              const roomNumber = selectedNoteReceipt.student?.room?.roomNumber || '102';
+              const admissionId = `HP-2026-${rollNumber}`;
+
+              const hostelFee = selectedNoteReceipt.hostelFee || 8000;
+              const elecUnits = selectedNoteReceipt.electricityUnits || 45;
+              const elecRate = selectedNoteReceipt.electricityRate || 12.0;
+              const elecAmt = selectedNoteReceipt.electricityAmount || elecUnits * elecRate;
+              const messFee = selectedNoteReceipt.messFee || 3000;
+              const hostelNetPayable = hostelFee + elecAmt;
+
+              const isHostel = receiptModalTab === 'HOSTEL';
+              const targetCompany = isHostel ? company : catering;
+              const targetNoteNo = isHostel ? `${company.notePrefix}/2026-27/08/042` : `${catering.notePrefix}/2026-27/08/108`;
+              const netPayableAmt = isHostel ? hostelNetPayable : messFee;
+
+              return (
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingVertical: 6 }}>
+                  <View style={{ borderWidth: 1, borderColor: '#000000', padding: 12, borderRadius: 8, backgroundColor: '#FFFFFF' }}>
+                    {/* Company Header Banner */}
+                    <Text style={{ fontSize: 10, color: '#6B7280', textAlign: 'center' }}>=================================================</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#1F2937', textAlign: 'center', marginVertical: 2 }}>{targetCompany.hostelName || targetCompany.companyName}</Text>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: '#4B5563', textAlign: 'center' }}>Run by: {targetCompany.companyName}</Text>
+                    <Text style={{ fontSize: 9, color: '#6B7280', textAlign: 'center', marginTop: 1 }}>Hari Pushp Tower, Plot No. 10, Durgapura, Jaipur, RJ - 302018</Text>
+                    <Text style={{ fontSize: 10, color: '#6B7280', textAlign: 'center' }}>=================================================</Text>
+
+                    {/* Metadata */}
+                    <View style={{ marginVertical: 6, gap: 2 }}>
+                      <Text style={{ fontSize: 10, color: '#374151' }}>SAN (संस्था आधार नंबर) : {targetCompany.san}</Text>
+                      <Text style={{ fontSize: 10, color: '#374151' }}>Udyam Reg. No.          : {targetCompany.udyamRegNo}</Text>
+                      {!isHostel && <Text style={{ fontSize: 10, color: '#374151' }}>FSSAI Reg No.           : {catering.fssai}</Text>}
+                      <Text style={{ fontSize: 10, color: '#374151' }}>Proprietor Name         : {targetCompany.proprietorName}</Text>
+                    </View>
+
+                    <Text style={{ fontSize: 10, color: '#6B7280', textAlign: 'center' }}>=================================================</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '900', color: '#1F2937', textAlign: 'center', marginVertical: 2 }}>DEMAND NOTE / RECEIPT</Text>
+                    <Text style={{ fontSize: 10, color: '#6B7280', textAlign: 'center', marginBottom: 4 }}>({isHostel ? 'Hostel Accommodation Fee' : 'Food & Catering Services'})</Text>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <Text style={{ fontSize: 10, color: '#374151' }}>Note No: <Text style={{ fontWeight: '800' }}>{targetNoteNo}</Text></Text>
+                      <Text style={{ fontSize: 10, color: '#374151' }}>Issue Date: 05-Sep-2026</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <Text style={{ fontSize: 10, color: '#374151' }}>Cycle: 10-Aug-2026 to 10-Sep-2026</Text>
+                      <Text style={{ fontSize: 10, color: '#374151' }}>Due Date: 10-Sep-2026</Text>
+                    </View>
+
+                    {/* Resident Details */}
+                    <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#000000', paddingVertical: 6, marginVertical: 4, gap: 2 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#1F2937' }}>RESIDENT DETAILS:</Text>
+                      <Text style={{ fontSize: 10, color: '#374151' }}>Resident Name : <Text style={{ fontWeight: '800' }}>सुश्री {studentName}</Text> · Adm ID: {admissionId}</Text>
+                      <Text style={{ fontSize: 10, color: '#374151' }}>Father's Name : श्री {fatherName} · Room: {roomNumber} - Bed A</Text>
+                      <Text style={{ fontSize: 10, color: '#374151' }}>Floor         : {company.floorLabel}</Text>
+                    </View>
+
+                    {/* Fee Breakdown */}
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#1F2937', marginTop: 4 }}>FEE BREAKDOWN:</Text>
+                    {isHostel ? (
+                      <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#000000', paddingVertical: 6, marginVertical: 4, gap: 4 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <Text style={{ fontSize: 10, color: '#374151' }}>1. Hostel Accommodation Fee (10 Aug - 10 Sep)</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#1F2937' }}>₹{hostelFee.toLocaleString()}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <Text style={{ fontSize: 10, color: '#374151' }}>2. Electricity ({elecUnits} units @ ₹12.00/unit)</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#1F2937' }}>₹{elecAmt.toLocaleString()}</Text>
+                        </View>
+                      </View>
+                    ) : (
+                      <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#000000', paddingVertical: 6, marginVertical: 4 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                          <Text style={{ fontSize: 10, color: '#374151' }}>1. Monthly Food & Catering Charges (10 Aug - 10 Sep)</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#1F2937' }}>₹{messFee.toLocaleString()}</Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Net Payable */}
+                    <View style={{ borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#000000', paddingVertical: 6, marginVertical: 4, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '900', color: '#1F2937' }}>NET PAYABLE AMOUNT:</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '900', color: PURPLE }}>₹{netPayableAmt.toLocaleString()}.00</Text>
+                    </View>
+
+                    {/* QR Code & Payment Info */}
+                    <View style={{ borderTopWidth: 1, borderColor: '#000000', paddingTop: 6, marginTop: 4, gap: 2 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#1F2937' }}>PAYMENT DETAILS & QR CODE:</Text>
+                      <Text style={{ fontSize: 9, color: '#4B5563' }}>Bank Name : [Bank Details Will Be Added]</Text>
+                      <Text style={{ fontSize: 9, color: '#4B5563' }}>UPI ID    : {isHostel ? `${company.notePrefix.toLowerCase()}@upi` : 'meenakshicatering@upi'}</Text>
+                      <View style={{ backgroundColor: '#F9FAFB', padding: 6, borderRadius: 6, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center', marginTop: 4 }}>
+                        <Text style={{ fontSize: 9, fontWeight: '800', color: '#374151' }}>[ Scan & Pay via UPI ]</Text>
+                        <Text style={{ fontSize: 8, color: '#6B7280', marginTop: 2 }}>Dynamic QR Auto-fills ₹{netPayableAmt.toLocaleString()}.00</Text>
+                      </View>
+                    </View>
+
+                    {/* Terms */}
+                    <View style={{ borderTopWidth: 1, borderColor: '#000000', paddingTop: 6, marginTop: 6, gap: 2 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#1F2937' }}>TERMS & CONDITIONS:</Text>
+                      <Text style={{ fontSize: 8.5, color: '#4B5563' }}>1. Fee is payable strictly in advance by the 10th of every cycle month.</Text>
+                      <Text style={{ fontSize: 8.5, color: '#4B5563' }}>2. Late fee policy: A delay beyond due date attracts ₹100/day late fee.</Text>
+                    </View>
+
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#1F2937', textAlign: 'right', marginTop: 12 }}>For {targetCompany.companyName}</Text>
+                    <Text style={{ fontSize: 8.5, color: '#6B7280', textAlign: 'right' }}>(Authorized Signatory / Digital Seal)</Text>
+                  </View>
+                </ScrollView>
+              );
+            })()}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Cook Kitchen Dashboard & Meal Opt-Out Modal ── */}
+      <Modal visible={cookDashboardModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setCookDashboardModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setCookDashboardModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { maxHeight: '88%' }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.rowBetween}>
+              <View>
+                <Text style={[styles.modalTitle, { color: '#10B981', marginBottom: 2 }]}>Cook Kitchen Dashboard</Text>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#6B7280' }}>Daily Meal Counts & Student Opt-Outs</Text>
+              </View>
+              <TouchableOpacity onPress={() => setCookDashboardModalVisible(false)} style={{ padding: 6 }}>
+                <XCircle size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginVertical: 12 }}>
+              {/* Summary Stats */}
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <View style={{ flex: 1, backgroundColor: '#ECFDF5', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#A7F3D0' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#047857' }}>ENROLLED RESIDENTS</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#065F46', marginTop: 2 }}>{cookData?.totalStudents || allStudents.length || 11}</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: '#FEF3C7', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#FDE68A' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: '#B45309' }}>TOTAL OPT-OUTS TODAY</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#92400E', marginTop: 2 }}>{cookData?.optOutCount || 0}</Text>
+                </View>
+              </View>
+
+              {/* Meal Opt-Out Selector */}
+              <View style={{ backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937', marginBottom: 8 }}>Student Meal Opt-Out</Text>
+                <View style={{ flexDirection: 'row', gap: 6, marginBottom: 10 }}>
+                  {['BREAKFAST', 'LUNCH', 'SNACKS', 'DINNER'].map(m => (
+                    <TouchableOpacity
+                      key={m}
+                      onPress={() => setOptOutMealType(m)}
+                      style={{
+                        flex: 1, paddingVertical: 7, borderRadius: 6, alignItems: 'center',
+                        backgroundColor: optOutMealType === m ? '#10B981' : '#F3F4F6',
+                      }}
+                    >
+                      <Text style={{ fontSize: 9, fontWeight: '800', color: optOutMealType === m ? '#FFFFFF' : '#4B5563' }}>{m}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <TouchableOpacity onPress={handleSubmitMealOptOut} style={{ backgroundColor: '#10B981', paddingVertical: 9, borderRadius: 8, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Submit Opt-Out for Today</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Required Kitchen Meal Counts */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1F2937', marginTop: 4 }}>Today's Expected Kitchen Meal Prep</Text>
+              <View style={{ gap: 8 }}>
+                {[
+                  { name: 'Breakfast (8:00 AM)', count: (cookData?.totalStudents || allStudents.length || 11) - (cookData?.optOutsPerMeal?.BREAKFAST || 0) },
+                  { name: 'Lunch (1:00 PM)', count: (cookData?.totalStudents || allStudents.length || 11) - (cookData?.optOutsPerMeal?.LUNCH || 0) },
+                  { name: 'Evening Snacks (5:30 PM)', count: (cookData?.totalStudents || allStudents.length || 11) - (cookData?.optOutsPerMeal?.SNACKS || 0) },
+                  { name: 'Dinner (8:30 PM)', count: (cookData?.totalStudents || allStudents.length || 11) - (cookData?.optOutsPerMeal?.DINNER || 0) },
+                ].map((item, idx) => (
+                  <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 10, backgroundColor: '#FFFFFF', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#374151' }}>{item.name}</Text>
+                    <View style={{ backgroundColor: '#EEF2FF', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '900', color: PURPLE }}>{item.count} meals</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Suggestion Box Modal ── */}
+      <Modal visible={suggestionsModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setSuggestionsModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSuggestionsModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { maxHeight: '88%' }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.rowBetween}>
+              <View>
+                <Text style={[styles.modalTitle, { color: '#06B6D4', marginBottom: 2 }]}>Suggestion Box</Text>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#6B7280' }}>Student Feedback & Warden Inbox</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSuggestionsModalVisible(false)} style={{ padding: 6 }}>
+                <XCircle size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, marginVertical: 12 }}>
+              {/* Submit Form */}
+              <View style={{ backgroundColor: '#F9FAFB', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB' }}>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937', marginBottom: 6 }}>Submit a Suggestion / Feedback</Text>
+                <TextInput
+                  style={[styles.formInputText, { height: 60, textAlignVertical: 'top' }]}
+                  multiline
+                  value={suggestionInput}
+                  onChangeText={setSuggestionInput}
+                  placeholder="Share feedback, mess ideas, or general improvements..."
+                />
+                <TouchableOpacity onPress={handleSubmitSuggestion} style={{ backgroundColor: '#06B6D4', paddingVertical: 9, borderRadius: 8, alignItems: 'center', marginTop: 8 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Submit Suggestion</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Suggestions Inbox */}
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1F2937', marginTop: 4 }}>Warden Suggestion Inbox ({suggestionsList.length})</Text>
+              {suggestionsLoading ? (
+                <ActivityIndicator size="small" color="#06B6D4" />
+              ) : suggestionsList.length === 0 ? (
+                <Text style={{ color: '#9CA3AF', textAlign: 'center', marginVertical: 15, fontWeight: '500' }}>No suggestions submitted yet.</Text>
+              ) : (
+                suggestionsList.map((item: any) => (
+                  <View key={item.id} style={{ padding: 12, backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', gap: 4 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>{item.student?.user?.name || 'Student'}</Text>
+                      <View style={{ backgroundColor: item.status === 'RESOLVED' ? '#ECFDF5' : '#F3F4F6', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 9, fontWeight: '800', color: item.status === 'RESOLVED' ? '#047857' : '#4B5563' }}>{item.status}</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#4B5563', fontStyle: 'italic', marginVertical: 2 }}>"{item.content}"</Text>
+
+                    {user?.role === 'ADMIN' && item.status !== 'RESOLVED' && (
+                      <TouchableOpacity
+                        onPress={() => handleUpdateSuggestionStatus(item.id, 'RESOLVED')}
+                        style={{ alignSelf: 'flex-end', backgroundColor: '#ECFDF5', borderColor: '#A7F3D0', borderWidth: 1, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginTop: 4 }}
+                      >
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#047857' }}>Mark Resolved</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Gate Entry & Biometric Logs Modal ── */}
+      <Modal visible={gateLogsModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setGateLogsModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setGateLogsModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { maxHeight: '85%' }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.rowBetween}>
+              <View>
+                <Text style={[styles.modalTitle, { color: '#8B5CF6', marginBottom: 2 }]}>Gate Entry & Biometric Logs</Text>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#6B7280' }}>Real-time Biometric Scanner & QR Logs</Text>
+              </View>
+              <TouchableOpacity onPress={() => setGateLogsModalVisible(false)} style={{ padding: 6 }}>
+                <XCircle size={22} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, marginVertical: 12 }}>
+              {/* Summary Pills */}
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1, backgroundColor: '#ECFDF5', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#047857' }}>INSIDE HOSTEL</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#065F46', marginTop: 2 }}>{allStudents.length - 1}</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: '#FEF3C7', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#FDE68A', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#B45309' }}>OUTSIDE / ON LEAVE</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#92400E', marginTop: 2 }}>1</Text>
+                </View>
+              </View>
+
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937', marginTop: 4 }}>Today's Gate Log Stream</Text>
+              {gateLogsLoading ? (
+                <ActivityIndicator size="small" color="#8B5CF6" />
+              ) : (
+                gateLogsList.map((log) => (
+                  <View key={log.id} style={{ padding: 12, backgroundColor: '#FFFFFF', borderRadius: 10, borderWidth: 1, borderColor: '#E5E7EB', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#1F2937' }}>{log.studentName}</Text>
+                      <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Room {log.roomNumber} · {log.method}</Text>
+                    </View>
+
+                    <View style={{ alignItems: 'flex-end', gap: 2 }}>
+                      <View style={{ backgroundColor: log.action === 'ENTRY' ? '#ECFDF5' : '#FEF2F2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 10, fontWeight: '900', color: log.action === 'ENTRY' ? '#047857' : '#DC2626' }}>{log.action}</Text>
+                      </View>
+                      <Text style={{ fontSize: 10, color: '#9CA3AF', fontWeight: '600' }}>{log.timestamp}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+
       {/* ── Upload Document Modal ── */}
       <FormModal 
         visible={uploadDocModalVisible} 
@@ -2224,9 +3626,9 @@ export default function DashboardScreen() {
       </FormModal>
 
       {/* ── Custom Alert Modal ── */}
-      <Modal visible={alertVisible} animationType="fade" transparent>
-        <View style={styles.alertOverlay}>
-          <View style={styles.alertBox}>
+      <Modal visible={alertVisible} animationType="fade" transparent onRequestClose={() => setAlertVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setAlertVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={styles.alertBox}>
             <View style={[styles.alertIconBox, {
               backgroundColor: alertType === 'SUCCESS' ? '#ECFDF5' : alertType === 'ERROR' ? '#FEF2F2' : alertType === 'CONFIRM' ? '#FFFBEB' : '#EFF6FF'
             }]}>
@@ -2253,14 +3655,14 @@ export default function DashboardScreen() {
                 </TouchableOpacity>
               )}
             </View>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
 
       {/* ── Detail View Modal ── */}
-      <Modal visible={detailModalVisible} animationType="slide" transparent presentationStyle="overFullScreen">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { maxHeight: '85%' }]}>
+      <Modal visible={detailModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setDetailModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setDetailModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { maxHeight: '85%' }]}>
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, { color: PURPLE }]}>Detailed Information</Text>
             
@@ -2503,8 +3905,241 @@ export default function DashboardScreen() {
             <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { width: '100%', height: 48, borderRadius: 14 }]} onPress={() => setDetailModalVisible(false)}>
               <Text style={styles.actionBtnText}>Close Details</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── WORKSPACE FLOOR SELECTION MODAL ─── */}
+      <Modal visible={workspaceModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setWorkspaceModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setWorkspaceModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { height: '82%', maxHeight: '82%', paddingHorizontal: 20, paddingTop: 12 }]}>
+            <View style={{ width: '100%', alignItems: 'center', marginBottom: 10 }}>
+              <View style={styles.modalHandle} />
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Building2 size={20} color={PURPLE} />
+                <Text style={styles.modalTitle}>Select Workspace Floor</Text>
+              </View>
+              <TouchableOpacity onPress={() => setWorkspaceModalVisible(false)} style={{ padding: 6, backgroundColor: '#F1F5F9', borderRadius: 20 }}>
+                <XCircle size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', marginBottom: 16 }}>
+              Select a floor workspace to filter student directory, rooms, and reports:
+            </Text>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 16 }}>
+              {WORKSPACE_OPTIONS.map((item) => (
+                <WorkspaceOptionCard
+                  key={item.label}
+                  item={item}
+                  isSelected={String(selectedWorkspaceFloor) === String(item.num)}
+                  onPress={() => {
+                    setSelectedWorkspaceFloor(item.num as any);
+                    setWorkspaceModalVisible(false);
+                  }}
+                />
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { width: '100%', height: 48, borderRadius: 14, marginTop: 6 }]} onPress={() => setWorkspaceModalVisible(false)}>
+              <Text style={styles.actionBtnText}>Done</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── FLOOR DIRECTORY & FINANCIAL REPORT MODAL ─── */}
+      <Modal visible={floorModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setFloorModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setFloorModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { height: '88%', maxHeight: '88%' }]}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>
+              {selectedFloorNum === 'combined' ? 'Consolidated Report' : `Floor ${selectedFloorNum} Directory`}
+            </Text>
+
+            {/* Subtitle */}
+            <Text style={{ fontSize: 12, color: '#6B7280', textAlign: 'center', marginTop: -14, marginBottom: 16 }}>
+              {selectedFloorNum === 'combined'
+                ? 'All 5 Floors & Meenakshi Enterprises Catering'
+                : floorDetail?.floor?.companyName ? `${floorDetail.floor.companyName} · ${floorDetail.floor.hostelName}` : 'Company & Resident Details'}
+            </Text>
+
+            {/* Tab switcher for single floor */}
+            {selectedFloorNum !== 'combined' && (
+              <View style={{ flexDirection: 'row', backgroundColor: '#F3F4F6', borderRadius: 12, padding: 3, marginBottom: 16 }}>
+                <TouchableOpacity
+                  style={[{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' }, floorActiveTab === 'directory' && { backgroundColor: PURPLE }]}
+                  onPress={() => setFloorActiveTab('directory')}
+                >
+                  <Text style={[{ fontSize: 13, fontWeight: '700', color: '#4B5563' }, floorActiveTab === 'directory' && { color: '#FFFFFF' }]}>📋 Directory</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center' }, floorActiveTab === 'report' && { backgroundColor: PURPLE }]}
+                  onPress={() => setFloorActiveTab('report')}
+                >
+                  <Text style={[{ fontSize: 13, fontWeight: '700', color: '#4B5563' }, floorActiveTab === 'report' && { color: '#FFFFFF' }]}>📊 Financial Report</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {floorLoading ? (
+              <View style={{ paddingVertical: 60, alignItems: 'center' }}><ActivityIndicator size="large" color={PURPLE} /></View>
+            ) : (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+
+                {/* ── DIRECTORY TAB ── */}
+                {floorActiveTab === 'directory' && selectedFloorNum !== 'combined' && (
+                  <View>
+                    {/* Search Bar */}
+                    <View style={[styles.searchBar, { height: 44, marginBottom: 12 }]}>
+                      <Search size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
+                      <TextInput
+                        placeholder="Search student or roll number..."
+                        value={floorSearch}
+                        onChangeText={setFloorSearch}
+                        style={styles.searchInput}
+                        placeholderTextColor="#9CA3AF"
+                      />
+                    </View>
+
+                    {/* Summary Chips */}
+                    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+                      <View style={{ backgroundColor: '#F4F3FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: PURPLE }}>Rooms: {floorDetail?.rooms?.length || 0}</Text>
+                      </View>
+                      <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#10B981' }}>Residents: {floorDetail?.summary?.totalStudents || 0}</Text>
+                      </View>
+                      <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#2563EB' }}>Mess Total: ₹{(floorDetail?.summary?.messFeeTotal || 0).toLocaleString()}</Text>
+                      </View>
+                    </View>
+
+                    {/* Room Blocks */}
+                    {(floorDetail?.rooms || [])
+                      .map((room: any) => ({
+                        ...room,
+                        students: (room.students || []).filter((s: any) =>
+                          !floorSearch ||
+                          s.name.toLowerCase().includes(floorSearch.toLowerCase()) ||
+                          s.rollNumber.toLowerCase().includes(floorSearch.toLowerCase())
+                        )
+                      }))
+                      .filter((r: any) => r.students.length > 0 || !floorSearch)
+                      .map((room: any) => (
+                        <View key={room.id} style={[styles.listCard, { marginBottom: 12 }]}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                              <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: PURPLE, justifyContent: 'center', alignItems: 'center' }}>
+                                <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFFFFF' }}>{room.roomNumber}</Text>
+                              </View>
+                              <View>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: '#1F2937' }}>Room {room.roomNumber}</Text>
+                                <Text style={{ fontSize: 10, color: '#6B7280' }}>{room.sharingLabel} · ₹{room.monthlyFee?.toLocaleString()}/mo</Text>
+                              </View>
+                            </View>
+                            <Badge label={`${room.occupancy}/${room.capacity} ${room.status}`} color={room.status === 'FULL' ? '#EF4444' : '#10B981'} />
+                          </View>
+
+                          {/* Students List */}
+                          <View style={{ gap: 6, marginTop: 4 }}>
+                            {room.students.map((s: any) => (
+                              <View key={s.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F9FAFB', padding: 8, borderRadius: 10 }}>
+                                <View>
+                                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#1F2937' }}>{s.name}</Text>
+                                  <Text style={{ fontSize: 10, color: '#6B7280' }}>Roll: {s.rollNumber} · Ph: {s.phoneNumber}</Text>
+                                </View>
+                                <Badge label={s.latestInvoice?.status || 'Active'} color={s.latestInvoice?.status === 'PAID' ? '#10B981' : '#F59E0B'} />
+                              </View>
+                            ))}
+                          </View>
+                        </View>
+                      ))}
+                  </View>
+                )}
+
+                {/* ── FINANCIAL REPORT TAB / CONSOLIDATED VIEW ── */}
+                {(floorActiveTab === 'report' || selectedFloorNum === 'combined') && floorReport && (
+                  <View>
+                    {/* Summary Metric Cards */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                      <View style={[styles.roomSummaryBox, { borderTopColor: '#7F56D9' }]}>
+                        <Text style={[styles.roomSummaryCount, { color: '#7F56D9' }]}>{floorReport.summary?.totalStudents ?? floorReport.grandTotal?.totalStudents}</Text>
+                        <Text style={styles.roomSummaryLabel}>Students</Text>
+                      </View>
+                      <View style={[styles.roomSummaryBox, { borderTopColor: '#2563EB' }]}>
+                        <Text style={[styles.roomSummaryCount, { color: '#2563EB', fontSize: 15 }]}>₹{(floorReport.summary?.grandTotal ?? floorReport.grandTotal?.total)?.toLocaleString()}</Text>
+                        <Text style={styles.roomSummaryLabel}>Total Due</Text>
+                      </View>
+                      <View style={[styles.roomSummaryBox, { borderTopColor: '#10B981' }]}>
+                        <Text style={[styles.roomSummaryCount, { color: '#10B981', fontSize: 15 }]}>₹{(floorReport.summary?.totalCollected ?? floorReport.grandTotal?.collected)?.toLocaleString()}</Text>
+                        <Text style={styles.roomSummaryLabel}>Collected</Text>
+                      </View>
+                      <View style={[styles.roomSummaryBox, { borderTopColor: '#EF4444' }]}>
+                        <Text style={[styles.roomSummaryCount, { color: '#EF4444', fontSize: 15 }]}>₹{(floorReport.summary?.totalPending ?? floorReport.grandTotal?.pending)?.toLocaleString()}</Text>
+                        <Text style={styles.roomSummaryLabel}>Pending</Text>
+                      </View>
+                    </View>
+
+                    {/* Consolidated Floor-wise Table */}
+                    {floorReport.floors && (
+                      <View style={styles.listCard}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#1F2937', marginBottom: 10 }}>Floor & Company Financial Breakdown</Text>
+                        {floorReport.floors.map((f: any, idx: number) => (
+                          <View key={idx} style={{ paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#111827' }}>Floor {f.floor?.floorNumber} – {f.floor?.companyName}</Text>
+                              <Text style={{ fontSize: 12, fontWeight: '800', color: PURPLE }}>₹{f.summary?.grandTotal?.toLocaleString()}</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
+                              <Text style={{ fontSize: 10, color: '#6B7280' }}>Hostel: ₹{f.summary?.totalHostelFee?.toLocaleString()} · Mess: ₹{f.summary?.totalMessFee?.toLocaleString()}</Text>
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: '#10B981' }}>Paid: ₹{f.summary?.totalCollected?.toLocaleString()}</Text>
+                            </View>
+                          </View>
+                        ))}
+
+                        {/* Meenakshi Enterprises Catering Row */}
+                        <View style={{ paddingVertical: 10, backgroundColor: '#EFF6FF', paddingHorizontal: 8, borderRadius: 8, marginTop: 8 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF' }}>Meenakshi Enterprises (Catering)</Text>
+                            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1E40AF' }}>₹{floorReport.grandTotal?.meenakshiCatering?.toLocaleString()}</Text>
+                          </View>
+                          <Text style={{ fontSize: 10, color: '#3B82F6', marginTop: 2 }}>₹3,000 × {floorReport.grandTotal?.totalStudents} residents across all 5 floors</Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Single Floor Student Rows */}
+                    {floorReport.students && (
+                      <View style={styles.listCard}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#1F2937', marginBottom: 10 }}>Resident Bills Summary</Text>
+                        {floorReport.students.map((s: any, idx: number) => (
+                          <View key={idx} style={{ paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View>
+                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#1F2937' }}>{s.name} (Room {s.roomNumber})</Text>
+                              <Text style={{ fontSize: 10, color: '#6B7280' }}>Hostel: ₹{s.hostelFee} · Mess: ₹{s.messFee} · Elec: ₹{s.electricity}</Text>
+                            </View>
+                            <View style={{ alignItems: 'flex-end' }}>
+                              <Text style={{ fontSize: 12, fontWeight: '800', color: '#111827' }}>₹{s.total}</Text>
+                              <Text style={{ fontSize: 10, fontWeight: '700', color: s.pending > 0 ? '#EF4444' : '#10B981' }}>{s.pending > 0 ? `Due ₹${s.pending}` : 'Paid'}</Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+
+              </ScrollView>
+            )}
+
+            <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { width: '100%', height: 48, borderRadius: 14, marginTop: 10 }]} onPress={() => setFloorModalVisible(false)}>
+              <Text style={styles.actionBtnText}>Close Directory</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
     </View>
   );

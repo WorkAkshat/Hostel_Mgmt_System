@@ -11,6 +11,23 @@ export const getMyAttendance = () => {
 export const biometricVerify = (data) => {
   return client('/mess/biometric-verify', {
     method: 'POST',
-    body: data
+    body: JSON.stringify(data)
   });
+};
+
+export const optOutMeal = (data) => {
+  return client('/mess/opt-out', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+};
+
+export const cancelOptOut = (id) => {
+  return client(`/mess/opt-out/${id}`, {
+    method: 'DELETE'
+  });
+};
+
+export const getCookDashboard = (date) => {
+  return client(`/mess/cook-dashboard${date ? `?date=${date}` : ''}`);
 };

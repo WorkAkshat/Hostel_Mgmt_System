@@ -3,12 +3,61 @@ const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
-async function main() {
-  console.log('Seeding Hari Pushp PG Girls Hostel database...');
+// ─── Floor Master Data (English) ──────────────────────────────────────────────
+const FLOOR_DATA = [
+  {
+    floorNumber: 1,
+    companyName: 'Rajken Enterprises',
+    hostelName:  'Hari Pushp Girls Hostel',
+    shortName:   'Floor 1 – Rajken',
+    floorLabel:  'First Floor',
+  },
+  {
+    floorNumber: 2,
+    companyName: 'Vandana Enterprises',
+    hostelName:  'Vandana Girls Hostel',
+    shortName:   'Floor 2 – Vandana',
+    floorLabel:  'Second Floor',
+  },
+  {
+    floorNumber: 3,
+    companyName: 'Pushpa Enterprises',
+    hostelName:  'Pushpa Girls Hostel',
+    shortName:   'Floor 3 – Pushpa',
+    floorLabel:  'Third Floor',
+  },
+  {
+    floorNumber: 4,
+    companyName: 'Harish Chandra Enterprises',
+    hostelName:  'Harish Chandra Girls Hostel',
+    shortName:   'Floor 4 – Harish Chandra',
+    floorLabel:  'Fourth Floor',
+  },
+  {
+    floorNumber: 5,
+    companyName: 'Ramesh Enterprises',
+    hostelName:  'Ramesh Girls Hostel',
+    shortName:   'Floor 5 – Ramesh',
+    floorLabel:  'Fifth & Sixth Floor',
+  },
+];
 
-  // 1. Clear existing data
-  await prisma.messAttendance.deleteMany({});
-  await prisma.notice.deleteMany({});
+// ─── Fee Constants ──────────────────────────────────────────────────────────────
+const FEE = {
+  SINGLE: 16000,  // Single sharing
+  TWIN:   14000,  // Twin sharing
+  TRIPLE: 12000,  // Triple sharing
+  MESS:    3000,  // Meenakshi Enterprises per student
+};
+
+async function main() {
+  console.log('🌱 Seeding Hari Pushp PG Girls Hostel database...\n');
+
+  // ── 1. Clear existing data (order matters for FK constraints) ──────────────
+  await prisma.nightAttendance.deleteMany({});
+  await prisma.mealOptOut.deleteMany({});
+  await prisma.electricityReading.deleteMany({});
+  await prisma.demandNote.deleteMany({});
   await prisma.visitor.deleteMany({});
   await prisma.invoice.deleteMany({});
   await prisma.complaint.deleteMany({});
@@ -16,326 +65,360 @@ async function main() {
   await prisma.student.deleteMany({});
   await prisma.staff.deleteMany({});
   await prisma.room.deleteMany({});
+  await prisma.floor.deleteMany({});
   await prisma.user.deleteMany({});
 
-  console.log('Cleared existing data.');
+  console.log('✓ Cleared old database tables.');
 
-  // 2. Hash default password
+  // ── 2. Create Floor Master Records ─────────────────────────────────────────
+  const floors = [];
+  for (const fd of FLOOR_DATA) {
+    const floor = await prisma.floor.create({ data: fd });
+    floors.push(floor);
+  }
+  const [floor1, floor2, floor3, floor4, floor5] = floors;
+  console.log('✓ Created 5 floor records.');
+
+  // ── 3. Hash default password ───────────────────────────────────────────────
   const hashedPassword = await bcrypt.hash('password123', 10);
 
-  // 3. Create Users
-  // Warden User (ADMIN)
-  const adminUser = await prisma.user.create({
-    data: {
-      email: 'warden@haripushppg.com',
-      password: hashedPassword,
-      name: 'Dr. Shalini Sharma',
-      role: 'ADMIN',
-    },
+  // ── 4. Create Dedicated Floor Warden Logins + Consolidated Super Admin ─────
+  // Consolidated Super Admins (Can view all floors combined)
+  const superAdmin = await prisma.user.create({
+    data: { email: 'admin@haripushppg.com', password: hashedPassword, name: 'Chief Warden (Consolidated)', role: 'ADMIN', assignedFloor: null },
+  });
+  const wardenAdmin = await prisma.user.create({
+    data: { email: 'warden@haripushppg.com', password: hashedPassword, name: 'Dr. Shalini Sharma (Super Admin)', role: 'ADMIN', assignedFloor: null },
   });
 
-  // Student Users (STUDENT - Girls names)
-  const studentUser1 = await prisma.user.create({
-    data: {
-      email: 'pooja@haripushppg.com',
-      password: hashedPassword,
-      name: 'Pooja Sharma',
-      role: 'STUDENT',
-    },
+  // Dedicated Floor Wardens (Auto-locked to their specific floor)
+  const floor1Admin = await prisma.user.create({
+    data: { email: 'floor1@haripushppg.com', password: hashedPassword, name: 'Floor 1 Warden (Rajken Ent.)', role: 'ADMIN', assignedFloor: 1 },
+  });
+  const floor2Admin = await prisma.user.create({
+    data: { email: 'floor2@haripushppg.com', password: hashedPassword, name: 'Floor 2 Warden (Vandana Ent.)', role: 'ADMIN', assignedFloor: 2 },
+  });
+  const floor3Admin = await prisma.user.create({
+    data: { email: 'floor3@haripushppg.com', password: hashedPassword, name: 'Floor 3 Warden (Pushpa Ent.)', role: 'ADMIN', assignedFloor: 3 },
+  });
+  const floor4Admin = await prisma.user.create({
+    data: { email: 'floor4@haripushppg.com', password: hashedPassword, name: 'Floor 4 Warden (Harish Chandra Ent.)', role: 'ADMIN', assignedFloor: 4 },
+  });
+  const floor5Admin = await prisma.user.create({
+    data: { email: 'floor5@haripushppg.com', password: hashedPassword, name: 'Floor 5 Warden (Ramesh Ent.)', role: 'ADMIN', assignedFloor: 5 },
   });
 
-  const studentUser2 = await prisma.user.create({
-    data: {
-      email: 'ananya@haripushppg.com',
-      password: hashedPassword,
-      name: 'Ananya Mehta',
-      role: 'STUDENT',
-    },
-  });
+  // Floor 1 students
+  const sUser1 = await prisma.user.create({ data: { email: 'pooja@haripushppg.com',   password: hashedPassword, name: 'Pooja Sharma',   role: 'STUDENT' } });
+  const sUser2 = await prisma.user.create({ data: { email: 'ananya@haripushppg.com',  password: hashedPassword, name: 'Ananya Mehta',   role: 'STUDENT' } });
+  // Floor 2 students
+  const sUser3 = await prisma.user.create({ data: { email: 'sneha@haripushppg.com',   password: hashedPassword, name: 'Sneha Patel',    role: 'STUDENT' } });
+  const sUser4 = await prisma.user.create({ data: { email: 'priya@haripushppg.com',   password: hashedPassword, name: 'Priya Singh',    role: 'STUDENT' } });
+  // Floor 3 students
+  const sUser5 = await prisma.user.create({ data: { email: 'kavya@haripushppg.com',   password: hashedPassword, name: 'Kavya Reddy',    role: 'STUDENT' } });
+  const sUser6 = await prisma.user.create({ data: { email: 'riya@haripushppg.com',    password: hashedPassword, name: 'Riya Verma',     role: 'STUDENT' } });
+  const sUser7 = await prisma.user.create({ data: { email: 'shruti@haripushppg.com',  password: hashedPassword, name: 'Shruti Jain',    role: 'STUDENT' } });
+  // Floor 4 students
+  const sUser8 = await prisma.user.create({ data: { email: 'divya@haripushppg.com',   password: hashedPassword, name: 'Divya Gupta',    role: 'STUDENT' } });
+  const sUser9 = await prisma.user.create({ data: { email: 'neha@haripushppg.com',    password: hashedPassword, name: 'Neha Tiwari',    role: 'STUDENT' } });
+  // Floor 5 students
+  const sUser10 = await prisma.user.create({ data: { email: 'aarti@haripushppg.com', password: hashedPassword, name: 'Aarti Mishra',   role: 'STUDENT' } });
+  const sUser11 = await prisma.user.create({ data: { email: 'meera@haripushppg.com', password: hashedPassword, name: 'Meera Chauhan',  role: 'STUDENT' } });
 
-  const studentUser3 = await prisma.user.create({
-    data: {
-      email: 'sneha@haripushppg.com',
-      password: hashedPassword,
-      name: 'Sneha Patel',
-      role: 'STUDENT',
-    },
-  });
+  // Staff
+  const securityUser = await prisma.user.create({ data: { email: 'guard@haripushppg.com', password: hashedPassword, name: 'Sunita Devi', role: 'STAFF' } });
 
-  // Staff User (STAFF - Security Guard / Warden Assistant)
-  const securityUser = await prisma.user.create({
-    data: {
-      email: 'guard@haripushppg.com',
-      password: hashedPassword,
-      name: 'Sunita Devi',
-      role: 'STAFF',
-    },
-  });
+  console.log('✓ Created users (5 Floor Wardens + Consolidated Super Admin).');
 
-  console.log('Created Users.');
-
-  // 4. Create Staff Entry
+  // ── 5. Create Staff Entry ──────────────────────────────────────────────────
   await prisma.staff.create({
-    data: {
-      userId: securityUser.id,
-      department: 'Security',
-      designation: 'Head Female Guard',
-      phoneNumber: '9876543210',
-    },
+    data: { userId: securityUser.id, department: 'Security', designation: 'Head Female Guard', phoneNumber: '9876543210' },
   });
 
-  // 5. Create Rooms
-  const assetsTemplate = JSON.stringify([
-    { name: 'Bed', status: 'Good' },
-    { name: 'Study Table', status: 'Good' },
-    { name: 'Chair', status: 'Good' },
-    { name: 'Ceiling Fan', status: 'Good' },
+  // ── 6. Create Rooms with floor assignments ─────────────────────────────────
+  const assetsSingle = JSON.stringify([
+    { name: 'Bed', status: 'Good' }, { name: 'Study Table', status: 'Good' },
+    { name: 'Chair', status: 'Good' }, { name: 'Ceiling Fan', status: 'Good' },
+    { name: 'Wardrobe', status: 'Good' }, { name: 'LAN Port', status: 'Working' },
+  ]);
+  const assetsTwin = JSON.stringify([
+    { name: 'Bed x2', status: 'Good' }, { name: 'Study Table x2', status: 'Good' },
+    { name: 'Chair x2', status: 'Good' }, { name: 'Ceiling Fan', status: 'Good' },
+    { name: 'LAN Port', status: 'Working' },
+  ]);
+  const assetsTriple = JSON.stringify([
+    { name: 'Bed x3', status: 'Good' }, { name: 'Study Table x3', status: 'Good' },
+    { name: 'Chair x3', status: 'Good' }, { name: 'Ceiling Fan', status: 'Good' },
     { name: 'LAN Port', status: 'Working' },
   ]);
 
-  const roomA101 = await prisma.room.create({
-    data: {
-      roomNumber: 'A-101',
-      block: 'Block A (UG)',
-      sharingType: 2,
-      isAc: true,
-      status: 'AVAILABLE',
-      assets: assetsTemplate,
-    },
+  // Floor 1 Rooms
+  const room101 = await prisma.room.create({ data: { roomNumber: '101', block: 'Hari Pushp',       floorId: floor1.id, floorNumber: 1, sharingType: 2, isAc: true,  status: 'AVAILABLE', assets: assetsTwin   } });
+  const room102 = await prisma.room.create({ data: { roomNumber: '102', block: 'Hari Pushp',       floorId: floor1.id, floorNumber: 1, sharingType: 2, isAc: false, status: 'AVAILABLE', assets: assetsTwin   } });
+  const room103 = await prisma.room.create({ data: { roomNumber: '103', block: 'Hari Pushp',       floorId: floor1.id, floorNumber: 1, sharingType: 1, isAc: true,  status: 'AVAILABLE', assets: assetsSingle } });
+
+  // Floor 2 Rooms
+  const room201 = await prisma.room.create({ data: { roomNumber: '201', block: 'Vandana',          floorId: floor2.id, floorNumber: 2, sharingType: 2, isAc: true,  status: 'AVAILABLE', assets: assetsTwin   } });
+  const room202 = await prisma.room.create({ data: { roomNumber: '202', block: 'Vandana',          floorId: floor2.id, floorNumber: 2, sharingType: 3, isAc: false, status: 'AVAILABLE', assets: assetsTriple } });
+
+  // Floor 3 Rooms
+  const room301 = await prisma.room.create({ data: { roomNumber: '301', block: 'Pushpa',           floorId: floor3.id, floorNumber: 3, sharingType: 1, isAc: true,  status: 'AVAILABLE', assets: assetsSingle } });
+  const room302 = await prisma.room.create({ data: { roomNumber: '302', block: 'Pushpa',           floorId: floor3.id, floorNumber: 3, sharingType: 2, isAc: true,  status: 'AVAILABLE', assets: assetsTwin   } });
+  const room303 = await prisma.room.create({ data: { roomNumber: '303', block: 'Pushpa',           floorId: floor3.id, floorNumber: 3, sharingType: 3, isAc: false, status: 'AVAILABLE', assets: assetsTriple } });
+
+  // Floor 4 Rooms
+  const room401 = await prisma.room.create({ data: { roomNumber: '401', block: 'Harish Chandra',   floorId: floor4.id, floorNumber: 4, sharingType: 2, isAc: true,  status: 'AVAILABLE', assets: assetsTwin   } });
+  const room402 = await prisma.room.create({ data: { roomNumber: '402', block: 'Harish Chandra',   floorId: floor4.id, floorNumber: 4, sharingType: 2, isAc: false, status: 'AVAILABLE', assets: assetsTwin   } });
+
+  // Floor 5 Rooms
+  const room501 = await prisma.room.create({ data: { roomNumber: '501', block: 'Ramesh',           floorId: floor5.id, floorNumber: 5, sharingType: 2, isAc: true,  status: 'AVAILABLE', assets: assetsTwin   } });
+  const room502 = await prisma.room.create({ data: { roomNumber: '502', block: 'Ramesh',           floorId: floor5.id, floorNumber: 5, sharingType: 2, isAc: false, status: 'AVAILABLE', assets: assetsTwin   } });
+
+  console.log('✓ Created 12 rooms across 5 floors.');
+
+  // Helper to create Student profile
+  const makeStudent = (uId, roll, phone, parent, roomId, dateJoin, father) => ({
+    userId: uId, rollNumber: roll, phoneNumber: phone, parentContact: parent,
+    roomId, status: 'CHECKED_IN', dateOfJoining: new Date(dateJoin), fatherName: father,
   });
 
-  const roomA102 = await prisma.room.create({
-    data: {
-      roomNumber: 'A-102',
-      block: 'Block A (UG)',
-      sharingType: 2,
-      isAc: true,
-      status: 'AVAILABLE',
-      assets: assetsTemplate,
-    },
+  // Floor 1
+  const student1 = await prisma.student.create({ data: makeStudent(sUser1.id, 'HP-2024-101', '9810011111', '9810099901', room101.id, '2024-07-01', 'Rajesh Sharma') });
+  const student2 = await prisma.student.create({ data: makeStudent(sUser2.id, 'HP-2024-102', '9810011112', '9810099902', room101.id, '2024-07-05', 'Vikram Mehta') });
+  // Floor 2
+  const student3 = await prisma.student.create({ data: makeStudent(sUser3.id, 'VN-2024-201', '9810022221', '9810099903', room201.id, '2024-07-10', 'Suresh Patel') });
+  const student4 = await prisma.student.create({ data: makeStudent(sUser4.id, 'VN-2024-202', '9810022222', '9810099904', room202.id, '2024-07-12', 'Ramesh Singh') });
+  // Floor 3
+  const student5 = await prisma.student.create({ data: makeStudent(sUser5.id, 'PS-2024-301', '9810033331', '9810099905', room301.id, '2024-07-15', 'Venkat Reddy') });
+  const student6 = await prisma.student.create({ data: makeStudent(sUser6.id, 'PS-2024-302', '9810033332', '9810099906', room302.id, '2024-07-18', 'Anil Verma') });
+  const student7 = await prisma.student.create({ data: makeStudent(sUser7.id, 'PS-2024-303', '9810033333', '9810099907', room303.id, '2024-07-20', 'Pravin Jain') });
+  // Floor 4
+  const student8 = await prisma.student.create({ data: makeStudent(sUser8.id, 'HC-2024-401', '9810044441', '9810099908', room401.id, '2024-07-22', 'Alok Gupta') });
+  const student9 = await prisma.student.create({ data: makeStudent(sUser9.id, 'HC-2024-402', '9810044442', '9810099909', room402.id, '2024-07-25', 'Mahesh Tiwari') });
+  // Floor 5
+  const student10 = await prisma.student.create({ data: makeStudent(sUser10.id, 'RM-2024-501', '9810055551', '9810099910', room501.id, '2024-07-28', 'Dinesh Mishra') });
+  const student11 = await prisma.student.create({ data: makeStudent(sUser11.id, 'RM-2024-502', '9810055552', '9810099911', room502.id, '2024-08-01', 'Sunil Chauhan') });
+
+  const allStudents = [student1, student2, student3, student4, student5, student6, student7, student8, student9, student10, student11];
+  console.log('✓ Created 11 student profiles.');
+
+  // ── 7. Update Room Status to OCCUPIED ──────────────────────────────────────
+  const occupiedRoomIds = [room101.id, room201.id, room202.id, room301.id, room302.id, room303.id, room401.id, room402.id, room501.id, room502.id];
+  await prisma.room.updateMany({ where: { id: { in: occupiedRoomIds } }, data: { status: 'OCCUPIED' } });
+
+  // ── 8. Create Invoices (Floor-wise tagged) ──────────────────────────────────
+  await prisma.invoice.createMany({
+    data: [
+      { studentId: student1.id, amount: FEE.TWIN,   dueDate: new Date('2026-09-09'), status: 'PAID',   paidAt: new Date('2026-08-10'), floorNumber: 1, companyName: 'Rajken Enterprises' },
+      { studentId: student2.id, amount: FEE.TWIN,   dueDate: new Date('2026-09-09'), status: 'UNPAID', floorNumber: 1, companyName: 'Rajken Enterprises' },
+      { studentId: student3.id, amount: FEE.TWIN,   dueDate: new Date('2026-09-09'), status: 'PAID',   paidAt: new Date('2026-08-11'), floorNumber: 2, companyName: 'Vandana Enterprises' },
+      { studentId: student4.id, amount: FEE.TRIPLE, dueDate: new Date('2026-09-09'), status: 'UNPAID', floorNumber: 2, companyName: 'Vandana Enterprises' },
+      { studentId: student5.id, amount: FEE.SINGLE, dueDate: new Date('2026-09-09'), status: 'PAID',   paidAt: new Date('2026-08-09'), floorNumber: 3, companyName: 'Pushpa Enterprises' },
+      { studentId: student6.id, amount: FEE.TWIN,   dueDate: new Date('2026-09-09'), status: 'UNPAID', floorNumber: 3, companyName: 'Pushpa Enterprises' },
+      { studentId: student7.id, amount: FEE.TRIPLE, dueDate: new Date('2026-09-09'), status: 'PAID',   paidAt: new Date('2026-08-10'), floorNumber: 3, companyName: 'Pushpa Enterprises' },
+      { studentId: student8.id, amount: FEE.TWIN,   dueDate: new Date('2026-09-09'), status: 'UNPAID', floorNumber: 4, companyName: 'Harish Chandra Enterprises' },
+      { studentId: student9.id, amount: FEE.TWIN,   dueDate: new Date('2026-09-09'), status: 'PAID',   paidAt: new Date('2026-08-12'), floorNumber: 4, companyName: 'Harish Chandra Enterprises' },
+      { studentId: student10.id, amount: FEE.TWIN,  dueDate: new Date('2026-09-09'), status: 'UNPAID', floorNumber: 5, companyName: 'Ramesh Enterprises' },
+      { studentId: student11.id, amount: FEE.TWIN,  dueDate: new Date('2026-09-09'), status: 'PAID',   paidAt: new Date('2026-08-10'), floorNumber: 5, companyName: 'Ramesh Enterprises' },
+    ],
   });
+  console.log('✓ Created floor-wise invoices.');
 
-  const roomB101 = await prisma.room.create({
-    data: {
-      roomNumber: 'B-101',
-      block: 'Block B (PG)',
-      sharingType: 1,
-      isAc: false,
-      status: 'AVAILABLE',
-      assets: assetsTemplate,
-    },
+  // ── 9. Create Demand Notes (10-to-10 billing cycle, Floor-wise tagged) ──────
+  const demandNoteData = [
+    { student: student1, sharingFee: FEE.TWIN,   floorNumber: 1, companyName: 'Rajken Enterprises',           elecUnits: 25, elecRate: 8, elecAmt: 200 },
+    { student: student2, sharingFee: FEE.TWIN,   floorNumber: 1, companyName: 'Rajken Enterprises',           elecUnits: 25, elecRate: 8, elecAmt: 200 },
+    { student: student3, sharingFee: FEE.TWIN,   floorNumber: 2, companyName: 'Vandana Enterprises',          elecUnits: 30, elecRate: 8, elecAmt: 240 },
+    { student: student4, sharingFee: FEE.TRIPLE, floorNumber: 2, companyName: 'Vandana Enterprises',          elecUnits: 20, elecRate: 8, elecAmt: 160 },
+    { student: student5, sharingFee: FEE.SINGLE, floorNumber: 3, companyName: 'Pushpa Enterprises',           elecUnits: 40, elecRate: 8, elecAmt: 320 },
+    { student: student6, sharingFee: FEE.TWIN,   floorNumber: 3, companyName: 'Pushpa Enterprises',           elecUnits: 35, elecRate: 8, elecAmt: 280 },
+    { student: student7, sharingFee: FEE.TRIPLE, floorNumber: 3, companyName: 'Pushpa Enterprises',           elecUnits: 15, elecRate: 8, elecAmt: 120 },
+    { student: student8, sharingFee: FEE.TWIN,   floorNumber: 4, companyName: 'Harish Chandra Enterprises',   elecUnits: 28, elecRate: 8, elecAmt: 224 },
+    { student: student9, sharingFee: FEE.TWIN,   floorNumber: 4, companyName: 'Harish Chandra Enterprises',   elecUnits: 28, elecRate: 8, elecAmt: 224 },
+    { student: student10, sharingFee: FEE.TWIN,  floorNumber: 5, companyName: 'Ramesh Enterprises',           elecUnits: 32, elecRate: 8, elecAmt: 256 },
+    { student: student11, sharingFee: FEE.TWIN,  floorNumber: 5, companyName: 'Ramesh Enterprises',           elecUnits: 32, elecRate: 8, elecAmt: 256 },
+  ];
+
+  for (const d of demandNoteData) {
+    const total = d.sharingFee + d.elecAmt + FEE.MESS;
+    await prisma.demandNote.create({
+      data: {
+        studentId: d.student.id,
+        billingMonth: '2026-08',
+        cycleStart: new Date('2026-08-10'),
+        cycleEnd: new Date('2026-09-09'),
+        floorNumber: d.floorNumber,
+        companyName: d.companyName,
+        hostelFee: d.sharingFee,
+        electricityUnits: d.elecUnits,
+        electricityRate: d.elecRate,
+        electricityAmount: d.elecAmt,
+        messFee: FEE.MESS,
+        otherCharges: 0,
+        totalAmount: total,
+        status: d.student.id === student1.id ? 'PAID' : 'PENDING',
+        paidAt: d.student.id === student1.id ? new Date('2026-08-10') : null,
+      },
+    });
+  }
+  console.log('✓ Created 11 Demand Notes (10-to-10 cycle, Floor-wise tagged).');
+
+  // ── 10. Sample Complaints ───────────────────────────────────────────────────
+  await prisma.complaint.createMany({
+    data: [
+      { studentId: student1.id, category: 'PLUMBING',   description: 'Bathroom tap leaking in Room 101', priority: 'MEDIUM', status: 'IN_PROGRESS' },
+      { studentId: student3.id, category: 'ELECTRICAL', description: 'Study lamp socket loose in Room 201', priority: 'LOW',    status: 'PENDING' },
+      { studentId: student5.id, category: 'INTERNET',   description: 'Wi-Fi disconnects frequently on Floor 3', priority: 'HIGH', status: 'RESOLVED', wardenNotes: 'Router rebooted & password reset.' },
+      { studentId: student8.id, category: 'CLEANING',   description: 'Balcony needs cleaning on Floor 4', priority: 'MEDIUM', status: 'PENDING' },
+      { studentId: student10.id, category: 'FOOD',      description: 'Breakfast paratha cold today', priority: 'LOW', status: 'RESOLVED', wardenNotes: 'Instructed cook team.' },
+    ],
   });
+  console.log('✓ Created sample complaints.');
 
-  console.log('Created Rooms.');
-
-  // 6. Create Students linked to Users and Rooms
-  const student1 = await prisma.student.create({
-    data: {
-      userId: studentUser1.id,
-      rollNumber: '2024CS101',
-      phoneNumber: '9888877771',
-      parentContact: '9111122221',
-      status: 'CHECKED_IN',
-      roomId: roomA101.id,
-    },
-  });
-
-  const student2 = await prisma.student.create({
-    data: {
-      userId: studentUser2.id,
-      rollNumber: '2024EC102',
-      phoneNumber: '9888877772',
-      parentContact: '9111122222',
-      status: 'CHECKED_IN',
-      roomId: roomA101.id,
-    },
-  });
-
-  const student3 = await prisma.student.create({
-    data: {
-      userId: studentUser3.id,
-      rollNumber: '2024EE103',
-      phoneNumber: '9888877773',
-      parentContact: '9111122223',
-      status: 'CHECKED_IN',
-      roomId: roomB101.id,
-    },
-  });
-
-  // Update room occupancy state in context of room sharing limits
-  await prisma.room.update({
-    where: { id: roomA101.id },
-    data: { status: 'FULL' },
-  });
-
-  console.log('Created Student details and room mappings.');
-
-  // 7. Create Notices
-  await prisma.notice.createMany({
+  // ── 11. Sample Leave Requests ───────────────────────────────────────────────
+  await prisma.leaveRequest.createMany({
     data: [
       {
-        title: 'Curfew & Biometric Verification',
-        content: 'All residents are reminded that curfew time is 8:30 PM. Biometric gate check-out will lock after 8:00 PM unless a pre-approved late gate pass exists.',
-        priority: 'URGENT',
-        postedBy: 'Dr. Shalini Sharma',
+        studentId: student2.id, type: 'HOME_LEAVE', reason: 'Visiting family in Jaipur',
+        destination: 'Jaipur, Rajasthan', startDate: new Date('2026-08-25'), endDate: new Date('2026-08-28'),
+        departureTime: '10:00', expectedReturnTime: '18:00', parentNotified: true, status: 'APPROVED', comments: 'Approved by Warden',
       },
       {
-        title: 'Water Supply Outage',
-        content: 'There will be a temporary water supply maintenance tomorrow between 9:00 AM and 12:00 PM. Please store water in advance.',
-        priority: 'WARNING',
-        postedBy: 'Dr. Shalini Sharma',
+        studentId: student4.id, type: 'OUTING', reason: 'Shopping at Mall of India',
+        destination: 'Sector 18 Noida', startDate: new Date('2026-08-21'), endDate: new Date('2026-08-21'),
+        departureTime: '14:00', expectedReturnTime: '20:00', parentNotified: false, status: 'PENDING',
       },
       {
-        title: 'Hostel Fest Registrations Open',
-        content: 'Registrations for the Girls Hostel Annual Fest "SANSKRITI 2026" are now open. Register at the warden office.',
-        priority: 'INFO',
-        postedBy: 'Dr. Shalini Sharma',
+        studentId: student6.id, type: 'EMERGENCY', reason: 'Medical appointment',
+        destination: 'Fortis Hospital Noida', startDate: new Date('2026-08-22'), endDate: new Date('2026-08-22'),
+        departureTime: '09:00', expectedReturnTime: '13:00', parentNotified: true, status: 'APPROVED', comments: 'Medical Leave',
       },
     ],
   });
+  console.log('✓ Created sample leave requests.');
 
-  console.log('Created Notices.');
-
-  // 8. Create Complaints
-  await prisma.complaint.create({
-    data: {
-      studentId: student1.id,
-      category: 'Electrical',
-      description: 'The ceiling fan in A-101 is making a loud squeaking sound and running very slowly.',
-      priority: 'MEDIUM',
-      status: 'PENDING',
-    },
+  // ── 12. Sample Visitors ─────────────────────────────────────────────────────
+  await prisma.visitor.createMany({
+    data: [
+      { studentId: student1.id, name: 'Rajesh Sharma (Father)', phone: '9810099901', relationship: 'Father', checkInTime: new Date() },
+      { studentId: student5.id, name: 'Sunita Reddy (Mother)',  phone: '9810099905', relationship: 'Mother', checkInTime: new Date(Date.now() - 3600000), checkOutTime: new Date() },
+    ],
   });
+  console.log('✓ Created sample visitors.');
 
-  await prisma.complaint.create({
-    data: {
-      studentId: student2.id,
-      category: 'Wi-Fi',
-      description: 'LAN port in room A-101 has no internet connection.',
-      priority: 'HIGH',
-      status: 'IN_PROGRESS',
-      wardenNotes: 'Network technician has been assigned.',
-    },
-  });
+  // ── 13. Electricity Readings for August 2026 ────────────────────────────────
+  const roomsForReadings = [room101, room102, room103, room201, room202, room301, room302, room303, room401, room402, room501, room502];
+  for (const room of roomsForReadings) {
+    const readingMonth = '2026-08';
+    const prev = Math.floor(Math.random() * 200) + 100;
+    const curr = prev + Math.floor(Math.random() * 80) + 20;
+    const units = curr - prev;
+    await prisma.electricityReading.create({
+      data: {
+        roomId: room.id,
+        readingMonth,
+        readingDate: new Date('2026-08-04T10:00:00Z'),
+        previousReading: prev,
+        currentReading: curr,
+        unitsConsumed: units,
+        ratePerUnit: 8.0,
+        totalAmount: units * 8.0,
+        enteredBy: 'Dr. Shalini Sharma',
+      },
+    });
+  }
+  console.log('✓ Created electricity readings for August 2026.');
 
-  console.log('Created Complaints.');
-
-  // 9. Create Leave Requests
-  await prisma.leaveRequest.create({
-    data: {
-      studentId: student1.id,
-      startDate: new Date('2026-07-18T17:00:00Z'),
-      endDate: new Date('2026-07-20T08:00:00Z'),
-      type: 'NIGHT_OUT',
-      reason: 'Visiting parents in local city.',
-      status: 'PENDING',
-    },
-  });
-
-  await prisma.leaveRequest.create({
-    data: {
-      studentId: student3.id,
-      startDate: new Date('2026-07-10T14:00:00Z'),
-      endDate: new Date('2026-07-15T18:00:00Z'),
-      type: 'OUT_OF_STATION',
-      reason: 'Going home for family function.',
-      status: 'APPROVED',
-      approvedBy: 'Dr. Shalini Sharma',
-      comments: 'Granted. Please log exit and entry via gate biometric scan.',
-    },
-  });
-
-  console.log('Created Leave Requests.');
-
-  // 10. Create Invoices
-  await prisma.invoice.create({
-    data: {
-      studentId: student1.id,
-      amount: 15500,
-      dueDate: new Date('2026-07-15T23:59:59Z'),
-      status: 'UNPAID',
-    },
-  });
-
-  await prisma.invoice.create({
-    data: {
-      studentId: student2.id,
-      amount: 15500,
-      dueDate: new Date('2026-07-15T23:59:59Z'),
-      status: 'UNPAID',
-    },
-  });
-
-  await prisma.invoice.create({
-    data: {
-      studentId: student3.id,
-      amount: 12000,
-      dueDate: new Date('2026-07-15T23:59:59Z'),
-      status: 'PAID',
-      paidAt: new Date('2026-07-05T10:30:00Z'),
-    },
-  });
-
-  console.log('Created Invoices.');
-
-  // 11. Create Visitors
-  await prisma.visitor.create({
-    data: {
-      studentId: student1.id,
-      name: 'Satish Sharma',
-      phone: '9444455555',
-      relationship: 'Father',
-      checkInTime: new Date('2026-07-12T10:00:00Z'),
-      checkOutTime: new Date('2026-07-12T16:30:00Z'),
-    },
-  });
-
-  console.log('Created Visitors.');
-
-  // 12. Create Biometric Mess Attendance Logs
-  // Create realistic attendance data for the past 7 days
+  // ── 14. Biometric Mess Attendance (7 days history) ─────────────────────────
   const mealTypes = ['BREAKFAST', 'LUNCH', 'SNACKS', 'DINNER'];
-  const studentsList = [student1, student2, student3];
-
-  console.log('Generating biometric mess attendance history...');
-
+  console.log('  Generating biometric mess attendance...');
+  const messAttendanceData = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split('T')[0];
-
-    // Seed logs
-    for (const student of studentsList) {
+    for (const student of allStudents) {
       for (const meal of mealTypes) {
-        // 85% attendance rate simulation
-        if (Math.random() < 0.85) {
-          const timestamp = new Date(d);
-          // adjust timestamp time for meal type
-          if (meal === 'BREAKFAST') timestamp.setHours(8, 15, 0);
-          else if (meal === 'LUNCH') timestamp.setHours(13, 10, 0);
-          else if (meal === 'SNACKS') timestamp.setHours(17, 0, 0);
-          else timestamp.setHours(20, 20, 0);
-
-          await prisma.messAttendance.create({
-            data: {
-              studentId: student.id,
-              mealType: meal,
-              date: dateStr,
-              timestamp,
-              verifiedBy: Math.random() > 0.5 ? 'BIOMETRIC_FINGERPRINT' : 'BIOMETRIC_FACE',
-            },
+        if (Math.random() < 0.82) {
+          const ts = new Date(d);
+          if (meal === 'BREAKFAST') ts.setHours(8, 15, 0);
+          else if (meal === 'LUNCH')  ts.setHours(13, 10, 0);
+          else if (meal === 'SNACKS') ts.setHours(17, 0, 0);
+          else                        ts.setHours(20, 20, 0);
+          messAttendanceData.push({
+            studentId: student.id, mealType: meal, date: dateStr, timestamp: ts, verifiedBy: Math.random() > 0.5 ? 'BIOMETRIC_FINGERPRINT' : 'BIOMETRIC_FACE'
           });
         }
       }
     }
   }
+  await prisma.messAttendance.createMany({ data: messAttendanceData });
+  console.log('✓ Generated mess attendance history.');
 
-  console.log('Database seeding complete!');
+  // ── 15. Meal Opt-Outs ──────────────────────────────────────────────────────
+  await prisma.mealOptOut.createMany({
+    data: [
+      { studentId: student1.id, date: new Date().toISOString().split('T')[0], mealType: 'DINNER' },
+      { studentId: student3.id, date: new Date().toISOString().split('T')[0], mealType: 'BREAKFAST' },
+      { studentId: student5.id, date: new Date().toISOString().split('T')[0], mealType: 'LUNCH' },
+    ],
+  });
+  console.log('✓ Created sample meal opt-outs.');
+
+  // ── 16. Night Attendance ───────────────────────────────────────────────────
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  for (const student of allStudents) {
+    const status = Math.random() > 0.1 ? 'PRESENT' : 'ABSENT';
+    const fNum = student.id === student1.id || student.id === student2.id ? 1 :
+                 student.id === student3.id || student.id === student4.id ? 2 :
+                 student.id === student5.id || student.id === student6.id || student.id === student7.id ? 3 :
+                 student.id === student8.id || student.id === student9.id ? 4 : 5;
+    await prisma.nightAttendance.create({
+      data: { studentId: student.id, date: yesterdayStr, status, floorNumber: fNum, markedByUserId: superAdmin.id, parentNotified: false },
+    });
+  }
+  console.log('✓ Created night attendance for yesterday.');
+
+  // ── 17. Poll ───────────────────────────────────────────────────────────────
+  await prisma.poll.create({
+    data: {
+      question: 'What is your favourite breakfast option in the mess menu?',
+      options: JSON.stringify(['Paratha + Curd', 'Idli + Sambar', 'Poha', 'Dalia / Porridge']),
+      isActive: true,
+      createdById: superAdmin.id,
+    },
+  });
+  console.log('✓ Created sample poll.');
+
+  // ── 18. Notices ────────────────────────────────────────────────────────────
+  await prisma.notice.createMany({
+    data: [
+      { title: 'Sub-Meter Electricity Reading Date', content: 'Sub-meter readings for August cycle will be taken on August 3rd-4th. Please ensure access to room sub-meters.', category: 'URGENT', target: 'ALL', postedBy: 'Chief Warden' },
+      { title: 'Night Attendance Round Timings', content: 'Warden night rounds take place between 9:30 PM - 10:15 PM daily across all 5 floors.', category: 'GENERAL', target: 'STUDENTS', postedBy: 'Chief Warden' },
+    ],
+  });
+  console.log('✓ Created initial notices.');
+
+  console.log('\n==================================================');
+  console.log('🎉 SEEDING COMPLETED SUCCESSFULLY!');
+  console.log('==================================================');
+  console.log('\n🔑 Dedicated Warden & Super Admin Credentials:');
+  console.log('--------------------------------------------------');
+  console.log('• Floor 1 Admin:  floor1@haripushppg.com  / password123 (Rajken Enterprises)');
+  console.log('• Floor 2 Admin:  floor2@haripushppg.com  / password123 (Vandana Enterprises)');
+  console.log('• Floor 3 Admin:  floor3@haripushppg.com  / password123 (Pushpa Enterprises)');
+  console.log('• Floor 4 Admin:  floor4@haripushppg.com  / password123 (Harish Chandra Ent.)');
+  console.log('• Floor 5 Admin:  floor5@haripushppg.com  / password123 (Ramesh Enterprises)');
+  console.log('• Super Admin:    admin@haripushppg.com   / password123 (Consolidated All Floors)');
+  console.log('• Chief Warden:   warden@haripushppg.com  / password123 (Consolidated All Floors)');
+  console.log('--------------------------------------------------\n');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('❌ Seeding failed:', e);
     process.exit(1);
   })
   .finally(async () => {

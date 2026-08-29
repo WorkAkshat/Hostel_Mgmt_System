@@ -110,6 +110,20 @@ const API_ROUTES = {
   POLLS:          '/polls',
   POLL_BY_ID:     '/polls/:id',
 
+  // Floors
+  FLOORS:         '/floors',
+  FLOOR_BY_ID:    '/floors/:id',
+
+  // Electricity Sub-meters & Demand Notes
+  ELECTRICITY_READINGS: '/electricity/readings',
+  DEMAND_NOTES:         '/demand-notes',
+  DEMAND_NOTES_GENERATE:'/demand-notes/generate',
+
+  // Suggestions & Night Attendance
+  SUGGESTIONS:          '/suggestions',
+  NIGHT_ATTENDANCE:     '/attendance/night',
+  NIGHT_ATTENDANCE_BULK:'/attendance/night/bulk',
+
   // Health
   HEALTH:         '/health',
 };

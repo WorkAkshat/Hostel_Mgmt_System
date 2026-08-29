@@ -1,5 +1,5 @@
 import { Stack, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { AuthProvider } from '../../context/AuthContext';
 import { LanguageProvider } from '../../context/LanguageContext';
 import { NotificationProvider } from '../../context/NotificationContext';
@@ -42,26 +42,39 @@ const TYPE_TO_TAB: Record<string, string> = {
 // ─── Root Layout ──────────────────────────────────────────────────────────────
 export default function RootLayout() {
   const router = useRouter();
+  // Guard: don't call router before the navigator tree has mounted
+  const mounted = useRef(false);
 
-  // Handle notification TAP from notification drawer (background / killed state)
   useEffect(() => {
-    // 1. App launched FROM notification tap (killed state)
-    Notifications.getLastNotificationResponseAsync().then(response => {
-      if (response?.notification) {
-        const data = response.notification.request.content.data ?? {};
-        const tab = TYPE_TO_TAB[(data.type as string) ?? ''] ?? 'Home';
-        router.replace({ pathname: '/dashboard', params: { tab } } as any);
-      }
-    });
+    mounted.current = true;
 
-    // 2. Notification tapped while app is backgrounded
+    // 1. App launched FROM notification tap (killed state).
+    //    setTimeout(0) defers resolution until after the first render cycle,
+    //    preventing the "state update on unmounted component" warning from expo-router.
+    const timer = setTimeout(() => {
+      Notifications.getLastNotificationResponseAsync().then(response => {
+        if (!mounted.current) return;
+        if (response?.notification) {
+          const data = response.notification.request.content.data ?? {};
+          const tab = TYPE_TO_TAB[(data.type as string) ?? ''] ?? 'Home';
+          router.replace({ pathname: '/dashboard', params: { tab } } as any);
+        }
+      });
+    }, 0);
+
+    // 2. Notification tapped while app is backgrounded (live listener)
     const sub = Notifications.addNotificationResponseReceivedListener(response => {
+      if (!mounted.current) return;
       const data = response.notification.request.content.data ?? {};
       const tab = TYPE_TO_TAB[(data.type as string) ?? ''] ?? 'Home';
       router.push({ pathname: '/dashboard', params: { tab } } as any);
     });
 
-    return () => sub.remove();
+    return () => {
+      mounted.current = false;
+      clearTimeout(timer);
+      sub.remove();
+    };
   }, []);
 
   return (

@@ -5,8 +5,11 @@ const getBaseUrl = () => {
   }
 
   const { hostname } = window.location;
-  if (hostname === 'hms.geotree.in' || hostname.endsWith('geotree.in')) {
-    return 'https://hms.geotree.io/api/v1';
+  if (
+    hostname === 'hms.haripushphostel.in' ||
+    hostname.endsWith('haripushphostel.in')
+  ) {
+    return 'https://hms-api.haripushphostel.in/api/v1';
   }
   return `http://${hostname}:9000/api/v1`;
 };

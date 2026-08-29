@@ -213,7 +213,7 @@ const Login = () => {
             <div className="grid grid-cols-3 gap-2.5">
               {[
                 { label: 'Admin', sublabel: 'Chief Warden', email: 'warden@haripushppg.com', color: '#2563eb', bg: 'rgba(37,99,235,0.06)' },
-                { label: 'Student', sublabel: 'Ananya', email: 'ananya@haripushppg.com', color: '#10b981', bg: 'rgba(16,185,129,0.06)' },
+                { label: 'Student', sublabel: 'Pooja', email: 'pooja@haripushppg.com', color: '#10b981', bg: 'rgba(16,185,129,0.06)' },
                 { label: 'Staff', sublabel: 'Security', email: 'guard@haripushppg.com', color: '#f59e0b', bg: 'rgba(245,158,11,0.06)' },
               ].map((d) => (
                 <button

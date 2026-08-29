@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fees as feesApi } from '../utils/api';
+import { fees as feesApi, demandNotes as demandNotesApi } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { CreditCard, Receipt, Calendar, FileText, CheckCircle, ShieldAlert, ArrowLeft, Download } from 'lucide-react';
+import { CreditCard, Receipt, Calendar, FileText, CheckCircle, ShieldAlert, ArrowLeft, Download, ShieldCheck } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
+import DemandNotePrint from '../components/DemandNotePrint';
+import PaymentGatewayModal from '../components/PaymentGatewayModal';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -15,8 +17,9 @@ const Fees = () => {
 
   // Modals state
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
-  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [payingNote, setPayingNote] = useState(null);
+  const [printNote, setPrintNote] = useState(null);
 
   // Generate Form state (Warden)
   const [generateForm, setGenerateForm] = useState({
@@ -34,13 +37,32 @@ const Fees = () => {
   const fetchInvoices = async () => {
     try {
       setLoading(true);
-      if (user.role === 'ADMIN') {
-        const data = await feesApi.getAll();
-        setInvoices(data);
-      } else {
-        const data = await feesApi.getMyInvoices();
-        setInvoices(data);
-      }
+      let feeList = [];
+      let demandList = [];
+
+      try {
+        if (user.role === 'ADMIN') {
+          feeList = await feesApi.getAll();
+        } else {
+          feeList = await feesApi.getMyInvoices();
+        }
+      } catch (e) { console.error(e); }
+
+      try {
+        demandList = await demandNotesApi.getAll();
+      } catch (e) { console.error(e); }
+
+      const combined = [
+        ...(Array.isArray(demandList) ? demandList.map(n => ({
+          ...n,
+          isDemandNote: true,
+          amount: n.totalAmount,
+          dueDate: n.cycleEnd || n.dueDate || '2026-09-10'
+        })) : []),
+        ...(Array.isArray(feeList) ? feeList : [])
+      ];
+
+      setInvoices(combined);
     } catch (error) {
       console.error('Error fetching invoices:', error);
     } finally {
@@ -383,21 +405,27 @@ const Fees = () => {
                 </div>
 
                 <div className="flex gap-2">
-                  {invoice.status === 'UNPAID' && user.role === 'STUDENT' && (
+                  {invoice.status !== 'PAID' && (
                     <button 
                       className="btn-primary flex-1 justify-center"
-                      onClick={() => openPaymentModal(invoice)}
+                      onClick={() => setPayingNote(invoice)}
                     >
                       <CreditCard size={14} />
-                      <span>Pay Invoice</span>
+                      <span>Pay Online</span>
                     </button>
                   )}
                   <button 
-                    className="flex-1 bg-slate-50 border border-slate-200/60 text-slate-600 hover:text-slate-900 cursor-pointer h-11 rounded-xl hover:bg-slate-100 transition-colors flex items-center justify-center font-bold text-xs gap-2"
-                    onClick={() => handleDownloadPDF(invoice)}
+                    className="flex-1 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 cursor-pointer h-11 rounded-xl transition-colors flex items-center justify-center font-bold text-xs gap-2 border border-indigo-200"
+                    onClick={() => {
+                      if (invoice.isDemandNote) {
+                        setPrintNote(invoice);
+                      } else {
+                        handleDownloadPDF(invoice);
+                      }
+                    }}
                   >
                     <Download size={14} />
-                    <span>Download PDF</span>
+                    <span>Receipt / PDF</span>
                   </button>
                 </div>
               </div>
@@ -624,6 +652,25 @@ const Fees = () => {
           </div>
         </form>
       </CustomModal>
+      {/* Payment Gateway Modal */}
+      {payingNote && (
+        <PaymentGatewayModal
+          note={payingNote}
+          onClose={() => setPayingNote(null)}
+          onSuccess={() => {
+            setPayingNote(null);
+            fetchInvoices();
+          }}
+        />
+      )}
+
+      {/* Demand Note Print Modal */}
+      {printNote && (
+        <DemandNotePrint
+          note={printNote}
+          onClose={() => setPrintNote(null)}
+        />
+      )}
     </div>
   );
 };

@@ -17,24 +17,60 @@ import {
 } from 'recharts';
 import { 
   Users, Home, Wrench, ShieldAlert, Receipt, Sparkles,
-  CheckCircle, Clock, CalendarDays, UtensilsCrossed, Megaphone, Phone, ArrowRight, ShieldCheck, HelpCircle, ChevronRight, ChevronDown
+  CheckCircle, Clock, CalendarDays, UtensilsCrossed, Megaphone, Phone, ArrowRight, ShieldCheck, HelpCircle, ChevronRight, ChevronDown, Building2, Layers
 } from 'lucide-react';
 import MetricCard from '../components/MetricCard';
 import CustomModal from '../components/CustomModal';
 
 const COLORS = ['#3b82f6', '#f43f5e', '#10b981', '#f59e0b', '#8b5cf6'];
 
+const FLOOR_OPTIONS = [
+  { num: 1, name: 'Rajken Enterprises', label: 'Floor 1', sub: 'Hari Pushp Girls Hostel', icon: '🏠', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  { num: 2, name: 'Vandana Enterprises', label: 'Floor 2', sub: 'Vandana Girls Hostel', icon: '🏢', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+  { num: 3, name: 'Pushpa Enterprises', label: 'Floor 3', sub: 'Pushpa Girls Hostel', icon: '🏙️', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+  { num: 4, name: 'Harish Chandra Enterprises', label: 'Floor 4', sub: 'Harish Chandra Girls Hostel', icon: '🌿', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+  { num: 5, name: 'Ramesh Enterprises', label: 'Floor 5 & 6', sub: 'Ramesh Girls Hostel', icon: '⭐', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+  { num: 'combined', name: 'Consolidated View', label: 'All 5 Floors', sub: 'Meenakshi Enterprises Catering', icon: '🌐', gradient: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)' },
+];
+
 const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Default to assignedFloor if floor warden, or 'combined' for Super Admin
+  const [selectedFloor, setSelectedFloor] = useState(() => {
+    return user?.assignedFloor ? String(user.assignedFloor) : 'combined';
+  });
+  const [showFloorModal, setShowFloorModal] = useState(false);
+
+  const [rawRooms, setRawRooms] = useState([]);
+  const [rawStudents, setRawStudents] = useState([]);
+  const [rawComplaints, setRawComplaints] = useState([]);
+  const [rawInvoices, setRawInvoices] = useState([]);
+  const [rawVisitors, setRawVisitors] = useState([]);
+  const [rawMessStats, setRawMessStats] = useState(null);
+
   const [showContactModal, setShowContactModal] = useState(false);
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [guestForm, setGuestForm] = useState({ name: '', relationship: 'Father', phone: '', date: '' });
   const [guestSubmitted, setGuestSubmitted] = useState(false);
+
+  // Sync selectedFloor with user assignedFloor if dedicated floor warden
+  useEffect(() => {
+    if (user?.role === 'ADMIN' && user?.assignedFloor) {
+      setSelectedFloor(String(user.assignedFloor));
+    }
+  }, [user]);
+
+  const handleSelectFloorChoice = (num) => {
+    const val = String(num);
+    setSelectedFloor(val);
+    setShowFloorModal(false);
+  };
 
   useEffect(() => {
     const fetchDashboardStats = async () => {
@@ -50,67 +86,20 @@ const Dashboard = () => {
             messApi.getStats()
           ]);
 
-          const totalBeds = rooms.reduce((acc, r) => acc + r.sharingType, 0);
-          const occupiedBeds = students.filter(s => s.roomId !== null).length;
-          const occupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
-
-          const pendingComplaints = complaints.filter(c => c.status !== 'RESOLVED').length;
-          const activeVisitors = visitors.filter(v => v.checkOutTime === null).length;
-
-          const unpaidInvoicesAmount = invoices
-            .filter(i => i.status === 'UNPAID')
-            .reduce((acc, i) => acc + i.amount, 0);
-
-          const roomBlockData = rooms.reduce((acc, r) => {
-            const block = r.block;
-            if (!acc[block]) acc[block] = { name: block, rooms: 0, occupied: 0 };
-            acc[block].rooms += 1;
-            acc[block].occupied += r.students.length;
-            return acc;
-          }, {});
-
-          const complaintStatusCounts = complaints.reduce((acc, c) => {
-            acc[c.status] = (acc[c.status] || 0) + 1;
-            return acc;
-          }, { PENDING: 0, IN_PROGRESS: 0, RESOLVED: 0 });
-
-          const complaintChartData = Object.keys(complaintStatusCounts).map(key => ({
-            name: key,
-            value: complaintStatusCounts[key]
-          }));
-
-          setStats({
-            summary: {
-              occupancyRate,
-              occupiedBeds,
-              totalBeds,
-              pendingComplaints,
-              activeVisitors,
-              unpaidInvoicesAmount
-            },
-            charts: {
-              roomBlockData: Object.values(roomBlockData),
-              complaintChartData,
-              mealStatsChartData: messStats.mealStatsChartData,
-              historyChartData: messStats.historyChartData
-            },
-            recentComplaints: complaints.slice(0, 5),
-            recentVisitors: visitors.slice(0, 5)
-          });
+          setRawRooms(rooms || []);
+          setRawStudents(students || []);
+          setRawComplaints(complaints || []);
+          setRawInvoices(invoices || []);
+          setRawVisitors(visitors || []);
+          setRawMessStats(messStats);
         } else if (user.role === 'STUDENT') {
           const dashData = await dashboardApi.getDashboard();
-          const studentProfile = dashData.profile;
-          const activeComplaint = dashData.stats.pendingComplaints;
-          const outstandingFees = dashData.stats.totalDue;
-          const activeLeaves = dashData.stats.pendingLeaves;
-          const checkedInToday = dashData.messAttendance.filter(d => d.date === new Date().toISOString().split('T')[0]).length;
-
           setStats({
-            studentProfile,
-            activeComplaint,
-            outstandingFees,
-            activeLeaves,
-            checkedInToday,
+            studentProfile: dashData.profile,
+            activeComplaint: dashData.stats.pendingComplaints,
+            outstandingFees: dashData.stats.totalDue,
+            activeLeaves: dashData.stats.pendingLeaves,
+            checkedInToday: dashData.messAttendance.filter(d => d.date === new Date().toISOString().split('T')[0]).length,
             recentComplaints: dashData.complaints.slice(0, 3),
             recentInvoices: dashData.invoices.slice(0, 3),
             recentLeaves: dashData.leaves.slice(0, 3)
@@ -126,6 +115,75 @@ const Dashboard = () => {
     fetchDashboardStats();
   }, [user]);
 
+  // Re-calculate admin stats whenever selectedFloor or raw data changes
+  useEffect(() => {
+    if (user?.role !== 'ADMIN') return;
+
+    let filteredRooms = rawRooms || [];
+    let filteredStudents = rawStudents || [];
+
+    if (selectedFloor && selectedFloor !== 'combined' && selectedFloor !== 'all') {
+      const fNum = parseInt(selectedFloor, 10);
+      filteredRooms = rawRooms.filter(r => r.floorNumber === fNum);
+      const roomIds = new Set(filteredRooms.map(r => r.id));
+      filteredStudents = rawStudents.filter(s => roomIds.has(s.roomId));
+    }
+
+    const totalBeds = filteredRooms.reduce((acc, r) => acc + r.sharingType, 0);
+    const occupiedBeds = filteredStudents.filter(s => s.roomId !== null).length;
+    const occupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
+
+    const filteredStudentUserIds = new Set(filteredStudents.map(s => s.id));
+    const filteredComplaints = rawComplaints.filter(c => filteredStudentUserIds.has(c.studentId));
+    const pendingComplaints = filteredComplaints.filter(c => c.status !== 'RESOLVED').length;
+
+    const activeVisitors = rawVisitors.filter(v => v.checkOutTime === null && filteredStudentUserIds.has(v.studentId)).length;
+
+    const filteredInvoices = rawInvoices.filter(i => filteredStudentUserIds.has(i.studentId));
+    const unpaidInvoicesAmount = filteredInvoices
+      .filter(i => i.status === 'UNPAID')
+      .reduce((acc, i) => acc + i.amount, 0);
+
+    const roomBlockData = filteredRooms.reduce((acc, r) => {
+      const block = r.block || `Floor ${r.floorNumber}`;
+      if (!acc[block]) acc[block] = { name: block, rooms: 0, occupied: 0 };
+      acc[block].rooms += 1;
+      acc[block].occupied += r.students?.length || 0;
+      return acc;
+    }, {});
+
+    const complaintStatusCounts = filteredComplaints.reduce((acc, c) => {
+      acc[c.status] = (acc[c.status] || 0) + 1;
+      return acc;
+    }, { PENDING: 0, IN_PROGRESS: 0, RESOLVED: 0 });
+
+    const complaintChartData = Object.keys(complaintStatusCounts).map(key => ({
+      name: key,
+      value: complaintStatusCounts[key]
+    }));
+
+    setStats({
+      summary: {
+        occupancyRate,
+        occupiedBeds,
+        totalBeds,
+        pendingComplaints,
+        activeVisitors,
+        unpaidInvoicesAmount,
+        totalRooms: filteredRooms.length,
+        totalStudents: filteredStudents.length
+      },
+      charts: {
+        roomBlockData: Object.values(roomBlockData),
+        complaintChartData,
+        mealStatsChartData: rawMessStats?.mealStatsChartData || [],
+        historyChartData: rawMessStats?.historyChartData || []
+      },
+      recentComplaints: filteredComplaints.slice(0, 5),
+      recentVisitors: rawVisitors.filter(v => filteredStudentUserIds.has(v.studentId)).slice(0, 5)
+    });
+  }, [selectedFloor, rawRooms, rawStudents, rawComplaints, rawInvoices, rawVisitors, rawMessStats, user]);
+
   if (loading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
@@ -135,43 +193,173 @@ const Dashboard = () => {
     );
   }
 
-  // WARDEN DASHBOARD VIEW
+  // WARDEN / ADMIN DASHBOARD VIEW
   if (user.role === 'ADMIN') {
-    const { summary, charts, recentComplaints, recentVisitors } = stats || {};
+    const defaultSummary = { occupancyRate: 0, occupiedBeds: 0, totalBeds: 0, pendingComplaints: 0, activeVisitors: 0, unpaidInvoicesAmount: 0, totalRooms: 0, totalStudents: 0 };
+    const defaultCharts = { roomBlockData: [], complaintChartData: [], mealStatsChartData: [], historyChartData: [] };
+    const summary = stats?.summary || defaultSummary;
+    const charts = stats?.charts || defaultCharts;
+    const recentComplaints = stats?.recentComplaints || [];
+    const activeFloorConfig = FLOOR_OPTIONS.find(f => String(f.num) === String(selectedFloor)) || FLOOR_OPTIONS[5];
 
     return (
       <div className="animate-fade-in flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-          <div>
-            <h1 className="text-[28px] font-bold text-slate-800 tracking-tight leading-tight">Dashboard</h1>
-            <p className="text-[14px] text-slate-500 font-medium">Overview of Hari Pushp PG Girls Hostel operations and analytics</p>
+
+        {/* ── Floor / Workspace Selector Modal (Opened on login) ── */}
+        <CustomModal 
+          isOpen={showFloorModal} 
+          onClose={() => setShowFloorModal(false)} 
+          title="Select Workspace & Floor Directory"
+        >
+          <div className="flex flex-col gap-4 text-left">
+            <p className="text-xs text-slate-500 font-medium">
+              Welcome Chief Warden. Select a floor workspace below to view filtered analytics, room occupancy, maintenance complaints, and invoice reports:
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-2">
+              {FLOOR_OPTIONS.map((item) => (
+                <div
+                  key={item.label}
+                  onClick={() => handleSelectFloorChoice(item.num)}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center gap-3.5 ${
+                    String(selectedFloor) === String(item.num)
+                      ? 'border-indigo-600 bg-indigo-50/60 shadow-md'
+                      : 'border-slate-100 hover:border-indigo-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-2xl flex-shrink-0 shadow-inner">
+                    {item.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.label}</span>
+                    <h4 className="text-sm font-bold text-slate-800 truncate">{item.name}</h4>
+                    <p className="text-[11px] text-slate-400 truncate mt-0.5">{item.sub}</p>
+                  </div>
+                  {String(selectedFloor) === String(item.num) && (
+                    <CheckCircle size={20} className="text-indigo-600 flex-shrink-0" />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-slate-100">
+              <button 
+                onClick={() => handleSelectFloorChoice('combined')}
+                className="btn-primary h-11 px-6 text-xs font-bold"
+              >
+                Open Consolidated View
+              </button>
+            </div>
           </div>
-          <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2 rounded-[12px] text-[13px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
-            <CalendarDays size={16} className="text-slate-500" />
-            {new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
-            <ChevronDown size={14} className="text-slate-400 ml-1" />
-          </button>
+        </CustomModal>
+
+        {/* Header Bar */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-1">
+          <div>
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <h1 className="text-[28px] font-bold text-slate-800 tracking-tight leading-tight">Dashboard</h1>
+              <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+                <span>{activeFloorConfig.icon}</span>
+                <span>{activeFloorConfig.name}</span>
+              </span>
+            </div>
+            <p className="text-[14px] text-slate-500 font-medium">
+              Active Workspace: <b>{activeFloorConfig.name}</b> ({activeFloorConfig.sub})
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowFloorModal(true)}
+              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-[12px] text-[13px] font-bold shadow-md hover:bg-indigo-700 transition-all border-none cursor-pointer"
+            >
+              <Layers size={16} />
+              <span>Choose Floor Workspace</span>
+            </button>
+
+            <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-[12px] text-[13px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
+              <CalendarDays size={16} className="text-slate-500" />
+              {new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </button>
+          </div>
         </div>
 
-        {/* Stats Grid - Responsive 4 Columns */}
+        {/* ── 5 Floor Choice Cards + Consolidated View (ALWAYS VISIBLE AT TOP OF DASHBOARD) ── */}
+        <div className="glass-card p-6 rounded-3xl border border-slate-100 shadow-sm flex flex-col gap-4 text-left bg-gradient-to-br from-slate-50/50 to-white">
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+                <Building2 size={20} />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-800">Select Floor & Company Workspace</h3>
+                <p className="text-xs text-slate-400 font-medium">Click any floor below to instantly load its specific dashboard, rooms, and financial reports</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => navigate('/admin/floors')}
+              className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 text-xs font-bold border-none bg-transparent cursor-pointer"
+            >
+              <span>Full Directory Page</span>
+              <ArrowRight size={14} />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5 mt-1">
+            {FLOOR_OPTIONS.map((item) => {
+              const isSelected = String(selectedFloor) === String(item.num);
+              return (
+                <div
+                  key={item.label}
+                  onClick={() => handleSelectFloorChoice(item.num)}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between min-h-[110px] relative overflow-hidden ${
+                    isSelected
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xl scale-[1.03]'
+                      : 'bg-white border-slate-100 hover:border-indigo-300 hover:shadow-lg hover:-translate-y-0.5'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{item.icon}</span>
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+                      {item.label}
+                    </span>
+                  </div>
+                  <div className="mt-3">
+                    <p className={`text-xs font-extrabold leading-tight truncate ${isSelected ? 'text-white' : 'text-slate-800'}`}>
+                      {item.name}
+                    </p>
+                    <p className={`text-[10px] font-medium truncate mt-0.5 ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>
+                      {item.sub}
+                    </p>
+                  </div>
+                  {isSelected && (
+                    <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse" />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stats Grid - Responsive 4 Columns (Filtered for chosen floor) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <MetricCard 
             title="Room Occupancy" 
-            value={`${summary?.occupiedBeds || 3}/${summary?.totalBeds || 5} Beds`}
-            subtitle="60% Occupancy Rate"
+            value={`${summary?.occupiedBeds || 0}/${summary?.totalBeds || 0} Beds`}
+            subtitle={`${summary?.occupancyRate || 0}% Occupancy Rate`}
             icon={<Home size={22} />}
             color="#3b82f6"
           />
           <MetricCard 
             title="Pending Maintenance" 
-            value={summary?.pendingComplaints || 2}
+            value={summary?.pendingComplaints || 0}
             subtitle="Pending repairs inspection"
             icon={<Wrench size={22} />}
             color="#f59e0b"
           />
           <MetricCard 
             title="Total Revenue Dues" 
-            value={`₹${summary?.unpaidInvoicesAmount?.toLocaleString() || '15,500'}`}
+            value={`₹${summary?.unpaidInvoicesAmount?.toLocaleString() || '0'}`}
             subtitle="Outstanding invoices"
             icon={<Receipt size={22} />}
             color="#10b981"
@@ -194,10 +382,6 @@ const Dashboard = () => {
                 <UtensilsCrossed size={16} className="text-[var(--primary)]" />
                 <h3 className="text-[13px] font-bold text-slate-800">Today's Dining Biometric Turnout</h3>
               </div>
-              <button className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-[10px] text-[12px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-                Today
-                <ChevronDown size={14} className="text-slate-400" />
-              </button>
             </div>
             <div className="w-full h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -218,12 +402,8 @@ const Dashboard = () => {
           <div className="glass-card p-6 flex flex-col">
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center gap-2">
-                <h3 className="text-[13px] font-bold text-slate-800">Occupancy by Hostel Block</h3>
+                <h3 className="text-[13px] font-bold text-slate-800">Occupancy by Room Block</h3>
               </div>
-              <button className="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-[10px] text-[12px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-                This Month
-                <ChevronDown size={14} className="text-slate-400" />
-              </button>
             </div>
             <div className="w-full h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -307,7 +487,7 @@ const Dashboard = () => {
             </div>
             <div className="flex flex-col gap-3 overflow-y-auto max-h-[260px] pr-2">
               {recentComplaints?.length === 0 ? (
-                <p className="text-center py-12 text-slate-400 text-sm">No active maintenance tickets.</p>
+                <p className="text-center py-12 text-slate-400 text-sm">No active maintenance tickets for this workspace.</p>
               ) : (
                 recentComplaints?.map(complaint => (
                   <div key={complaint.id} className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-100 rounded-2xl hover:border-slate-200 transition-all gap-4 text-left">
@@ -342,44 +522,25 @@ const Dashboard = () => {
     activeComplaint = 0,
     outstandingFees = 0,
     activeLeaves = 0,
-    checkedInToday = 0,
-    recentComplaints = [],
-    recentInvoices = [],
-    recentLeaves = []
+    checkedInToday = 0
   } = stats || {};
   const allocatedRoom = studentProfile?.room;
 
-  const handleGuestSubmit = (e) => {
-    e.preventDefault();
-    setGuestSubmitted(true);
-    setTimeout(() => {
-      setGuestSubmitted(false);
-      setShowGuestModal(false);
-      setGuestForm({ name: '', relationship: 'Father', phone: '', date: '' });
-      alert('Guest pre-registered successfully!');
-    }, 1000);
-  };
-
   return (
     <div className="animate-fade-in flex flex-col gap-8">
-
       {/* Student Profile Hero Card */}
       <div className="bg-gradient-to-br from-[#4f46e5] to-[#2563eb] text-white rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-[0_8px_32px_rgba(79,70,229,0.3)] border border-white/10">
-        {/* Decorative background circles */}
         <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full bg-white/5 pointer-events-none" />
         <div className="absolute -bottom-12 -right-4 w-36 h-36 rounded-full bg-white/5 pointer-events-none" />
 
         <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
-          {/* Avatar */}
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center font-bold text-3xl text-white shadow-inner shrink-0">
             {user.name.charAt(0).toUpperCase()}
           </div>
 
-          {/* Name & Details */}
           <div className="flex flex-col gap-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight leading-tight">{user.name}</h2>
-              {/* Role badge — white/translucent on indigo, no green clash */}
               <span className="inline-flex items-center bg-white/15 border border-white/25 text-white/90 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">
                 Student
               </span>
@@ -390,7 +551,6 @@ const Dashboard = () => {
             <p className="text-white/60 text-xs font-medium truncate">{user.email}</p>
           </div>
 
-          {/* Room info — top-right on desktop */}
           {allocatedRoom && (
             <div className="sm:ml-auto shrink-0 bg-white/10 border border-white/20 rounded-2xl px-4 py-3 text-center sm:text-right">
               <p className="text-[10px] text-white/60 font-semibold uppercase tracking-wider">Room</p>
@@ -434,280 +594,8 @@ const Dashboard = () => {
           <span className="text-[11px] text-slate-400 font-semibold">Meals Today</span>
         </div>
       </div>
-
-      {/* Latest Announcement Banner */}
-      <div
-        onClick={() => setShowAnnouncementModal(true)}
-        className="bg-slate-900 text-white rounded-3xl p-6 sm:p-8 relative overflow-hidden shadow-lg cursor-pointer hover:scale-[1.005] hover:shadow-xl transition-all duration-300 text-left border border-white/5"
-      >
-        <div className="absolute right-0 top-0 bottom-0 opacity-10 pointer-events-none flex items-center pr-12">
-          <Megaphone size={120} />
-        </div>
-        <div className="flex items-center gap-2 mb-3">
-          <span className="bg-indigo-500/20 border border-indigo-400/20 text-indigo-300 text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider">
-            Latest Announcement
-          </span>
-        </div>
-        <h2 className="text-lg font-bold tracking-tight">Annual Sports Meet 2024</h2>
-        <p className="text-white/70 text-xs mt-1.5 leading-relaxed max-w-md">Registrations are open until this Friday. Visit the Notice Board for details.</p>
-        <div className="flex items-center gap-1 mt-5 text-xs font-bold text-indigo-300 hover:text-indigo-200 transition-all">
-          <span>Read notice</span>
-          <ArrowRight size={14} />
-        </div>
-      </div>
-
-      {/* Grid of Navigation Action Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-        <div 
-          onClick={() => navigate('/student/leaves')}
-          className="glass-card p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-blue-500/20 transition-all duration-300 min-h-[140px]"
-        >
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3.5 shadow-sm border border-blue-100">
-            <CalendarDays size={22} />
-          </div>
-          <span className="text-xs font-bold text-slate-700 tracking-tight">Apply Leave</span>
-        </div>
-
-        <div 
-          onClick={() => navigate('/student/complaints')}
-          className="glass-card p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-blue-500/20 transition-all duration-300 min-h-[140px]"
-        >
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3.5 shadow-sm border border-blue-100">
-            <Wrench size={22} />
-          </div>
-          <span className="text-xs font-bold text-slate-700 tracking-tight">Raise Complaint</span>
-        </div>
-
-        <div 
-          onClick={() => setShowGuestModal(true)}
-          className="glass-card p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-blue-500/20 transition-all duration-300 min-h-[140px]"
-        >
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3.5 shadow-sm border border-blue-100">
-            <Users size={22} />
-          </div>
-          <span className="text-xs font-bold text-slate-700 tracking-tight">Guest Form</span>
-        </div>
-
-        <div 
-          onClick={() => setShowAttendanceModal(true)}
-          className="glass-card p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-blue-500/20 transition-all duration-300 min-h-[140px]"
-        >
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3.5 shadow-sm border border-blue-100">
-            <CheckCircle size={22} />
-          </div>
-          <span className="text-xs font-bold text-slate-700 tracking-tight">Attendance</span>
-        </div>
-
-        <div 
-          onClick={() => setShowAnnouncementModal(true)}
-          className="glass-card p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-blue-500/20 transition-all duration-300 min-h-[140px]"
-        >
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3.5 shadow-sm border border-blue-100">
-            <Megaphone size={22} />
-          </div>
-          <span className="text-xs font-bold text-slate-700 tracking-tight">Notice Board</span>
-        </div>
-
-        <div 
-          onClick={() => setShowContactModal(true)}
-          className="glass-card p-6 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-blue-500/20 transition-all duration-300 min-h-[140px]"
-        >
-          <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-3.5 shadow-sm border border-blue-100">
-            <Phone size={22} />
-          </div>
-          <span className="text-xs font-bold text-slate-700 tracking-tight">Phone Directory</span>
-        </div>
-      </div>
-
-      {/* Upcoming Events Section */}
-      <div className="glass-card p-6 shadow-sm text-left">
-        <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-5">Upcoming Events</h3>
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-4 p-4 border border-slate-100 rounded-2xl hover:bg-slate-50 hover:border-slate-200 transition-all">
-            <div className="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-slate-100 text-slate-500 font-bold shrink-0 shadow-sm border border-slate-200/50">
-              <span className="text-[10px] uppercase leading-none">OCT</span>
-              <span className="text-base leading-none mt-1.5 font-extrabold">24</span>
-            </div>
-            <div className="flex-grow">
-              <h4 className="text-sm font-bold text-slate-800">Warden Interactive Session</h4>
-              <p className="text-xs text-slate-400 mt-1">4:00 PM • Common Room</p>
-            </div>
-            <ChevronRight size={16} className="text-slate-400" />
-          </div>
-
-          <div className="flex items-center gap-4 p-4 border border-slate-100 rounded-2xl hover:bg-slate-50 hover:border-slate-200 transition-all">
-            <div className="flex flex-col items-center justify-center w-12 h-12 rounded-xl bg-slate-100 text-slate-500 font-bold shrink-0 shadow-sm border border-slate-200/50">
-              <span className="text-[10px] uppercase leading-none">OCT</span>
-              <span className="text-base leading-none mt-1.5 font-extrabold">29</span>
-            </div>
-            <div className="flex-grow">
-              <h4 className="text-sm font-bold text-slate-800">Hostel Night & Community Dinner</h4>
-              <p className="text-xs text-slate-400 mt-1">8:00 PM • Central Lawn</p>
-            </div>
-            <ChevronRight size={16} className="text-slate-400" />
-          </div>
-        </div>
-      </div>
-
-      {/* Guest Pre-registration Form Modal */}
-      <CustomModal isOpen={showGuestModal} onClose={() => setShowGuestModal(false)} title="Guest Pre-Registration Form">
-        <form onSubmit={handleGuestSubmit} className="form-grid">
-          <div className="form-group mb-0 full-width">
-            <label className="form-label">Guest Full Name</label>
-            <input
-              type="text"
-              className="form-input"
-              required
-              placeholder="e.g. Rakesh Kumar"
-              value={guestForm.name}
-              onChange={(e) => setGuestForm({ ...guestForm, name: e.target.value })}
-            />
-          </div>
-          <div className="form-group mb-0 full-width">
-            <label className="form-label">Relationship</label>
-            <select
-              className="form-input"
-              value={guestForm.relationship}
-              onChange={(e) => setGuestForm({ ...guestForm, relationship: e.target.value })}
-            >
-              <option value="Father">Father</option>
-              <option value="Mother">Mother</option>
-              <option value="Brother">Brother</option>
-              <option value="Sister">Sister</option>
-              <option value="Guardian">Guardian</option>
-            </select>
-          </div>
-          <div className="form-group mb-0 full-width">
-            <label className="form-label">Contact Number</label>
-            <input
-              type="text"
-              className="form-input"
-              required
-              placeholder="+91 XXXXX XXXXX"
-              value={guestForm.phone}
-              onChange={(e) => setGuestForm({ ...guestForm, phone: e.target.value })}
-            />
-          </div>
-          <div className="form-group mb-0 full-width">
-            <label className="form-label">Date of Visit</label>
-            <input
-              type="date"
-              className="form-input"
-              required
-              value={guestForm.date}
-              onChange={(e) => setGuestForm({ ...guestForm, date: e.target.value })}
-            />
-          </div>
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 full-width">
-            <button type="button" className="btn-secondary h-11 px-5" onClick={() => setShowGuestModal(false)}>Cancel</button>
-            <button type="submit" className="btn-primary h-11 px-5">Register Guest</button>
-          </div>
-        </form>
-      </CustomModal>
-
-      {/* Attendance History Modal */}
-      <CustomModal isOpen={showAttendanceModal} onClose={() => setShowAttendanceModal(false)} title="My Roster Attendance">
-        <div className="flex flex-col gap-5 text-left">
-          <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl flex items-center justify-between">
-            <span className="text-xs font-bold text-blue-900">Today's Dining Count:</span>
-            <span className="text-xs font-extrabold text-blue-900 bg-white border border-blue-100 px-3 py-1 rounded shadow-sm">{checkedInToday} / 4 Meals Eaten</span>
-          </div>
-          <div>
-            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Simulated Biometric Check-ins</h4>
-            <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 overflow-hidden bg-white max-h-[300px] overflow-y-auto shadow-sm">
-              <div className="p-3.5 flex justify-between items-center text-xs">
-                <span className="font-semibold text-slate-700">Dinner</span>
-                <span className="text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded border border-green-100">Verified</span>
-              </div>
-              <div className="p-3.5 flex justify-between items-center text-xs">
-                <span className="font-semibold text-slate-700">Snacks</span>
-                <span className="text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded border border-green-100">Verified</span>
-              </div>
-              <div className="p-3.5 flex justify-between items-center text-xs">
-                <span className="font-semibold text-slate-700">Lunch</span>
-                <span className="text-green-600 font-bold bg-green-50 px-2 py-0.5 rounded border border-green-100">Verified</span>
-              </div>
-              <div className="p-3.5 flex justify-between items-center text-xs">
-                <span className="font-semibold text-slate-700">Breakfast</span>
-                <span className="text-slate-400 font-medium bg-slate-50 px-2 py-0.5 rounded border border-slate-100">Missed</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </CustomModal>
-
-      {/* Emergency Directory Modal */}
-      <CustomModal isOpen={showContactModal} onClose={() => setShowContactModal(false)} title="Emergency Directory">
-        <div className="flex flex-col gap-4 text-left">
-          <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Immediate hotlines for security and resident assistance.</p>
-          <div className="flex flex-col gap-3">
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-bold text-slate-800">Dr. Shalini Sharma</h4>
-                <p className="text-xs text-slate-400 font-medium mt-0.5">Chief Hostel Warden</p>
-              </div>
-              <a href="tel:+919876543210" className="btn-primary h-10 px-4 text-xs shrink-0 w-full sm:w-auto justify-center">
-                <Phone size={14} />
-                <span>Call Warden</span>
-              </a>
-            </div>
-
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-bold text-slate-800">Main Security Gate Desk</h4>
-                <p className="text-xs text-slate-400 font-medium mt-0.5">24/7 Gate Guard Wing</p>
-              </div>
-              <a href="tel:+919876543211" className="btn-primary h-10 px-4 text-xs shrink-0 w-full sm:w-auto justify-center">
-                <Phone size={14} />
-                <span>Call Gate</span>
-              </a>
-            </div>
-
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-bold text-slate-800">Ambulance & Medical Wing</h4>
-                <p className="text-xs text-slate-400 font-medium mt-0.5">Campus Health Center</p>
-              </div>
-              <a href="tel:+919876543212" className="btn-primary h-10 px-4 text-xs shrink-0 w-full sm:w-auto justify-center">
-                <Phone size={14} />
-                <span>Call Clinic</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      </CustomModal>
-
-      {/* Announcements Notice Board Modal */}
-      <CustomModal isOpen={showAnnouncementModal} onClose={() => setShowAnnouncementModal(false)} title="Hostel Notice Board">
-        <div className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-1 text-left">
-          <div className="p-5 bg-indigo-50 border border-indigo-100 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-center mb-3">
-              <span className="bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">Event Announcement</span>
-              <span className="text-[10px] text-indigo-700 font-bold">Oct 20, 2024</span>
-            </div>
-            <h4 className="text-sm font-bold text-indigo-900 leading-tight">Hostel Night & Community Dinner</h4>
-            <p className="text-xs text-indigo-800 mt-2 leading-relaxed">
-              Join us for an evening of music, games, and a special buffet dinner this Friday at the central lawn. Registration starts today at block lobby desks.
-            </p>
-            <p className="text-[10px] text-indigo-700 font-semibold mt-4">- Cultural Committee</p>
-          </div>
-
-          <div className="p-5 bg-slate-50 border border-slate-100 rounded-2xl shadow-sm">
-            <div className="flex justify-between items-center mb-3">
-              <span className="bg-slate-600 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">General Notice</span>
-              <span className="text-[10px] text-slate-700 font-bold">Oct 18, 2024</span>
-            </div>
-            <h4 className="text-sm font-bold text-slate-900 leading-tight">Wi-Fi Maintenance Schedule</h4>
-            <p className="text-xs text-slate-800 mt-2 leading-relaxed">
-              Hostel Wi-Fi network will undergo scheduled maintenance on Sunday between 2:00 AM and 5:00 AM. Internet service will be temporarily unavailable during this window.
-            </p>
-            <p className="text-[10px] text-slate-700 font-semibold mt-4">- IT Support Desk</p>
-          </div>
-        </div>
-      </CustomModal>
     </div>
   );
 };
 
 export default Dashboard;
-

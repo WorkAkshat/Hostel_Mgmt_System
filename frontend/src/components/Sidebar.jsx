@@ -18,7 +18,8 @@ import {
   X,
   PlusCircle,
   AlertCircle,
-  ShieldCheck
+  ShieldCheck,
+  Building2
 } from 'lucide-react';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
@@ -36,8 +37,14 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
     switch (user.role) {
       case 'ADMIN':
         return [
-          { path: '/admin/dashboard', name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-          { path: '/admin/approvals', name: 'User Approvals', icon: <ShieldCheck size={18} /> },
+          { path: '/admin/dashboard', name: 'Dashboard',          icon: <LayoutDashboard size={18} /> },
+          { path: '/admin/floors',    name: 'Floor Directory 🏢',  icon: <Building2 size={18} /> },
+          { path: '/admin/reports',   name: 'Financial Reports 📊', icon: <FileCheck size={18} /> },
+          { path: '/admin/demand-notes', name: 'Demand Notes & Sub-meters 🧾', icon: <Receipt size={18} /> },
+          { path: '/admin/cook-dashboard', name: 'Cook Dashboard 🍽️', icon: <Sparkles size={18} /> },
+          { path: '/admin/suggestions', name: 'Suggestion Box 💬', icon: <Wrench size={18} /> },
+          { path: '/admin/night-attendance', name: 'Night Attendance 🌙', icon: <ShieldCheck size={18} /> },
+          { path: '/admin/approvals', name: 'User Approvals',      icon: <ShieldCheck size={18} /> },
           { path: '/admin/students', name: 'Students Directory', icon: <Users size={18} /> },
           { path: '/admin/rooms', name: 'Rooms & Assets', icon: <Home size={18} /> },
           { path: '/admin/leaves', name: 'Leave Approvals', icon: <FileCheck size={18} /> },
@@ -51,7 +58,8 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
         return [
           { path: '/student/dashboard', name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
           { path: '/student/leaves', name: 'Apply Leave', icon: <FileCheck size={18} /> },
-          { path: '/student/mess', name: 'Mess Rating', icon: <Sparkles size={18} /> },
+          { path: '/student/mess', name: 'Mess Rating & Opt-Out', icon: <Sparkles size={18} /> },
+          { path: '/student/suggestions', name: 'Suggestion Box', icon: <Wrench size={18} /> },
           { path: '/student/fees', name: 'My Invoices', icon: <Receipt size={18} /> },
           { path: '/student/complaints', name: 'My Complaints', icon: <Wrench size={18} /> },
         ];
@@ -77,7 +85,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
           </div>
           {!isCollapsed && (
             <div className="flex flex-col transition-all duration-300 overflow-hidden">
-              <h2 className="text-[1.05rem] text-[var(--text-primary)] font-bold leading-none whitespace-nowrap">हरि पुष्प पीजी</h2>
+              <h2 className="text-[1.05rem] text-[var(--text-primary)] font-bold leading-none whitespace-nowrap">Hari Pushp PG</h2>
               <span className="text-[0.65rem] text-[var(--text-secondary)] mt-1 whitespace-nowrap">Girls Hostel</span>
             </div>
           )}

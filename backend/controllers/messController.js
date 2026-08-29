@@ -1,5 +1,8 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const fs = require('fs');
+const path = require('path');
+const MENU_FILE_PATH = path.join(__dirname, '../mess_menu.json');
 
 // Determine meal type dynamically based on current time
 const getMealTypeByTime = () => {
@@ -155,9 +158,112 @@ const getMyMessAttendance = async (req, res) => {
   }
 };
 
-const fs = require('fs');
-const path = require('path');
-const MENU_FILE_PATH = path.join(__dirname, '../mess_menu.json');
+// @desc    Student Opt-out of a meal
+// @route   POST /api/mess/opt-out
+// @access  Private (Student)
+const optOutMeal = async (req, res) => {
+  try {
+    const { date, mealType } = req.body;
+
+    if (!mealType) {
+      return res.status(400).json({ message: 'Meal type is required' });
+    }
+
+    const student = await prisma.student.findUnique({
+      where: { userId: req.user.id }
+    });
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student profile not found' });
+    }
+
+    const targetDate = date || new Date().toISOString().split('T')[0];
+
+    const optOut = await prisma.mealOptOut.create({
+      data: {
+        studentId: student.id,
+        date: targetDate,
+        mealType: mealType.toUpperCase()
+      }
+    });
+
+    res.status(201).json({
+      message: `Successfully opted out of ${mealType} for ${targetDate}`,
+      optOut
+    });
+  } catch (error) {
+    if (error.code === 'P2002') {
+      return res.status(400).json({ message: 'You have already opted out of this meal for today.' });
+    }
+    console.error('Error opting out of meal:', error);
+    res.status(500).json({ message: 'Server error saving meal opt-out' });
+  }
+};
+
+// @desc    Cancel student meal opt-out (Re-enroll for meal)
+// @route   DELETE /api/mess/opt-out/:id
+// @access  Private (Student)
+const cancelOptOut = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await prisma.mealOptOut.delete({
+      where: { id }
+    });
+
+    res.json({ message: 'Meal opt-out cancelled successfully. Re-enrolled for meal.' });
+  } catch (error) {
+    console.error('Error cancelling meal opt-out:', error);
+    res.status(500).json({ message: 'Server error cancelling meal opt-out' });
+  }
+};
+
+// @desc    Cook Dashboard metrics (Expected meal count = Total residents - Opt outs)
+// @route   GET /api/mess/cook-dashboard
+// @access  Private
+const getCookDashboard = async (req, res) => {
+  try {
+    const targetDate = req.query.date || new Date().toISOString().split('T')[0];
+    const totalStudents = await prisma.student.count({ where: { status: 'CHECKED_IN' } });
+
+    const optOuts = await prisma.mealOptOut.findMany({
+      where: { date: targetDate },
+      include: {
+        student: {
+          include: {
+            user: { select: { name: true } },
+            room: true
+          }
+        }
+      }
+    });
+
+    const optOutCounts = {
+      BREAKFAST: optOuts.filter(o => o.mealType === 'BREAKFAST').length,
+      LUNCH: optOuts.filter(o => o.mealType === 'LUNCH').length,
+      SNACKS: optOuts.filter(o => o.mealType === 'SNACKS').length,
+      DINNER: optOuts.filter(o => o.mealType === 'DINNER').length,
+    };
+
+    const expectedMealCounts = {
+      BREAKFAST: Math.max(0, totalStudents - optOutCounts.BREAKFAST),
+      LUNCH: Math.max(0, totalStudents - optOutCounts.LUNCH),
+      SNACKS: Math.max(0, totalStudents - optOutCounts.SNACKS),
+      DINNER: Math.max(0, totalStudents - optOutCounts.DINNER),
+    };
+
+    res.json({
+      date: targetDate,
+      totalEnrolledResidents: totalStudents,
+      optOutCounts,
+      expectedMealCounts,
+      optOutsList: optOuts
+    });
+  } catch (error) {
+    console.error('Error fetching cook dashboard:', error);
+    res.status(500).json({ message: 'Server error loading cook dashboard metrics' });
+  }
+};
 
 const DEFAULT_MENU = {
   Monday:    { breakfast: 'Poha + Chai', lunch: 'Dal Tadka + Roti + Rice', snacks: 'Samosa + Tea', dinner: 'Paneer Butter Masala + Naan' },
@@ -201,6 +307,9 @@ module.exports = {
   biometricVerifyMess,
   getMessStats,
   getMyMessAttendance,
+  optOutMeal,
+  cancelOptOut,
+  getCookDashboard,
   getMessMenu,
   updateMessMenu
 };

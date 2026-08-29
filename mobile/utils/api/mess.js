@@ -11,8 +11,25 @@ export const getMyAttendance = () => {
 export const biometricVerify = (data) => {
   return client('/mess/biometric-verify', {
     method: 'POST',
-    body: data
+    body: JSON.stringify(data)
   });
+};
+
+export const optOutMeal = (data) => {
+  return client('/mess/opt-out', {
+    method: 'POST',
+    body: JSON.stringify(data)
+  });
+};
+
+export const cancelOptOut = (id) => {
+  return client(`/mess/opt-out/${id}`, {
+    method: 'DELETE'
+  });
+};
+
+export const getCookDashboard = (date) => {
+  return client(`/mess/cook-dashboard${date ? `?date=${date}` : ''}`);
 };
 
 export const getMenu = () => {
@@ -21,8 +38,8 @@ export const getMenu = () => {
 
 export const updateMenu = (data) => {
   return client('/mess/menu', {
-    method: 'POST',
-    body: data
+    method: 'PUT',
+    body: JSON.stringify(data)
   });
 };
 
@@ -30,6 +47,9 @@ export default {
   getStats,
   getMyAttendance,
   biometricVerify,
+  optOutMeal,
+  cancelOptOut,
+  getCookDashboard,
   getMenu,
-  updateMenu,
+  updateMenu
 };

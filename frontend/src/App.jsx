@@ -18,6 +18,8 @@ import Complaints from './pages/Complaints';
 import Visitors from './pages/Visitors';
 import Staff from './pages/Staff';
 import Approvals from './pages/Approvals';
+import FloorDirectory from './pages/FloorDirectory';
+import ModulesView from './pages/ModulesView';
 
 import { useState, useEffect } from 'react';
 
@@ -221,6 +223,10 @@ const App = () => {
               element={<PrivateRoute allowedRoles={['ADMIN']}><Dashboard /></PrivateRoute>} 
             />
             <Route 
+              path="/admin/floors" 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><FloorDirectory /></PrivateRoute>} 
+            />
+            <Route 
               path="/admin/approvals" 
               element={<PrivateRoute allowedRoles={['ADMIN']}><Approvals /></PrivateRoute>} 
             />
@@ -253,6 +259,26 @@ const App = () => {
               element={<PrivateRoute allowedRoles={['ADMIN']}><Visitors /></PrivateRoute>} 
             />
             <Route 
+              path="/admin/reports" 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><ModulesView defaultTab="reports" /></PrivateRoute>} 
+            />
+            <Route 
+              path="/admin/demand-notes" 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><ModulesView defaultTab="demand-notes" /></PrivateRoute>} 
+            />
+            <Route 
+              path="/admin/cook-dashboard" 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><ModulesView defaultTab="cook-dashboard" /></PrivateRoute>} 
+            />
+            <Route 
+              path="/admin/suggestions" 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><ModulesView defaultTab="suggestions" /></PrivateRoute>} 
+            />
+            <Route 
+              path="/admin/night-attendance" 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><ModulesView defaultTab="night-attendance" /></PrivateRoute>} 
+            />
+            <Route 
               path="/admin/staff" 
               element={<PrivateRoute allowedRoles={['ADMIN']}><Staff /></PrivateRoute>} 
             />
@@ -277,6 +303,10 @@ const App = () => {
             <Route 
               path="/student/complaints" 
               element={<PrivateRoute allowedRoles={['STUDENT']}><Complaints /></PrivateRoute>} 
+            />
+            <Route 
+              path="/student/suggestions" 
+              element={<PrivateRoute allowedRoles={['STUDENT']}><ModulesView defaultTab="suggestions" /></PrivateRoute>} 
             />
 
             {/* Security Staff Routes */}
