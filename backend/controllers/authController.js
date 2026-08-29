@@ -6,9 +6,10 @@ const prisma = new PrismaClient();
 
 // Generate JWT Token Helper
 const generateToken = (userId, email, role, name, assignedFloor = null) => {
+  const secret = process.env.JWT_SECRET || 'hari_pushp_pg_production_jwt_secret_key_2026_safe_fallback_key';
   return jwt.sign(
     { id: userId, email, role, name, assignedFloor },
-    process.env.JWT_SECRET,
+    secret,
     { expiresIn: '30d' }
   );
 };

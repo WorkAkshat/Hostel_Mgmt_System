@@ -64,8 +64,9 @@ jobs:
             echo "🔧 Generating Prisma Client..."
             npx prisma generate
 
-            echo "🗄️ Running production database migrations..."
-            npx prisma migrate deploy
+            echo "🗄️ Running production database migrations & seed..."
+            npx prisma db push --skip-generate
+            node prisma/seed.js || true
 
             echo "🔄 Restarting backend with PM2..."
 
