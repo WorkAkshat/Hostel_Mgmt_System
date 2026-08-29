@@ -85,6 +85,11 @@ const StudentRow = ({ student, theme }) => (
       <div className="flex items-center gap-2 flex-wrap">
         <span className="font-semibold text-[var(--text-primary)] text-sm">{student.name}</span>
         <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{student.rollNumber}</span>
+        {student.bedId && (
+          <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-semibold">
+            🛏️ Bed: {student.bedId}
+          </span>
+        )}
         <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${student.status === 'CHECKED_IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
           {student.status}
         </span>
@@ -110,30 +115,69 @@ const StudentRow = ({ student, theme }) => (
 );
 
 // ─── Room Block ───────────────────────────────────────────────────────────────
-const RoomBlock = ({ room, theme }) => (
-  <div className="mb-5">
-    <div className="flex items-center justify-between mb-3">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-[10px] flex items-center justify-center text-white text-sm font-bold flex-shrink-0" style={{ background: theme.gradient }}>
-          {room.roomNumber}
+const RoomBlock = ({ room, theme }) => {
+  let beds = [];
+  try {
+    beds = typeof room.bedMapping === 'string' ? JSON.parse(room.bedMapping || '[]') : (room.bedMapping || []);
+  } catch (e) {
+    beds = [];
+  }
+
+  return (
+    <div className="mb-6 p-4 rounded-[18px] bg-slate-50/50 border border-slate-200/60 shadow-xs">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-[12px] flex items-center justify-center text-white text-base font-black flex-shrink-0" style={{ background: theme.gradient }}>
+            {room.roomNumber}
+          </div>
+          <div>
+            <div className="text-base font-extrabold text-[var(--text-primary)] flex items-center gap-2">
+              <span>Room {room.roomNumber}</span>
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600">
+                {room.sharingType === 1 ? 'Single Seater' : room.sharingType === 2 ? 'Double Seater' : 'Triple Seater'}
+              </span>
+            </div>
+            <div className="text-xs text-slate-400 mt-0.5">{room.sharingLabel || `${room.sharingType} Beds`} · {room.isAc ? '❄️ AC' : 'Non-AC'} · {fmtCurrency(room.monthlyFee)}/mo</div>
+          </div>
         </div>
-        <div>
-          <div className="text-sm font-bold text-[var(--text-primary)]">Room {room.roomNumber}</div>
-          <div className="text-[11px] text-slate-400">{room.sharingLabel} · {room.isAc ? '❄️ AC' : 'Non-AC'} · {fmtCurrency(room.monthlyFee)}/mo</div>
-        </div>
+        <span className={`text-xs font-bold px-3 py-1 rounded-full ${room.status === 'FULL' ? 'bg-rose-100 text-rose-700' : room.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+          {room.occupancy}/{room.capacity} Beds · {room.status}
+        </span>
       </div>
-      <span className={`text-[11px] font-bold px-3 py-1 rounded-full ${room.status === 'FULL' ? 'bg-rose-50 text-rose-600' : room.status === 'AVAILABLE' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-        {room.occupancy}/{room.capacity} · {room.status}
-      </span>
+
+      {/* Bed Mapping Badges */}
+      {beds.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-3 pl-1 sticky">
+          {beds.map((bId) => {
+            const occupiedStudent = room.students?.find(s => s.bedId === bId);
+            return (
+              <div
+                key={bId}
+                className={`text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 border shadow-2xs ${
+                  occupiedStudent
+                    ? 'bg-purple-100 text-purple-900 border-purple-300'
+                    : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                }`}
+              >
+                <span>🛏️ {bId}</span>
+                <span className="text-[10px] font-normal opacity-80">
+                  {occupiedStudent ? `(${occupiedStudent.name})` : '• Vacant'}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        {room.students && room.students.length > 0
+          ? room.students.map((s) => <StudentRow key={s.id} student={s} theme={theme} />)
+          : <div className="text-xs text-slate-400 italic py-2 pl-2">No residents currently assigned</div>
+        }
+      </div>
     </div>
-    <div className="flex flex-col gap-2 pl-12">
-      {room.students.length > 0
-        ? room.students.map((s) => <StudentRow key={s.id} student={s} theme={theme} />)
-        : <div className="text-sm text-slate-400 italic py-2">No students assigned</div>
-      }
-    </div>
-  </div>
-);
+  );
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function FloorDirectory() {
