@@ -328,8 +328,7 @@ async function main() {
   });
   console.log('✓ Created sample visitors.');
 
-  // ── 13. Electricity Readings for August 2026 ────────────────────────────────
-  const roomsForReadings = [room101, room102, room103, room201, room202, room301, room302, room303, room401, room402, room501, room502];
+  const roomsForReadings = await prisma.room.findMany({});
   for (const room of roomsForReadings) {
     const readingMonth = '2026-08';
     const prev = Math.floor(Math.random() * 200) + 100;
