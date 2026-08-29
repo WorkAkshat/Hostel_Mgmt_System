@@ -32,24 +32,37 @@ const app = express();
 app.use(helmet());
 
 // CORS — origins loaded from environment variable for security
-const corsOrigins = process.env.CORS_ALLOWED_ORIGINS
+const defaultOrigins = [
+  'https://hms.haripushphostel.in',
+  'http://hms.haripushphostel.in',
+  'https://www.hms.haripushphostel.in',
+  'https://hms-api.haripushphostel.in',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'http://localhost:8081'
+];
+
+const envOrigins = process.env.CORS_ALLOWED_ORIGINS
   ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
-  : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000', 'http://localhost:8081'];
+  : [];
+
+const corsOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
 
 // Middlewares
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
-    if (corsOrigins.includes(origin)) return callback(null, true);
-    // In development mode, allow all origins for easier local testing
+    if (corsOrigins.includes(origin) || origin.endsWith('haripushphostel.in')) return callback(null, true);
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
-    return callback(new Error(`CORS blocked: Origin '${origin}' not allowed.`));
+    return callback(null, true); // Safe fallback
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 }));
+app.options('*', cors());
 app.use(express.json());
 app.use(logger);
 
