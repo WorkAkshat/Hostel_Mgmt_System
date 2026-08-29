@@ -17,7 +17,7 @@ import {
 } from 'recharts';
 import { 
   Users, Home, Wrench, ShieldAlert, Receipt, Sparkles,
-  CheckCircle, Clock, CalendarDays, UtensilsCrossed, Megaphone, Phone, ArrowRight, ShieldCheck, HelpCircle, ChevronRight, ChevronDown, Building2, Layers
+  CheckCircle, Clock, CalendarDays, UtensilsCrossed, Megaphone, Phone, ArrowRight, ShieldCheck, HelpCircle, ChevronRight, ChevronDown, Building2, Layers, BookOpen
 } from 'lucide-react';
 import MetricCard from '../components/MetricCard';
 import CustomModal from '../components/CustomModal';
@@ -268,7 +268,15 @@ const Dashboard = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button 
+              onClick={() => navigate('/admin/tally')}
+              className="flex items-center gap-2 bg-slate-900 text-emerald-400 px-4 py-2.5 rounded-[12px] text-[13px] font-bold shadow-md hover:bg-slate-800 transition-all border-none cursor-pointer"
+            >
+              <BookOpen size={16} />
+              <span>📖 Tally ERP Ledger</span>
+            </button>
+
             <button 
               onClick={() => setShowFloorModal(true)}
               className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-[12px] text-[13px] font-bold shadow-md hover:bg-indigo-700 transition-all border-none cursor-pointer"
