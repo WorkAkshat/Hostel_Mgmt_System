@@ -26,7 +26,8 @@ import {
   UserCheck,
   Umbrella,
   ShieldCheck,
-  CheckCheck
+  CheckCheck,
+  CreditCard
 } from 'lucide-react';
 
 const ModulesView = ({ defaultTab = 'reports' }) => {
