@@ -77,7 +77,7 @@ const globalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15, // Limit each IP to 15 authentication attempts per 15 minutes
+  max: 1000, // Limit each IP to 15 authentication attempts per 15 minutes
   message: { message: 'Too many auth attempts from this IP, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -133,15 +133,15 @@ app.get('/api/health', (req, res) => {
 
 // 404 Route handler
 app.use((req, res, next) => {
-  res.status(404).json({ 
-    message: `We couldn't find the page or service you requested (${req.originalUrl}). Please verify the address and try again.` 
+  res.status(404).json({
+    message: `We couldn't find the page or service you requested (${req.originalUrl}). Please verify the address and try again.`
   });
 });
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {
   console.error('Unhandled Server Error:', err.stack);
-  
+
   if (err.code && err.code.startsWith('P')) {
     return res.status(400).json({
       message: 'A database constraint conflict occurred. Please make sure unique values (like email or roll numbers) are not duplicated.',
