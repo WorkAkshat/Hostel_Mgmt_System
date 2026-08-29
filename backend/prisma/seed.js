@@ -152,52 +152,74 @@ async function main() {
     { name: 'LAN Port', status: 'Working' },
   ]);
 
-  // Floor 1 Rooms
-  const room101 = await prisma.room.create({ data: { roomNumber: '101', block: 'Hari Pushp',       floorId: floor1.id, floorNumber: 1, sharingType: 2, isAc: true,  status: 'AVAILABLE', assets: assetsTwin   } });
-  const room102 = await prisma.room.create({ data: { roomNumber: '102', block: 'Hari Pushp',       floorId: floor1.id, floorNumber: 1, sharingType: 2, isAc: false, status: 'AVAILABLE', assets: assetsTwin   } });
-  const room103 = await prisma.room.create({ data: { roomNumber: '103', block: 'Hari Pushp',       floorId: floor1.id, floorNumber: 1, sharingType: 1, isAc: true,  status: 'AVAILABLE', assets: assetsSingle } });
+  // Helper to create 6 rooms per floor with exact bed ID mappings
+  const createFloorRooms = async (floor, floorNum, blockName) => {
+    const createdRooms = {};
+    const configs = [
+      { num: `${floorNum}01`, type: 3, cap: 3, beds: [`${floorNum}01-A`, `${floorNum}01-B`, `${floorNum}01-C`], ac: true },
+      { num: `${floorNum}02`, type: 2, cap: 2, beds: [`${floorNum}02-A`, `${floorNum}02-B`], ac: false },
+      { num: `${floorNum}03`, type: 2, cap: 2, beds: [`${floorNum}03-A`, `${floorNum}03-B`], ac: true },
+      { num: `${floorNum}04`, type: 1, cap: 1, beds: [`${floorNum}04-Single`], ac: true },
+      { num: `${floorNum}05`, type: 2, cap: 2, beds: [`${floorNum}05-A`, `${floorNum}05-B`], ac: false },
+      { num: `${floorNum}06`, type: 2, cap: 2, beds: [`${floorNum}06-A`, `${floorNum}06-B`], ac: true },
+    ];
 
-  // Floor 2 Rooms
-  const room201 = await prisma.room.create({ data: { roomNumber: '201', block: 'Vandana',          floorId: floor2.id, floorNumber: 2, sharingType: 2, isAc: true,  status: 'AVAILABLE', assets: assetsTwin   } });
-  const room202 = await prisma.room.create({ data: { roomNumber: '202', block: 'Vandana',          floorId: floor2.id, floorNumber: 2, sharingType: 3, isAc: false, status: 'AVAILABLE', assets: assetsTriple } });
+    for (const cfg of configs) {
+      const rm = await prisma.room.create({
+        data: {
+          roomNumber: cfg.num,
+          block: blockName,
+          floorId: floor.id,
+          floorNumber: floorNum,
+          sharingType: cfg.type,
+          capacity: cfg.cap,
+          isAc: cfg.ac,
+          status: 'AVAILABLE',
+          bedMapping: JSON.stringify(cfg.beds),
+          assets: cfg.type === 1 ? assetsSingle : cfg.type === 2 ? assetsTwin : assetsTriple,
+        }
+      });
+      createdRooms[cfg.num] = rm;
+    }
+    return createdRooms;
+  };
 
-  // Floor 3 Rooms
-  const room301 = await prisma.room.create({ data: { roomNumber: '301', block: 'Pushpa',           floorId: floor3.id, floorNumber: 3, sharingType: 1, isAc: true,  status: 'AVAILABLE', assets: assetsSingle } });
-  const room302 = await prisma.room.create({ data: { roomNumber: '302', block: 'Pushpa',           floorId: floor3.id, floorNumber: 3, sharingType: 2, isAc: true,  status: 'AVAILABLE', assets: assetsTwin   } });
-  const room303 = await prisma.room.create({ data: { roomNumber: '303', block: 'Pushpa',           floorId: floor3.id, floorNumber: 3, sharingType: 3, isAc: false, status: 'AVAILABLE', assets: assetsTriple } });
+  const f1Rooms = await createFloorRooms(floor1, 1, 'Hari Pushp');
+  const f2Rooms = await createFloorRooms(floor2, 2, 'Vandana');
+  const f3Rooms = await createFloorRooms(floor3, 3, 'Pushpa');
+  const f4Rooms = await createFloorRooms(floor4, 4, 'Harish Chandra');
+  const f5Rooms = await createFloorRooms(floor5, 5, 'Ramesh');
 
-  // Floor 4 Rooms
-  const room401 = await prisma.room.create({ data: { roomNumber: '401', block: 'Harish Chandra',   floorId: floor4.id, floorNumber: 4, sharingType: 2, isAc: true,  status: 'AVAILABLE', assets: assetsTwin   } });
-  const room402 = await prisma.room.create({ data: { roomNumber: '402', block: 'Harish Chandra',   floorId: floor4.id, floorNumber: 4, sharingType: 2, isAc: false, status: 'AVAILABLE', assets: assetsTwin   } });
+  const room101 = f1Rooms['101'], room102 = f1Rooms['102'];
+  const room201 = f2Rooms['201'], room202 = f2Rooms['202'];
+  const room301 = f3Rooms['301'], room302 = f3Rooms['302'], room303 = f3Rooms['303'];
+  const room401 = f4Rooms['401'], room402 = f4Rooms['402'];
+  const room501 = f5Rooms['501'], room502 = f5Rooms['502'];
 
-  // Floor 5 Rooms
-  const room501 = await prisma.room.create({ data: { roomNumber: '501', block: 'Ramesh',           floorId: floor5.id, floorNumber: 5, sharingType: 2, isAc: true,  status: 'AVAILABLE', assets: assetsTwin   } });
-  const room502 = await prisma.room.create({ data: { roomNumber: '502', block: 'Ramesh',           floorId: floor5.id, floorNumber: 5, sharingType: 2, isAc: false, status: 'AVAILABLE', assets: assetsTwin   } });
+  console.log('✓ Created 30 room records with exact bed ID mappings across 5 floors (60 total beds).');
 
-  console.log('✓ Created 12 rooms across 5 floors.');
-
-  // Helper to create Student profile
-  const makeStudent = (uId, roll, phone, parent, roomId, dateJoin, father) => ({
+  // Helper to create Student profile with specific Bed ID
+  const makeStudent = (uId, roll, phone, parent, roomId, bedId, dateJoin, father) => ({
     userId: uId, rollNumber: roll, phoneNumber: phone, parentContact: parent,
-    roomId, status: 'CHECKED_IN', dateOfJoining: new Date(dateJoin), fatherName: father,
+    roomId, bedId, status: 'CHECKED_IN', dateOfJoining: new Date(dateJoin), fatherName: father,
   });
 
   // Floor 1
-  const student1 = await prisma.student.create({ data: makeStudent(sUser1.id, 'HP-2024-101', '9810011111', '9810099901', room101.id, '2024-07-01', 'Rajesh Sharma') });
-  const student2 = await prisma.student.create({ data: makeStudent(sUser2.id, 'HP-2024-102', '9810011112', '9810099902', room101.id, '2024-07-05', 'Vikram Mehta') });
+  const student1 = await prisma.student.create({ data: makeStudent(sUser1.id, 'HP-2024-101', '9810011111', '9810099901', room101.id, '101-A', '2024-07-01', 'Rajesh Sharma') });
+  const student2 = await prisma.student.create({ data: makeStudent(sUser2.id, 'HP-2024-102', '9810011112', '9810099902', room101.id, '101-B', '2024-07-05', 'Vikram Mehta') });
   // Floor 2
-  const student3 = await prisma.student.create({ data: makeStudent(sUser3.id, 'VN-2024-201', '9810022221', '9810099903', room201.id, '2024-07-10', 'Suresh Patel') });
-  const student4 = await prisma.student.create({ data: makeStudent(sUser4.id, 'VN-2024-202', '9810022222', '9810099904', room202.id, '2024-07-12', 'Ramesh Singh') });
+  const student3 = await prisma.student.create({ data: makeStudent(sUser3.id, 'VN-2024-201', '9810022221', '9810099903', room201.id, '201-A', '2024-07-10', 'Suresh Patel') });
+  const student4 = await prisma.student.create({ data: makeStudent(sUser4.id, 'VN-2024-202', '9810022222', '9810099904', room202.id, '202-A', '2024-07-12', 'Ramesh Singh') });
   // Floor 3
-  const student5 = await prisma.student.create({ data: makeStudent(sUser5.id, 'PS-2024-301', '9810033331', '9810099905', room301.id, '2024-07-15', 'Venkat Reddy') });
-  const student6 = await prisma.student.create({ data: makeStudent(sUser6.id, 'PS-2024-302', '9810033332', '9810099906', room302.id, '2024-07-18', 'Anil Verma') });
-  const student7 = await prisma.student.create({ data: makeStudent(sUser7.id, 'PS-2024-303', '9810033333', '9810099907', room303.id, '2024-07-20', 'Pravin Jain') });
+  const student5 = await prisma.student.create({ data: makeStudent(sUser5.id, 'PS-2024-301', '9810033331', '9810099905', room301.id, '301-A', '2024-07-15', 'Venkat Reddy') });
+  const student6 = await prisma.student.create({ data: makeStudent(sUser6.id, 'PS-2024-302', '9810033332', '9810099906', room302.id, '302-A', '2024-07-18', 'Anil Verma') });
+  const student7 = await prisma.student.create({ data: makeStudent(sUser7.id, 'PS-2024-303', '9810033333', '9810099907', room303.id, '303-A', '2024-07-20', 'Pravin Jain') });
   // Floor 4
-  const student8 = await prisma.student.create({ data: makeStudent(sUser8.id, 'HC-2024-401', '9810044441', '9810099908', room401.id, '2024-07-22', 'Alok Gupta') });
-  const student9 = await prisma.student.create({ data: makeStudent(sUser9.id, 'HC-2024-402', '9810044442', '9810099909', room402.id, '2024-07-25', 'Mahesh Tiwari') });
+  const student8 = await prisma.student.create({ data: makeStudent(sUser8.id, 'HC-2024-401', '9810044441', '9810099908', room401.id, '401-A', '2024-07-22', 'Alok Gupta') });
+  const student9 = await prisma.student.create({ data: makeStudent(sUser9.id, 'HC-2024-402', '9810044442', '9810099909', room402.id, '402-A', '2024-07-25', 'Mahesh Tiwari') });
   // Floor 5
-  const student10 = await prisma.student.create({ data: makeStudent(sUser10.id, 'RM-2024-501', '9810055551', '9810099910', room501.id, '2024-07-28', 'Dinesh Mishra') });
-  const student11 = await prisma.student.create({ data: makeStudent(sUser11.id, 'RM-2024-502', '9810055552', '9810099911', room502.id, '2024-08-01', 'Sunil Chauhan') });
+  const student10 = await prisma.student.create({ data: makeStudent(sUser10.id, 'RM-2024-501', '9810055551', '9810099910', room501.id, '501-A', '2024-07-28', 'Dinesh Mishra') });
+  const student11 = await prisma.student.create({ data: makeStudent(sUser11.id, 'RM-2024-502', '9810055552', '9810099911', room502.id, '502-A', '2024-08-01', 'Sunil Chauhan') });
 
   const allStudents = [student1, student2, student3, student4, student5, student6, student7, student8, student9, student10, student11];
   console.log('✓ Created 11 student profiles.');

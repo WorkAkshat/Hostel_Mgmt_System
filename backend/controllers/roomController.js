@@ -15,6 +15,7 @@ const getAllRooms = async (req, res) => {
           select: {
             id: true,
             rollNumber: true,
+            bedId: true,
             user: {
               select: {
                 name: true
