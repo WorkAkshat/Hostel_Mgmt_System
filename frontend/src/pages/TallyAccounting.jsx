@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import {
   BookOpen, Receipt, Scale, TrendingUp, Landmark,
-  Plus, RefreshCw, CheckCircle2, ShieldAlert
+  Plus, RefreshCw, CheckCircle2, ShieldAlert,
+  Printer, Download, FileSpreadsheet, User, Building2
 } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:9000/api/v1';
@@ -16,8 +17,8 @@ export default function TallyAccounting() {
   const isFloorWarden = user?.role === 'ADMIN' && user?.assignedFloor;
   const [selectedFloor, setSelectedFloor] = useState(isFloorWarden ? String(user.assignedFloor) : 'combined');
 
-  // Active accounting tab
-  const [activeTab, setActiveTab] = useState('daybook'); // 'daybook' | 'trial' | 'pnl' | 'bs' | 'voucher'
+  // Active accounting tab: 'daybook' | 'student' | 'trial' | 'pnl' | 'bs' | 'voucher'
+  const [activeTab, setActiveTab] = useState('daybook');
 
   // Data states
   const [daybook, setDaybook] = useState([]);
@@ -25,6 +26,9 @@ export default function TallyAccounting() {
   const [pnl, setPnl] = useState(null);
   const [bs, setBs] = useState(null);
   const [heads, setHeads] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [selectedStudentId, setSelectedStudentId] = useState('');
+  const [studentLedger, setStudentLedger] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // Voucher form state
@@ -38,9 +42,17 @@ export default function TallyAccounting() {
   });
   const [postMsg, setPostMsg] = useState(null);
 
-  // Fetch Day Book (with token memoization)
-  const fetchDaybook = useCallback(async () => {
-    if (!token) return;
+  // Single-fetch guards to prevent duplicate loading calls
+  const daybookFetchedRef = useRef('');
+  const trialFetchedRef = useRef('');
+  const pnlFetchedRef = useRef('');
+  const bsFetchedRef = useRef('');
+
+  // Fetch Day Book
+  const fetchDaybook = useCallback(async (force = false) => {
+    const key = `daybook-${selectedFloor}`;
+    if (!force && daybookFetchedRef.current === key) return;
+    daybookFetchedRef.current = key;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/accounting/daybook?floorNumber=${selectedFloor}`, {
@@ -56,8 +68,10 @@ export default function TallyAccounting() {
   }, [token, selectedFloor]);
 
   // Fetch Trial Balance
-  const fetchTrial = useCallback(async () => {
-    if (!token) return;
+  const fetchTrial = useCallback(async (force = false) => {
+    const key = `trial-${selectedFloor}`;
+    if (!force && trialFetchedRef.current === key) return;
+    trialFetchedRef.current = key;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/accounting/trial-balance?floorNumber=${selectedFloor}`, {
@@ -73,8 +87,10 @@ export default function TallyAccounting() {
   }, [token, selectedFloor]);
 
   // Fetch P&L
-  const fetchPnl = useCallback(async () => {
-    if (!token) return;
+  const fetchPnl = useCallback(async (force = false) => {
+    const key = `pnl-${selectedFloor}`;
+    if (!force && pnlFetchedRef.current === key) return;
+    pnlFetchedRef.current = key;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/accounting/profit-loss?floorNumber=${selectedFloor}`, {
@@ -90,8 +106,10 @@ export default function TallyAccounting() {
   }, [token, selectedFloor]);
 
   // Fetch Balance Sheet
-  const fetchBs = useCallback(async () => {
-    if (!token) return;
+  const fetchBs = useCallback(async (force = false) => {
+    const key = `bs-${selectedFloor}`;
+    if (!force && bsFetchedRef.current === key) return;
+    bsFetchedRef.current = key;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/accounting/balance-sheet?floorNumber=${selectedFloor}`, {
@@ -105,6 +123,45 @@ export default function TallyAccounting() {
       setLoading(false);
     }
   }, [token, selectedFloor]);
+
+  // Load students list once for Student-Wise Ledger dropdown
+  useEffect(() => {
+    if (!token) return;
+    let isMounted = true;
+    const fetchStudents = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/students`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (isMounted && Array.isArray(data)) {
+          setStudents(data);
+          if (data.length > 0) setSelectedStudentId(data[0].id);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    fetchStudents();
+    return () => { isMounted = false; };
+  }, [token]);
+
+  // Fetch Student Ledger when student selected
+  const fetchStudentLedger = useCallback(async (stId) => {
+    if (!stId || !token) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/accounting/student-ledger/${stId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setStudentLedger(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
   // Fetch Account Heads (ONCE)
   useEffect(() => {
@@ -130,7 +187,8 @@ export default function TallyAccounting() {
     else if (activeTab === 'trial') fetchTrial();
     else if (activeTab === 'pnl') fetchPnl();
     else if (activeTab === 'bs') fetchBs();
-  }, [activeTab, selectedFloor, fetchDaybook, fetchTrial, fetchPnl, fetchBs]);
+    else if (activeTab === 'student' && selectedStudentId) fetchStudentLedger(selectedStudentId);
+  }, [activeTab, selectedFloor, selectedStudentId, fetchDaybook, fetchTrial, fetchPnl, fetchBs, fetchStudentLedger]);
 
   const handlePostVoucher = async (e) => {
     e.preventDefault();
@@ -155,10 +213,34 @@ export default function TallyAccounting() {
         creditHeadCode: 'REV-HOSTEL',
         companyName: ''
       });
-      fetchDaybook();
+      fetchDaybook(true);
     } catch (err) {
       setPostMsg({ type: 'error', text: err.message });
     }
+  };
+
+  // Export CSV Helper
+  const exportCsv = (filename, rows) => {
+    if (!rows || rows.length === 0) return;
+    const processRow = (row) =>
+      row.map(val => {
+        let result = val === null || val === undefined ? '' : String(val);
+        result = result.replace(/"/g, '""');
+        return `"${result}"`;
+      }).join(',');
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(processRow).join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handlePrint = () => {
+    window.print();
   };
 
   const firmNameMap = {
@@ -171,55 +253,75 @@ export default function TallyAccounting() {
   };
 
   return (
-    <div className="animate-fade-in flex flex-col gap-6 text-left">
-      {/* Light Executive Header */}
-      <div className="rounded-[24px] bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white p-6 shadow-lg border border-emerald-600/30 relative overflow-hidden">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center text-white font-black text-2xl shadow-inner">
-                📖
-              </div>
-              <div>
-                <h1 className="text-2xl font-black tracking-tight text-white">Tally ERP Financial Accounting Ledger</h1>
-                <p className="text-xs text-emerald-100 font-medium mt-0.5">Double-Entry General Ledger, Day Book, Trial Balance, P&L Statement & Balance Sheet</p>
-              </div>
+    <div className="animate-fade-in flex flex-col gap-6 text-left print:p-0">
+      {/* Clean Executive Light Header */}
+      <div className="rounded-[24px] bg-white border border-slate-200/90 p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-black text-2xl shadow-xs">
+              📖
             </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Firm Scope Switcher */}
-            <div className="flex items-center gap-2 bg-white/15 border border-white/25 backdrop-blur-md px-3.5 py-2 rounded-2xl">
-              <span className="text-xs font-semibold text-emerald-100">Firm Scope:</span>
-              {isFloorWarden ? (
-                <span className="text-xs font-extrabold text-white">{firmNameMap[selectedFloor]}</span>
-              ) : (
-                <select
-                  value={selectedFloor}
-                  onChange={(e) => setSelectedFloor(e.target.value)}
-                  className="bg-transparent text-xs font-black text-white outline-none cursor-pointer"
-                >
-                  <option value="combined" className="text-slate-900">Consolidated (All 5 Firms)</option>
-                  <option value="1" className="text-slate-900">Floor 1 – Rajken Enterprises</option>
-                  <option value="2" className="text-slate-900">Floor 2 – Vandana Enterprises</option>
-                  <option value="3" className="text-slate-900">Floor 3 – Pushpa Enterprises</option>
-                  <option value="4" className="text-slate-900">Floor 4 – Harish Chandra Ent.</option>
-                  <option value="5" className="text-slate-900">Floor 5 – Ramesh Enterprises</option>
-                </select>
-              )}
-            </div>
-
-            <div className="bg-white/20 border border-white/30 text-white text-xs font-extrabold px-3.5 py-2 rounded-2xl">
-              F.Y. 2026-2027
+            <div>
+              <h1 className="text-2xl font-black text-slate-800 tracking-tight">Tally ERP Financial Accounting Engine</h1>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">ICAI Schedule III Standard Compliant Ledger, Trial Balance, P&L & Balance Sheet</p>
             </div>
           </div>
         </div>
+
+        <div className="flex flex-wrap items-center gap-3 print:hidden">
+          {/* Firm Scope Switcher */}
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-2xl">
+            <span className="text-xs font-semibold text-slate-500">Firm Scope:</span>
+            {isFloorWarden ? (
+              <span className="text-xs font-black text-slate-800">{firmNameMap[selectedFloor]}</span>
+            ) : (
+              <select
+                value={selectedFloor}
+                onChange={(e) => setSelectedFloor(e.target.value)}
+                className="bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer"
+              >
+                <option value="combined">Consolidated (All 5 Firms)</option>
+                <option value="1">Floor 1 – Rajken Enterprises</option>
+                <option value="2">Floor 2 – Vandana Enterprises</option>
+                <option value="3">Floor 3 – Pushpa Enterprises</option>
+                <option value="4">Floor 4 – Harish Chandra Ent.</option>
+                <option value="5">Floor 5 – Ramesh Enterprises</option>
+              </select>
+            )}
+          </div>
+
+          {/* Action Export Buttons */}
+          <button onClick={handlePrint} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs hover:bg-slate-200 transition-colors cursor-pointer">
+            <Printer size={14} /> Print
+          </button>
+          <button
+            onClick={() => {
+              if (activeTab === 'daybook') {
+                const csvData = [
+                  ['Voucher No', 'Date', 'Type', 'Operating Firm', 'Narration', 'Amount'],
+                  ...daybook.map(v => [v.voucherNo, new Date(v.date).toLocaleDateString(), v.voucherType, v.companyName || 'Consolidated', v.narration, v.amount])
+                ];
+                exportCsv(`Tally_DayBook_${selectedFloor}.csv`, csvData);
+              } else if (activeTab === 'student' && studentLedger) {
+                const csvData = [
+                  ['Date', 'Voucher No', 'Particulars', 'Debit (Dr)', 'Credit (Cr)', 'Running Balance'],
+                  ...studentLedger.ledger.map(l => [new Date(l.date).toLocaleDateString(), l.voucherNo, l.particulars, l.debit, l.credit, l.runningBalance])
+                ];
+                exportCsv(`Student_Ledger_${studentLedger.student.name}.csv`, csvData);
+              }
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 text-white font-extrabold text-xs hover:bg-emerald-700 shadow-sm border-none cursor-pointer transition-colors"
+          >
+            <FileSpreadsheet size={14} /> Export CSV / Excel
+          </button>
+        </div>
       </div>
 
-      {/* Light Style Tab Navigation */}
-      <div className="flex flex-wrap gap-2 border-b border-slate-200/80 pb-3">
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3 print:hidden">
         {[
           { id: 'daybook', label: '📖 Day Book (दैनिक बही)', icon: <BookOpen size={16} /> },
+          { id: 'student', label: '👤 Student-Wise Ledger (छात्र बही)', icon: <User size={16} /> },
           { id: 'trial', label: '⚖️ Trial Balance (तुलन पत्र)', icon: <Scale size={16} /> },
           { id: 'pnl', label: '📈 Profit & Loss (लाभ-हानि)', icon: <TrendingUp size={16} /> },
           { id: 'bs', label: '🏦 Balance Sheet (बैलेंस शीट)', icon: <Landmark size={16} /> },
@@ -230,7 +332,7 @@ export default function TallyAccounting() {
             onClick={() => setActiveTab(t.id)}
             className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all border ${
               activeTab === t.id
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md scale-[1.02]'
+                ? 'bg-slate-900 text-emerald-400 border-slate-900 shadow-md'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -242,10 +344,10 @@ export default function TallyAccounting() {
 
       {/* ── DAY BOOK TAB ── */}
       {activeTab === 'daybook' && (
-        <div className="glass-card p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col gap-4">
+        <div className="glass-card p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-extrabold text-slate-800">Transaction Vouchers Register (Day Book)</h3>
-            <button onClick={fetchDaybook} className="text-xs text-slate-500 font-semibold flex items-center gap-1 hover:text-emerald-700 cursor-pointer">
+            <button onClick={() => fetchDaybook(true)} className="text-xs text-slate-500 font-semibold flex items-center gap-1 hover:text-emerald-700 cursor-pointer">
               <RefreshCw size={14} /> Refresh
             </button>
           </div>
@@ -274,7 +376,7 @@ export default function TallyAccounting() {
                       <td className="p-3.5 font-mono font-bold text-slate-800">{v.voucherNo}</td>
                       <td className="p-3.5 text-slate-500">{new Date(v.date).toLocaleDateString('en-IN')}</td>
                       <td className="p-3.5">
-                        <span className={`px-2.5 py-1 rounded-md font-extrabold text-[10px] ${
+                        <span className={`px-2 py-0.5 rounded-md font-extrabold text-[10px] ${
                           v.voucherType === 'RECEIPT' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'
                         }`}>
                           {v.voucherType}
@@ -293,9 +395,78 @@ export default function TallyAccounting() {
         </div>
       )}
 
+      {/* ── STUDENT-WISE LEDGER TAB ── */}
+      {activeTab === 'student' && (
+        <div className="glass-card p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col gap-5">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <h3 className="text-base font-extrabold text-slate-800">Student General Ledger (छात्र खाता बही)</h3>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">Select Resident Student:</span>
+              <select
+                value={selectedStudentId}
+                onChange={(e) => setSelectedStudentId(e.target.value)}
+                className="p-2 rounded-xl border border-slate-200 text-xs font-bold bg-slate-50 text-slate-800 outline-none"
+              >
+                {students.map(s => (
+                  <option key={s.id} value={s.id}>{s.user?.name} ({s.rollNumber}) - Room {s.room?.roomNumber || 'N/A'}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {studentLedger && (
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-wrap justify-between items-center gap-4">
+              <div>
+                <div className="text-base font-black text-slate-800">{studentLedger.student.name}</div>
+                <div className="text-xs text-slate-500">Roll: {studentLedger.student.rollNumber} · Room {studentLedger.student.roomNumber} (Bed: {studentLedger.student.bedId})</div>
+              </div>
+              <div className="text-right">
+                <span className="text-xs text-slate-400 block font-semibold">Net Outstanding Balance:</span>
+                <span className={`text-xl font-black ${studentLedger.closingBalance > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  {fmtInr(studentLedger.closingBalance)} {studentLedger.closingBalance > 0 ? 'Dr (Due)' : 'Cleared'}
+                </span>
+              </div>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="py-12 text-center"><div className="spinner mx-auto" /></div>
+          ) : !studentLedger || studentLedger.ledger.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-sm font-medium">No ledger entries found for selected student.</div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <table className="w-full text-xs text-left">
+                <thead className="bg-slate-100 text-slate-700 font-extrabold uppercase tracking-wide border-b border-slate-200">
+                  <tr>
+                    <th className="p-3.5">Date</th>
+                    <th className="p-3.5">Voucher / Demand Ref</th>
+                    <th className="p-3.5">Particulars / Transaction Description</th>
+                    <th className="p-3.5 text-right">Debit (Dr) Charges</th>
+                    <th className="p-3.5 text-right">Credit (Cr) Received</th>
+                    <th className="p-3.5 text-right">Running Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {studentLedger.ledger.map((l, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/80">
+                      <td className="p-3.5 text-slate-500">{new Date(l.date).toLocaleDateString('en-IN')}</td>
+                      <td className="p-3.5 font-mono font-bold text-slate-800">{l.voucherNo}</td>
+                      <td className="p-3.5 text-slate-800 font-semibold">{l.particulars}</td>
+                      <td className="p-3.5 text-right font-bold text-rose-600">{l.debit > 0 ? fmtInr(l.debit) : '-'}</td>
+                      <td className="p-3.5 text-right font-bold text-emerald-600">{l.credit > 0 ? fmtInr(l.credit) : '-'}</td>
+                      <td className="p-3.5 text-right font-black text-slate-900">{fmtInr(l.runningBalance)} Dr</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── TRIAL BALANCE TAB ── */}
       {activeTab === 'trial' && trial && (
-        <div className="glass-card p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col gap-4">
+        <div className="glass-card p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col gap-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-extrabold text-slate-800">Trial Balance Ledger Summary</h3>
             <span className={`text-xs font-extrabold px-3.5 py-1 rounded-full ${trial.isBalanced ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'}`}>
@@ -338,54 +509,54 @@ export default function TallyAccounting() {
         </div>
       )}
 
-      {/* ── PROFIT & LOSS TAB ── */}
+      {/* ── PROFIT & LOSS TAB (ICAI Standard AS-2) ── */}
       {activeTab === 'pnl' && pnl && (
-        <div className="glass-card p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col gap-6">
-          <h3 className="text-base font-extrabold text-slate-800">Profit & Loss Statement</h3>
+        <div className="glass-card p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col gap-6">
+          <h3 className="text-base font-extrabold text-slate-800">ICAI Compliant Profit & Loss Statement (AS-2 Standard)</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-5 rounded-2xl bg-emerald-50/70 border border-emerald-200">
-              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Total Revenue Income</span>
+              <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">I. Revenue from Operations</span>
               <div className="text-2xl font-black text-emerald-900 mt-1">{fmtInr(pnl.totalIncome)}</div>
             </div>
             <div className="p-5 rounded-2xl bg-rose-50/70 border border-rose-200">
-              <span className="text-xs font-bold text-rose-700 uppercase tracking-wider">Total Operating Expenses</span>
+              <span className="text-xs font-bold text-rose-700 uppercase tracking-wider">II. Operating & Admin Expenses</span>
               <div className="text-2xl font-black text-rose-900 mt-1">{fmtInr(pnl.totalExpenses)}</div>
             </div>
             <div className="p-5 rounded-2xl bg-slate-900 text-white border border-slate-800">
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Net Operating Surplus / Profit</span>
+              <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Net Surplus / Profit Before Tax</span>
               <div className="text-2xl font-black text-emerald-300 mt-1">{fmtInr(pnl.netProfit)}</div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── BALANCE SHEET TAB ── */}
+      {/* ── BALANCE SHEET TAB (ICAI Schedule III Standard) ── */}
       {activeTab === 'bs' && bs && (
-        <div className="glass-card p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col gap-6">
-          <h3 className="text-base font-extrabold text-slate-800">Balance Sheet Statement</h3>
+        <div className="glass-card p-6 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex flex-col gap-6">
+          <h3 className="text-base font-extrabold text-slate-800">ICAI Schedule III Balance Sheet Statement</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Liabilities */}
             <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 flex flex-col gap-3">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 pb-2">Capital & Liabilities</h4>
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 pb-2">I. EQUITY AND LIABILITIES</h4>
               <div className="flex justify-between text-xs font-semibold py-1">
-                <span>Capital & Surplus Reserves</span>
+                <span>1. Capital & Reserves / Surplus</span>
                 <span className="font-extrabold text-slate-900">{fmtInr(bs.capitalAndReserves)}</span>
               </div>
               <div className="flex justify-between text-xs font-semibold py-1">
-                <span>Student Refundable Deposits</span>
+                <span>2. Non-Current Liabilities (Refundable Deposits)</span>
                 <span className="font-extrabold text-slate-900">{fmtInr(bs.totalLiabilities)}</span>
               </div>
               <div className="border-t border-slate-300 pt-2 flex justify-between font-black text-slate-900 text-sm">
-                <span>TOTAL LIABILITIES</span>
+                <span>TOTAL EQUITY & LIABILITIES</span>
                 <span>{fmtInr(bs.totalAssets)}</span>
               </div>
             </div>
 
             {/* Assets */}
             <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/60 flex flex-col gap-3">
-              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 pb-2">Assets & Cash Balances</h4>
+              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 pb-2">II. ASSETS</h4>
               <div className="flex justify-between text-xs font-semibold py-1">
-                <span>Current Bank & Cash Assets</span>
+                <span>1. Current Assets (Cash & Bank Balances)</span>
                 <span className="font-extrabold text-slate-900">{fmtInr(bs.totalAssets)}</span>
               </div>
               <div className="border-t border-slate-300 pt-2 flex justify-between font-black text-slate-900 text-sm">
@@ -399,7 +570,7 @@ export default function TallyAccounting() {
 
       {/* ── POST VOUCHER TAB ── */}
       {activeTab === 'voucher' && (
-        <div className="glass-card p-6 max-w-2xl bg-white border border-slate-200/80 rounded-2xl shadow-sm">
+        <div className="glass-card p-6 max-w-2xl bg-white border border-slate-200/90 rounded-2xl shadow-sm">
           <h3 className="text-base font-extrabold text-slate-800 mb-4">Post Tally Accounting Voucher</h3>
 
           {postMsg && (

@@ -113,7 +113,7 @@ const getTrialBalance = async (req, res) => {
   }
 };
 
-// @desc    Get Profit & Loss Statement
+// @desc    Get ICAI Format Profit & Loss Statement
 // @route   GET /api/v1/accounting/profit-loss
 // @access  Private (Admin/Warden)
 const getProfitLoss = async (req, res) => {
@@ -141,11 +141,11 @@ const getProfitLoss = async (req, res) => {
       if (group === 'INCOME') {
         const amt = e.type === 'CREDIT' ? e.amount : -e.amount;
         totalIncome += amt;
-        incomeHeads[code] = (incomeHeads[code] || 0) + amt;
+        incomeHeads[e.accountHead.name] = (incomeHeads[e.accountHead.name] || 0) + amt;
       } else if (group === 'EXPENSE') {
         const amt = e.type === 'DEBIT' ? e.amount : -e.amount;
         totalExpenses += amt;
-        expenseHeads[code] = (expenseHeads[code] || 0) + amt;
+        expenseHeads[e.accountHead.name] = (expenseHeads[e.accountHead.name] || 0) + amt;
       }
     });
 
@@ -164,7 +164,7 @@ const getProfitLoss = async (req, res) => {
   }
 };
 
-// @desc    Get Balance Sheet
+// @desc    Get ICAI Schedule III Balance Sheet
 // @route   GET /api/v1/accounting/balance-sheet
 // @access  Private (Admin/Warden)
 const getBalanceSheet = async (req, res) => {
@@ -187,16 +187,16 @@ const getBalanceSheet = async (req, res) => {
 
     entries.forEach(e => {
       const group = e.accountHead.group;
-      const code = e.accountHead.code;
+      const name = e.accountHead.name;
 
       if (group === 'ASSET') {
         const amt = e.type === 'DEBIT' ? e.amount : -e.amount;
         totalAssets += amt;
-        assetBreakdown[code] = (assetBreakdown[code] || 0) + amt;
+        assetBreakdown[name] = (assetBreakdown[name] || 0) + amt;
       } else if (group === 'LIABILITY') {
         const amt = e.type === 'CREDIT' ? e.amount : -e.amount;
         totalLiabilities += amt;
-        liabilityBreakdown[code] = (liabilityBreakdown[code] || 0) + amt;
+        liabilityBreakdown[name] = (liabilityBreakdown[name] || 0) + amt;
       }
     });
 
@@ -210,6 +210,72 @@ const getBalanceSheet = async (req, res) => {
   } catch (error) {
     console.error('Error generating Balance Sheet:', error);
     res.status(500).json({ message: 'Failed to generate Balance Sheet' });
+  }
+};
+
+// @desc    Get Student-Wise ICAI General Ledger
+// @route   GET /api/v1/accounting/student-ledger/:studentId
+// @access  Private (Admin/Warden)
+const getStudentLedger = async (req, res) => {
+  const { studentId } = req.params;
+  try {
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+      include: { user: true, room: true, demandNotes: true }
+    });
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    const entries = [];
+
+    // Demand notes as Debit (Dr) entries
+    student.demandNotes.forEach(dn => {
+      entries.push({
+        date: dn.createdAt,
+        voucherNo: `DN-${dn.billingMonth}`,
+        particulars: `Monthly Demand Note (${dn.billingMonth}) - Hostel & Mess`,
+        debit: dn.totalAmount,
+        credit: 0,
+        type: 'DEMAND_NOTE'
+      });
+
+      if (dn.status === 'PAID' && dn.paidAt) {
+        entries.push({
+          date: dn.paidAt,
+          voucherNo: `REC-${dn.billingMonth}`,
+          particulars: `Fee Receipt (Bank / Cash) - Billing ${dn.billingMonth}`,
+          debit: 0,
+          credit: dn.totalAmount,
+          type: 'RECEIPT'
+        });
+      }
+    });
+
+    entries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    let runningBalance = 0;
+    const ledgerWithBalance = entries.map(e => {
+      runningBalance += (e.debit - e.credit);
+      return { ...e, runningBalance };
+    });
+
+    res.json({
+      student: {
+        id: student.id,
+        name: student.user.name,
+        email: student.user.email,
+        rollNumber: student.rollNumber,
+        roomNumber: student.room?.roomNumber || 'N/A',
+        bedId: student.bedId || 'N/A'
+      },
+      ledger: ledgerWithBalance,
+      closingBalance: runningBalance
+    });
+  } catch (error) {
+    console.error('Error fetching student ledger:', error);
+    res.status(500).json({ message: 'Failed to fetch student ledger' });
   }
 };
 
@@ -267,5 +333,6 @@ module.exports = {
   getTrialBalance,
   getProfitLoss,
   getBalanceSheet,
+  getStudentLedger,
   createVoucher
 };

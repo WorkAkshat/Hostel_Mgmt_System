@@ -7,6 +7,7 @@ const {
   getTrialBalance,
   getProfitLoss,
   getBalanceSheet,
+  getStudentLedger,
   createVoucher
 } = require('../controllers/accountingController');
 
@@ -19,6 +20,7 @@ router.get('/daybook', getDayBook);
 router.get('/trial-balance', getTrialBalance);
 router.get('/profit-loss', getProfitLoss);
 router.get('/balance-sheet', getBalanceSheet);
+router.get('/student-ledger/:studentId', getStudentLedger);
 router.post('/vouchers', createVoucher);
 
 module.exports = router;
