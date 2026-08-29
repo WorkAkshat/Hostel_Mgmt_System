@@ -195,30 +195,35 @@ export default function FloorDirectory() {
   const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
   const [reportLoading, setReportLoading] = useState(false);
 
-  const headers = { Authorization: `Bearer ${token}` };
-
-  // Load all floors on mount
-  const loadFloors = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/floors`, { headers });
-      const data = await res.json();
-      setFloors(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { loadFloors(); }, [loadFloors]);
+  // Load all floors ONCE on mount
+  useEffect(() => {
+    let isMounted = true;
+    const fetchFloors = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/floors`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (isMounted) setFloors(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchFloors();
+    return () => { isMounted = false; };
+  }, [token]);
 
   // Load floor detail (students)
   const loadFloorDetail = useCallback(async (floorNumber) => {
     setDetailLoading(true);
     setFloorDetail(null);
     try {
-      const res = await fetch(`${API_BASE}/floors/${floorNumber}/students`, { headers });
+      const res = await fetch(`${API_BASE}/floors/${floorNumber}/students`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const data = await res.json();
       setFloorDetail(data);
     } catch (e) {
@@ -226,7 +231,7 @@ export default function FloorDirectory() {
     } finally {
       setDetailLoading(false);
     }
-  }, []);
+  }, [token]);
 
   // Load report for selected floor
   const loadReport = useCallback(async (floorNumber) => {
@@ -236,7 +241,9 @@ export default function FloorDirectory() {
       const endpoint = floorNumber === 'combined'
         ? `${API_BASE}/floors/consolidated/report?month=${reportMonth}`
         : `${API_BASE}/floors/${floorNumber}/report?month=${reportMonth}`;
-      const res = await fetch(endpoint, { headers });
+      const res = await fetch(endpoint, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       const data = await res.json();
       setReport(data);
     } catch (e) {
@@ -244,7 +251,7 @@ export default function FloorDirectory() {
     } finally {
       setReportLoading(false);
     }
-  }, [reportMonth]);
+  }, [token, reportMonth]);
 
   const handleSelectFloor = (floor) => {
     setSelected(floor);
@@ -263,7 +270,7 @@ export default function FloorDirectory() {
       const fn = selectedFloor === 'combined' ? 'combined' : selectedFloor.floorNumber;
       loadReport(fn);
     }
-  }, [activeTab, reportMonth, selectedFloor]);
+  }, [activeTab, reportMonth, selectedFloor, loadReport]);
 
   const getTheme = (floor) => {
     if (floor === 'combined') return COMBINED_THEME;
