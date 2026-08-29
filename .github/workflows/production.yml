@@ -40,7 +40,7 @@ jobs:
             # Update source code
             # ------------------------------------------
 
-            echo "📥 Fetching latest prod branch..."
+            echo "📥 Fetching latest prod branch...."
 
             cd "$APP_DIR"
 
