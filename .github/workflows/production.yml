@@ -101,7 +101,7 @@ jobs:
             rm -rf "$APP_DIR/html/"*
             cp -a "$APP_DIR/frontend/dist/." "$APP_DIR/html/"
 
-            echo "✅ Frontend deployed"
+            echo "✅ Frontend deployedd"
 
             # ------------------------------------------
             # Nginx
