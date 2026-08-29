@@ -24,10 +24,16 @@ const loginUser = async (req, res) => {
     return res.status(400).json({ message: 'Please provide email and password' });
   }
 
+  // Normalize domain variations & common typos (e.g. haripushappg.com -> haripushppg.com)
+  const rawEmail = email.trim().toLowerCase();
+  const normalizedEmail = rawEmail
+    .replace('@haripushappg.com', '@haripushppg.com')
+    .replace('@haripushphostel.in', '@haripushppg.com');
+
   try {
-    // 1. Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // 1. Find user by email (try normalized first, fallback to raw)
+    let user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
       include: {
         student: {
           include: {
@@ -37,6 +43,20 @@ const loginUser = async (req, res) => {
         staff: true
       }
     });
+
+    if (!user && rawEmail !== normalizedEmail) {
+      user = await prisma.user.findUnique({
+        where: { email: rawEmail },
+        include: {
+          student: {
+            include: {
+              room: true
+            }
+          },
+          staff: true
+        }
+      });
+    }
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
