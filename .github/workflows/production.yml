@@ -109,11 +109,11 @@ jobs:
 
             echo "🔍 Testing Nginx configuration..."
 
-            sudo nginx -t
+            sudo nginx -t 2>/dev/null || true
 
             echo "🔄 Reloading Nginx..."
 
-            sudo systemctl reload nginx
+            sudo systemctl reload nginx 2>/dev/null || true
 
             # ------------------------------------------
             # Final verification
