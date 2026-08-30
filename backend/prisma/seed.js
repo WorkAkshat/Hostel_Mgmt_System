@@ -439,6 +439,16 @@ async function main() {
     { code: 'ASSET-CASH',        name: 'Cash in Hand',                       group: 'ASSET',     category: 'CURRENT' },
     { code: 'LIAB-SECURITY',     name: 'Student Refundable Security Deposit',group: 'LIABILITY', category: 'CURRENT' },
     { code: 'LIAB-VENDOR-PAYABLE', name: 'Sundry Creditors / Vendor Payables', group: 'LIABILITY', category: 'CURRENT' },
+    // Daily Expense Heads
+    { code: 'EXP-CLEANING',       name: 'Cleaning Supplies & Housekeeping',   group: 'EXPENSE',   category: 'DIRECT' },
+    { code: 'EXP-PETTY-CASH',     name: 'Petty Cash / Miscellaneous',         group: 'EXPENSE',   category: 'INDIRECT' },
+    { code: 'EXP-WATER',          name: 'Water Supply & Tanker Charges',      group: 'EXPENSE',   category: 'DIRECT' },
+    { code: 'EXP-TRANSPORT',      name: 'Transport & Travel Expenses',        group: 'EXPENSE',   category: 'INDIRECT' },
+    { code: 'EXP-STATIONERY',     name: 'Stationery & Office Supplies',       group: 'EXPENSE',   category: 'INDIRECT' },
+    { code: 'EXP-INTERNET',       name: 'Internet / WiFi & Telecom',          group: 'EXPENSE',   category: 'INDIRECT' },
+    { code: 'EXP-PEST-CONTROL',   name: 'Pest Control & Fumigation',          group: 'EXPENSE',   category: 'DIRECT' },
+    { code: 'EXP-KITCHEN',        name: 'Kitchen & Pantry Supplies',          group: 'EXPENSE',   category: 'DIRECT' },
+    { code: 'EXP-OTHERS',         name: 'Other / General Expenses',           group: 'EXPENSE',   category: 'INDIRECT' },
   ];
 
   const headsMap = {};
@@ -446,7 +456,7 @@ async function main() {
     const head = await prisma.accountHead.create({ data: hd });
     headsMap[hd.code] = head;
   }
-  console.log('✓ Created 11 Tally Account Heads.');
+  console.log('✓ Created 19 Tally Account Heads.');
 
   // Initial Vouchers across Floor Firms
   const sampleVouchers = [

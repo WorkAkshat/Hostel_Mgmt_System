@@ -17,6 +17,7 @@ const Fees = () => {
 
   // Modals state
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [payingNote, setPayingNote] = useState(null);
   const [printNote, setPrintNote] = useState(null);

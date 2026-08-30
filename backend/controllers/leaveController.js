@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const { sendPushNotification } = require('../services/pushService');
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
 
 // @desc    Apply for a leave / gate pass (Student only)
 // @route   POST /api/leaves
@@ -34,8 +35,9 @@ const createLeaveRequest = async (req, res) => {
     });
 
     res.status(201).json(leaveRequest);
+
+    logActivity({ req, action: 'CREATE', module: 'LEAVE', description: `Applied for ${type || 'NIGHT_OUT'} leave: ${reason}`, targetId: leaveRequest.id, targetType: 'LeaveRequest' });
   } catch (error) {
-    console.error('Error creating leave request:', error);
     res.status(500).json({ message: 'Server error applying for leave' });
   }
 };
@@ -175,8 +177,9 @@ const updateLeaveRequestStatus = async (req, res) => {
     }
 
     res.json(updatedLeave);
+
+    logActivity({ req, action: status === 'APPROVED' ? 'APPROVE' : 'REJECT', module: 'LEAVE', description: `${status === 'APPROVED' ? 'Approved' : 'Rejected'} leave request (${leave.type})${comments ? ' — ' + comments : ''}`, targetId: id, targetType: 'LeaveRequest' });
   } catch (error) {
-    console.error('Error updating leave status:', error);
     res.status(500).json({ message: 'Server error updating status' });
   }
 };
@@ -219,8 +222,9 @@ const logCheckout = async (req, res) => {
     });
 
     res.json(updatedLeave);
+
+    logActivity({ req, action: 'CHECKOUT', module: 'LEAVE', description: `Student checked out (Gate exit) for leave ${leave.type}`, targetId: id, targetType: 'LeaveRequest' });
   } catch (error) {
-    console.error('Error logging checkout:', error);
     res.status(500).json({ message: 'Server error during gate check-out' });
   }
 };
@@ -262,8 +266,9 @@ const logCheckin = async (req, res) => {
     });
 
     res.json(updatedLeave);
+
+    logActivity({ req, action: 'CHECKIN', module: 'LEAVE', description: `Student returned (Gate check-in) from leave`, targetId: id, targetType: 'LeaveRequest' });
   } catch (error) {
-    console.error('Error logging checkin:', error);
     res.status(500).json({ message: 'Server error during gate check-in' });
   }
 };

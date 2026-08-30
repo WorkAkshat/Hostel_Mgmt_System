@@ -314,3 +314,17 @@ model VoucherEntry {
   amount        Float
 }
 
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String?          // Who performed the action (null = system)
+  userName    String?          // Denormalized for fast reads
+  userRole    String?          // "ADMIN", "STUDENT", "STAFF"
+  action      String           // "LOGIN", "LOGOUT", "CREATE", "UPDATE", "DELETE", "APPROVE", "REJECT", etc.
+  module      String           // "AUTH", "LEAVE", "COMPLAINT", "FEE", "ROOM", "VISITOR", "MESS", "ACCOUNTING", etc.
+  description String           // Human-readable: "Approved leave request for Sneha Patel"
+  targetId    String?          // ID of the affected record
+  targetType  String?          // "Student", "LeaveRequest", "Complaint", "Voucher", etc.
+  metadata    String?          // JSON string for extra details
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+}

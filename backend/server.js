@@ -26,6 +26,7 @@ const electricityRoutes = require('./routes/electricityRoutes');
 const demandNoteRoutes = require('./routes/demandNoteRoutes');
 const suggestionRoutes = require('./routes/suggestionRoutes');
 const nightAttendanceRoutes = require('./routes/nightAttendanceRoutes');
+const activityLogRoutes = require('./routes/activityLogRoutes');
 
 const app = express();
 
@@ -57,7 +58,7 @@ app.use(logger);
 // Rate Limiting Config
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Limit each IP to 100 requests per 15 minutes
+  max: 10000, // Limit each IP to 100 requests per 15 minutes
   message: { message: 'Too many requests from this IP, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -65,7 +66,7 @@ const globalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 15, // Limit each IP to 15 authentication attempts per 15 minutes
+  max: 1000, // Limit each IP to 15 authentication attempts per 15 minutes
   message: { message: 'Too many auth attempts from this IP, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -112,6 +113,8 @@ app.use('/api/v1/suggestions', suggestionRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/v1/attendance/night', nightAttendanceRoutes);
 app.use('/api/attendance/night', nightAttendanceRoutes);
+app.use('/api/v1/activity-logs', activityLogRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
 
 // Health Check Endpoint
 app.get('/api/v1/health', (req, res) => {

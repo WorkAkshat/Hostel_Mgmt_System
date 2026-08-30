@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
 
 // Helper to determine floor filter based on user role & query
 const resolveFloorFilter = (req) => {
@@ -14,7 +15,6 @@ const resolveFloorFilter = (req) => {
 
 // @desc    Get Account Heads List
 // @route   GET /api/v1/accounting/heads
-// @access  Private (Admin/Warden)
 const getAccountHeads = async (req, res) => {
   try {
     const heads = await prisma.accountHead.findMany({
@@ -27,9 +27,8 @@ const getAccountHeads = async (req, res) => {
   }
 };
 
-// @desc    Get Day Book Vouchers
+// @desc    Get Day Book (Voucher Register)
 // @route   GET /api/v1/accounting/daybook
-// @access  Private (Admin/Warden)
 const getDayBook = async (req, res) => {
   try {
     const floorNum = resolveFloorFilter(req);
@@ -45,10 +44,33 @@ const getDayBook = async (req, res) => {
           include: { accountHead: true }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { date: 'desc' }
     });
 
-    res.json(vouchers);
+    // Transform to proper Day Book format with separate Dr/Cr entries
+    const dayBookRows = [];
+    vouchers.forEach(v => {
+      const drEntries = v.entries.filter(e => e.type === 'DEBIT');
+      const crEntries = v.entries.filter(e => e.type === 'CREDIT');
+
+      drEntries.forEach(dr => {
+        const cr = crEntries[0]; // Paired credit entry
+        dayBookRows.push({
+          id: v.id,
+          voucherNo: v.voucherNo,
+          date: v.date,
+          voucherType: v.voucherType,
+          companyName: v.companyName,
+          narration: v.narration,
+          debitHead: dr.accountHead.name,
+          debitAmount: dr.amount,
+          creditHead: cr ? cr.accountHead.name : '',
+          creditAmount: cr ? cr.amount : 0
+        });
+      });
+    });
+
+    res.json(dayBookRows);
   } catch (error) {
     console.error('Error fetching Day Book:', error);
     res.status(500).json({ message: 'Failed to fetch Day Book vouchers' });
@@ -57,7 +79,6 @@ const getDayBook = async (req, res) => {
 
 // @desc    Get Trial Balance
 // @route   GET /api/v1/accounting/trial-balance
-// @access  Private (Admin/Warden)
 const getTrialBalance = async (req, res) => {
   try {
     const floorNum = resolveFloorFilter(req);
@@ -68,41 +89,46 @@ const getTrialBalance = async (req, res) => {
 
     const entries = await prisma.voucherEntry.findMany({
       where,
-      include: {
-        accountHead: true,
-        voucher: true
-      }
+      include: { accountHead: true }
     });
 
     // Group by account head
-    const ledgerSummary = {};
+    const ledgerMap = {};
     entries.forEach(e => {
       const code = e.accountHead.code;
-      if (!ledgerSummary[code]) {
-        ledgerSummary[code] = {
-          code: e.accountHead.code,
+      if (!ledgerMap[code]) {
+        ledgerMap[code] = {
+          code,
           name: e.accountHead.name,
           group: e.accountHead.group,
           category: e.accountHead.category,
           debit: 0,
           credit: 0,
-          netBalance: 0
         };
       }
       if (e.type === 'DEBIT') {
-        ledgerSummary[code].debit += e.amount;
+        ledgerMap[code].debit += e.amount;
       } else {
-        ledgerSummary[code].credit += e.amount;
+        ledgerMap[code].credit += e.amount;
       }
-      ledgerSummary[code].netBalance = ledgerSummary[code].debit - ledgerSummary[code].credit;
     });
 
-    const trialBalanceList = Object.values(ledgerSummary);
-    const totalDebit = trialBalanceList.reduce((acc, curr) => acc + curr.debit, 0);
-    const totalCredit = trialBalanceList.reduce((acc, curr) => acc + curr.credit, 0);
+    // Per ICAI: Trial Balance shows closing balance per head
+    // Assets & Expenses have debit balances, Liabilities & Income have credit balances
+    const summary = Object.values(ledgerMap).map(h => {
+      const net = h.debit - h.credit;
+      return {
+        ...h,
+        closingDebit: net > 0 ? net : 0,
+        closingCredit: net < 0 ? Math.abs(net) : 0,
+      };
+    });
+
+    const totalDebit = summary.reduce((a, c) => a + c.closingDebit, 0);
+    const totalCredit = summary.reduce((a, c) => a + c.closingCredit, 0);
 
     res.json({
-      summary: trialBalanceList,
+      summary,
       totalDebit,
       totalCredit,
       isBalanced: Math.abs(totalDebit - totalCredit) < 0.01
@@ -113,9 +139,8 @@ const getTrialBalance = async (req, res) => {
   }
 };
 
-// @desc    Get ICAI Format Profit & Loss Statement
+// @desc    ICAI Profit & Loss Account (Income & Expenditure Statement)
 // @route   GET /api/v1/accounting/profit-loss
-// @access  Private (Admin/Warden)
 const getProfitLoss = async (req, res) => {
   try {
     const floorNum = resolveFloorFilter(req);
@@ -126,37 +151,35 @@ const getProfitLoss = async (req, res) => {
 
     const entries = await prisma.voucherEntry.findMany({
       where,
-      include: { accountHead: true, voucher: true }
+      include: { accountHead: true }
     });
 
-    let totalIncome = 0;
-    let totalExpenses = 0;
     const incomeHeads = {};
     const expenseHeads = {};
 
     entries.forEach(e => {
-      const group = e.accountHead.group;
-      const code = e.accountHead.code;
-
+      const { group, name } = e.accountHead;
       if (group === 'INCOME') {
+        // Income is a credit-nature account. Credit increases, Debit decreases.
         const amt = e.type === 'CREDIT' ? e.amount : -e.amount;
-        totalIncome += amt;
-        incomeHeads[e.accountHead.name] = (incomeHeads[e.accountHead.name] || 0) + amt;
+        incomeHeads[name] = (incomeHeads[name] || 0) + amt;
       } else if (group === 'EXPENSE') {
+        // Expense is a debit-nature account. Debit increases, Credit decreases.
         const amt = e.type === 'DEBIT' ? e.amount : -e.amount;
-        totalExpenses += amt;
-        expenseHeads[e.accountHead.name] = (expenseHeads[e.accountHead.name] || 0) + amt;
+        expenseHeads[name] = (expenseHeads[name] || 0) + amt;
       }
     });
 
+    const totalIncome = Object.values(incomeHeads).reduce((a, c) => a + c, 0);
+    const totalExpenses = Object.values(expenseHeads).reduce((a, c) => a + c, 0);
     const netProfit = totalIncome - totalExpenses;
 
     res.json({
+      incomeBreakdown: Object.entries(incomeHeads).map(([name, amount]) => ({ name, amount })),
+      expenseBreakdown: Object.entries(expenseHeads).map(([name, amount]) => ({ name, amount })),
       totalIncome,
       totalExpenses,
-      netProfit,
-      incomeBreakdown: incomeHeads,
-      expenseBreakdown: expenseHeads
+      netProfit
     });
   } catch (error) {
     console.error('Error calculating Profit & Loss:', error);
@@ -164,9 +187,8 @@ const getProfitLoss = async (req, res) => {
   }
 };
 
-// @desc    Get ICAI Schedule III Balance Sheet
+// @desc    ICAI Schedule III Balance Sheet
 // @route   GET /api/v1/accounting/balance-sheet
-// @access  Private (Admin/Warden)
 const getBalanceSheet = async (req, res) => {
   try {
     const floorNum = resolveFloorFilter(req);
@@ -177,35 +199,42 @@ const getBalanceSheet = async (req, res) => {
 
     const entries = await prisma.voucherEntry.findMany({
       where,
-      include: { accountHead: true, voucher: true }
+      include: { accountHead: true }
     });
 
-    let totalAssets = 0;
-    let totalLiabilities = 0;
-    const assetBreakdown = {};
-    const liabilityBreakdown = {};
+    const assetHeads = {};
+    const liabilityHeads = {};
+    let totalIncome = 0;
+    let totalExpenses = 0;
 
     entries.forEach(e => {
-      const group = e.accountHead.group;
-      const name = e.accountHead.name;
-
+      const { group, name } = e.accountHead;
       if (group === 'ASSET') {
         const amt = e.type === 'DEBIT' ? e.amount : -e.amount;
-        totalAssets += amt;
-        assetBreakdown[name] = (assetBreakdown[name] || 0) + amt;
+        assetHeads[name] = (assetHeads[name] || 0) + amt;
       } else if (group === 'LIABILITY') {
         const amt = e.type === 'CREDIT' ? e.amount : -e.amount;
-        totalLiabilities += amt;
-        liabilityBreakdown[name] = (liabilityBreakdown[name] || 0) + amt;
+        liabilityHeads[name] = (liabilityHeads[name] || 0) + amt;
+      } else if (group === 'INCOME') {
+        totalIncome += e.type === 'CREDIT' ? e.amount : -e.amount;
+      } else if (group === 'EXPENSE') {
+        totalExpenses += e.type === 'DEBIT' ? e.amount : -e.amount;
       }
     });
 
+    const netProfit = totalIncome - totalExpenses;
+    const totalAssets = Object.values(assetHeads).reduce((a, c) => a + c, 0);
+    const totalLiabilities = Object.values(liabilityHeads).reduce((a, c) => a + c, 0);
+
+    // Balance Sheet equation: Assets = Liabilities + Capital (Net Profit is part of Capital)
     res.json({
+      assetBreakdown: Object.entries(assetHeads).map(([name, amount]) => ({ name, amount })),
+      liabilityBreakdown: Object.entries(liabilityHeads).map(([name, amount]) => ({ name, amount })),
       totalAssets,
       totalLiabilities,
-      assetBreakdown,
-      liabilityBreakdown,
-      capitalAndReserves: totalAssets - totalLiabilities
+      netProfit,
+      capitalAndReserves: netProfit,
+      totalEquityAndLiabilities: totalLiabilities + netProfit
     });
   } catch (error) {
     console.error('Error generating Balance Sheet:', error);
@@ -213,9 +242,8 @@ const getBalanceSheet = async (req, res) => {
   }
 };
 
-// @desc    Get Student-Wise ICAI General Ledger
+// @desc    Student-Wise General Ledger
 // @route   GET /api/v1/accounting/student-ledger/:studentId
-// @access  Private (Admin/Warden)
 const getStudentLedger = async (req, res) => {
   const { studentId } = req.params;
   try {
@@ -230,12 +258,12 @@ const getStudentLedger = async (req, res) => {
 
     const entries = [];
 
-    // Demand notes as Debit (Dr) entries
+    // Demand notes as Debit (Dr) entries — charge to student
     student.demandNotes.forEach(dn => {
       entries.push({
         date: dn.createdAt,
         voucherNo: `DN-${dn.billingMonth}`,
-        particulars: `Monthly Demand Note (${dn.billingMonth}) - Hostel & Mess`,
+        particulars: `Demand Note – ${dn.billingMonth} (Hostel ₹${dn.hostelFee || 0} + Elec ₹${dn.electricityAmount || 0} + Mess ₹${dn.messFee || 0})`,
         debit: dn.totalAmount,
         credit: 0,
         type: 'DEMAND_NOTE'
@@ -245,7 +273,7 @@ const getStudentLedger = async (req, res) => {
         entries.push({
           date: dn.paidAt,
           voucherNo: `REC-${dn.billingMonth}`,
-          particulars: `Fee Receipt (Bank / Cash) - Billing ${dn.billingMonth}`,
+          particulars: `Payment Received – ${dn.billingMonth}`,
           debit: 0,
           credit: dn.totalAmount,
           type: 'RECEIPT'
@@ -256,10 +284,21 @@ const getStudentLedger = async (req, res) => {
     entries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     let runningBalance = 0;
-    const ledgerWithBalance = entries.map(e => {
+    const ledger = entries.map(e => {
       runningBalance += (e.debit - e.credit);
       return { ...e, runningBalance };
     });
+
+    // Compute date range from entries
+    let periodFrom = null;
+    let periodTo = null;
+    if (entries.length > 0) {
+      periodFrom = new Date(entries[0].date);
+      periodTo = new Date(entries[entries.length - 1].date);
+    }
+
+    const totalDebit = entries.reduce((a, c) => a + c.debit, 0);
+    const totalCredit = entries.reduce((a, c) => a + c.credit, 0);
 
     res.json({
       student: {
@@ -270,8 +309,12 @@ const getStudentLedger = async (req, res) => {
         roomNumber: student.room?.roomNumber || 'N/A',
         bedId: student.bedId || 'N/A'
       },
-      ledger: ledgerWithBalance,
-      closingBalance: runningBalance
+      ledger,
+      totalDebit,
+      totalCredit,
+      closingBalance: runningBalance,
+      periodFrom,
+      periodTo
     });
   } catch (error) {
     console.error('Error fetching student ledger:', error);
@@ -279,14 +322,17 @@ const getStudentLedger = async (req, res) => {
   }
 };
 
-// @desc    Create Voucher Entry (Receipt / Payment / Journal)
+// @desc    Create Voucher Entry (Receipt / Payment / Journal / Contra)
 // @route   POST /api/v1/accounting/vouchers
-// @access  Private (Admin/Warden)
 const createVoucher = async (req, res) => {
   const { voucherType, date, floorNumber, companyName, narration, amount, debitHeadCode, creditHeadCode } = req.body;
 
   if (!voucherType || !narration || !amount || !debitHeadCode || !creditHeadCode) {
     return res.status(400).json({ message: 'Voucher type, narration, amount, debit head, and credit head are required' });
+  }
+
+  if (debitHeadCode === creditHeadCode) {
+    return res.status(400).json({ message: 'Debit and Credit account heads must be different' });
   }
 
   try {
@@ -298,7 +344,13 @@ const createVoucher = async (req, res) => {
     }
 
     const assignedFloor = req.user.assignedFloor || (floorNumber ? parseInt(floorNumber, 10) : null);
-    const voucherNo = `VCH-${Date.now().toString().slice(-6)}`;
+
+    // Generate proper voucher number: VCH-REC-2026-XXXXX
+    const prefix = voucherType === 'RECEIPT' ? 'REC' : voucherType === 'PAYMENT' ? 'PAY' : voucherType === 'CONTRA' ? 'CNT' : 'JRN';
+    const count = await prisma.voucher.count();
+    const voucherNo = `VCH-${prefix}-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+
+    const firmNames = { 1: 'Rajken Enterprises', 2: 'Vandana Enterprises', 3: 'Pushpa Enterprises', 4: 'Harish Chandra Enterprises', 5: 'Ramesh Enterprises' };
 
     const newVoucher = await prisma.voucher.create({
       data: {
@@ -306,7 +358,7 @@ const createVoucher = async (req, res) => {
         voucherType,
         date: date ? new Date(date) : new Date(),
         floorNumber: assignedFloor,
-        companyName: companyName || (assignedFloor ? `Floor ${assignedFloor} Firm` : 'Consolidated'),
+        companyName: companyName || (assignedFloor ? firmNames[assignedFloor] : 'Consolidated'),
         narration,
         amount: parseFloat(amount),
         createdBy: req.user.email
@@ -321,8 +373,9 @@ const createVoucher = async (req, res) => {
     });
 
     res.status(201).json(newVoucher);
+
+    logActivity({ req, action: 'CREATE', module: 'ACCOUNTING', description: `Posted ${voucherType} voucher ${newVoucher.voucherNo} — ₹${amount} — ${narration}`, targetId: newVoucher.id, targetType: 'Voucher' });
   } catch (error) {
-    console.error('Error creating voucher:', error);
     res.status(500).json({ message: 'Failed to create voucher' });
   }
 };

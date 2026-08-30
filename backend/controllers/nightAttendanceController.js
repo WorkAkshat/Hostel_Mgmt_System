@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
 
 // @desc    Submit floor night attendance round (bulk)
 // @route   POST /api/v1/attendance/night/bulk
@@ -54,6 +55,8 @@ const submitNightAttendance = async (req, res) => {
       floorNumber: fNum,
       count: savedRecords.length
     });
+
+    logActivity({ req, action: 'CREATE', module: 'ATTENDANCE', description: `Recorded night attendance for Floor ${fNum} on ${targetDate} (${savedRecords.length} students)`, metadata: { floorNumber: fNum, date: targetDate, count: savedRecords.length } });
   } catch (error) {
     console.error('Error recording night attendance:', error);
     res.status(500).json({ message: 'Server error saving night attendance round.' });

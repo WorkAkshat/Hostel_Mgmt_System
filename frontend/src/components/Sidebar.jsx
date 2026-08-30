@@ -19,7 +19,8 @@ import {
   PlusCircle,
   AlertCircle,
   ShieldCheck,
-  Building2
+  Building2,
+  Activity
 } from 'lucide-react';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
@@ -54,6 +55,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
           { path: '/admin/complaints', name: 'Complaints Logs', icon: <Wrench size={18} /> },
           { path: '/admin/visitors', name: 'Visitor Log', icon: <UserCheck size={18} /> },
           { path: '/admin/staff', name: 'Staff Roster', icon: <Contact size={18} /> },
+          { path: '/admin/activity-log', name: 'Activity Log 📋', icon: <Activity size={18} /> },
         ];
       case 'STUDENT':
         return [

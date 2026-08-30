@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
 
 // @desc    Get all rooms
 // @route   GET /api/rooms
@@ -130,6 +131,8 @@ const createRoom = async (req, res) => {
     });
 
     res.status(201).json(newRoom);
+
+    logActivity({ req, action: 'CREATE', module: 'ROOM', description: `Created room ${roomNumber} (Block ${block}, ${sharingType}-sharing)`, targetId: newRoom.id, targetType: 'Room' });
   } catch (error) {
     console.error('Error creating room:', error);
     res.status(500).json({ message: 'Server error creating room' });
@@ -175,6 +178,8 @@ const updateRoom = async (req, res) => {
     });
 
     res.json(updatedRoom);
+
+    logActivity({ req, action: 'UPDATE', module: 'ROOM', description: `Updated room ${room.roomNumber} (Status: ${updatedStatus})`, targetId: id, targetType: 'Room' });
   } catch (error) {
     console.error('Error updating room:', error);
     res.status(500).json({ message: 'Server error updating room' });
@@ -204,6 +209,8 @@ const deleteRoom = async (req, res) => {
 
     await prisma.room.delete({ where: { id } });
     res.json({ message: 'Room deleted successfully' });
+
+    logActivity({ req, action: 'DELETE', module: 'ROOM', description: `Deleted room ${room.roomNumber}`, targetId: id, targetType: 'Room' });
   } catch (error) {
     console.error('Error deleting room:', error);
     res.status(500).json({ message: 'Server error deleting room' });

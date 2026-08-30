@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
 
 // @desc    Submit a suggestion
 // @route   POST /api/v1/suggestions
@@ -32,6 +33,8 @@ const createSuggestion = async (req, res) => {
       message: 'Thank you for your feedback! Your suggestion has been submitted.',
       suggestion
     });
+
+    logActivity({ req, action: 'CREATE', module: 'SUGGESTION', description: `Submitted suggestion: ${content.substring(0, 80)}`, targetId: suggestion.id, targetType: 'Suggestion' });
   } catch (error) {
     console.error('Error creating suggestion:', error);
     res.status(500).json({ message: 'Server error submitting suggestion.' });
@@ -89,6 +92,8 @@ const updateStatus = async (req, res) => {
       message: `Suggestion marked as ${status}`,
       suggestion: updated
     });
+
+    logActivity({ req, action: 'UPDATE', module: 'SUGGESTION', description: `Marked suggestion as ${status}`, targetId: id, targetType: 'Suggestion' });
   } catch (error) {
     console.error('Error updating suggestion status:', error);
     res.status(500).json({ message: 'Server error updating suggestion.' });
