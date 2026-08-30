@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -195,9 +195,12 @@ export default function FloorDirectory() {
   const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
   const [reportLoading, setReportLoading] = useState(false);
 
+  const floorsFetchedRef = useRef(false);
+
   // Load all floors ONCE on mount
   useEffect(() => {
-    let isMounted = true;
+    if (!token || floorsFetchedRef.current) return;
+    floorsFetchedRef.current = true;
     const fetchFloors = async () => {
       setLoading(true);
       try {
@@ -205,15 +208,14 @@ export default function FloorDirectory() {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
-        if (isMounted) setFloors(Array.isArray(data) ? data : []);
+        setFloors(Array.isArray(data) ? data : []);
       } catch (e) {
         console.error(e);
       } finally {
-        if (isMounted) setLoading(false);
+        setLoading(false);
       }
     };
     fetchFloors();
-    return () => { isMounted = false; };
   }, [token]);
 
   // Load floor detail (students)

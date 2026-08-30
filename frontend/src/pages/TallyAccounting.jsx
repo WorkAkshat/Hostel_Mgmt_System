@@ -136,31 +136,39 @@ export default function TallyAccounting() {
     }
   }, [token, selectedFloor]);
 
-  // Load students list once for Student-Wise Ledger dropdown
+  // Single-execution refs for static metadata
+  const headsFetchedRef = useRef(false);
+  const studentsFetchedRef = useRef(false);
+  const lastFetchedStudentLedgerRef = useRef('');
+
+  // Load students list ONCE
   useEffect(() => {
-    if (!token) return;
-    let isMounted = true;
+    if (!token || studentsFetchedRef.current) return;
+    studentsFetchedRef.current = true;
     const fetchStudents = async () => {
       try {
         const res = await fetch(`${API_BASE}/students`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
-        if (isMounted && Array.isArray(data)) {
+        if (Array.isArray(data)) {
           setStudents(data);
-          if (data.length > 0) setSelectedStudentId(data[0].id);
+          if (data.length > 0) {
+            setSelectedStudentId(data[0].id);
+          }
         }
       } catch (e) {
         console.error(e);
       }
     };
     fetchStudents();
-    return () => { isMounted = false; };
   }, [token]);
 
   // Fetch Student Ledger when student selected
-  const fetchStudentLedger = useCallback(async (stId) => {
+  const fetchStudentLedger = useCallback(async (stId, force = false) => {
     if (!stId || !token) return;
+    if (!force && lastFetchedStudentLedgerRef.current === stId) return;
+    lastFetchedStudentLedgerRef.current = stId;
     setLoading(true);
     try {
       const res = await fetch(`${API_BASE}/accounting/student-ledger/${stId}`, {
@@ -175,23 +183,22 @@ export default function TallyAccounting() {
     }
   }, [token]);
 
-  // Fetch Account Heads (ONCE)
+  // Fetch Account Heads ONCE
   useEffect(() => {
-    if (!token) return;
-    let isMounted = true;
+    if (!token || headsFetchedRef.current) return;
+    headsFetchedRef.current = true;
     const fetchHeads = async () => {
       try {
         const res = await fetch(`${API_BASE}/accounting/heads`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await res.json();
-        if (isMounted) setHeads(Array.isArray(data) ? data : []);
+        setHeads(Array.isArray(data) ? data : []);
       } catch (e) {
         console.error(e);
       }
     };
     fetchHeads();
-    return () => { isMounted = false; };
   }, [token]);
 
   useEffect(() => {
