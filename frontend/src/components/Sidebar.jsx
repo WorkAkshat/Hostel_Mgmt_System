@@ -88,7 +88,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
           </div>
           {!isCollapsed && (
             <div className="flex flex-col transition-all duration-300 overflow-hidden">
-              <h2 className="text-[1.05rem] text-[var(--text-primary)] font-bold leading-none whitespace-nowrap">Hari Pushp PG</h2>
+              <h2 className="text-[1.05rem] text-[var(--text-primary)] font-bold leading-none whitespace-nowrap">Hari Pushp Tower</h2>
               <span className="text-[0.65rem] text-[var(--text-secondary)] mt-1 whitespace-nowrap">Girls Hostel</span>
             </div>
           )}

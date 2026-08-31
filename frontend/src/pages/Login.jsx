@@ -38,7 +38,7 @@ const Login = () => {
   const handleQuickLogin = async (roleEmail) => {
     setEmail(roleEmail);
     setPassword('password123');
-    
+
     // Auto-login
     setLocalError(null);
     setError(null);
@@ -64,8 +64,8 @@ const Login = () => {
       }}
     >
       {/* Decorative floating orbs */}
-      <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full" style={{background: 'radial-gradient(circle, rgba(37,99,235,0.07), transparent)', filter: 'blur(60px)'}} />
-      <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full" style={{background: 'radial-gradient(circle, rgba(139,92,246,0.07), transparent)', filter: 'blur(60px)'}} />
+      <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.07), transparent)', filter: 'blur(60px)' }} />
+      <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.07), transparent)', filter: 'blur(60px)' }} />
 
       <div className="relative z-10 w-full flex flex-col lg:flex-row items-center justify-center gap-12 px-6 max-w-[1100px] mx-auto">
 
@@ -73,11 +73,11 @@ const Login = () => {
         <div className="hidden lg:flex flex-col gap-8 flex-1 max-w-[420px]">
           {/* Logo */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-[18px] flex items-center justify-center shadow-lg" style={{background: 'linear-gradient(135deg, #2563eb, #4f46e5)'}}>
+            <div className="w-12 h-12 rounded-[18px] flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #2563eb, #4f46e5)' }}>
               <Home size={22} className="text-white" />
             </div>
             <div>
-              <h2 className="text-[17px] font-bold text-slate-800 tracking-tight leading-none">Hari Pushp PG</h2>
+              <h2 className="text-[17px] font-bold text-slate-800 tracking-tight leading-none">Hari Pushp Tower</h2>
               <p className="text-[12px] text-slate-500 font-medium mt-0.5">Girls Hostel Management</p>
             </div>
           </div>
@@ -86,7 +86,7 @@ const Login = () => {
           <div>
             <h1 className="text-[38px] font-bold text-slate-800 tracking-tight leading-tight">
               Manage your hostel<br />
-              <span style={{background: 'linear-gradient(135deg, #2563eb, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text'}}>like an enterprise.</span>
+              <span style={{ background: 'linear-gradient(135deg, #2563eb, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>like an enterprise.</span>
             </h1>
             <p className="text-[16px] text-slate-500 font-medium mt-4 leading-relaxed">
               A comprehensive platform for wardens, students, and staff — built for modern residential management.
@@ -101,7 +101,7 @@ const Login = () => {
               { icon: <Shield size={16} />, label: 'Visitor Security & Gate Pass Control', color: '#f59e0b' },
             ].map((f, i) => (
               <div key={i} className="flex items-center gap-3 p-3 bg-white/60 backdrop-blur-md border border-white/50 rounded-2xl shadow-sm">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white flex-shrink-0" style={{background: f.color}}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white flex-shrink-0" style={{ background: f.color }}>
                   {f.icon}
                 </div>
                 <span className="text-[13px] font-semibold text-slate-700">{f.label}</span>
@@ -114,10 +114,10 @@ const Login = () => {
         <div className="w-full max-w-[440px] flex flex-col gap-6">
           {/* Mobile Logo */}
           <div className="flex lg:hidden items-center gap-3 justify-center mb-2">
-            <div className="w-10 h-10 rounded-[14px] flex items-center justify-center shadow-md" style={{background: 'linear-gradient(135deg, #2563eb, #4f46e5)'}}>
+            <div className="w-10 h-10 rounded-[14px] flex items-center justify-center shadow-md" style={{ background: 'linear-gradient(135deg, #2563eb, #4f46e5)' }}>
               <Home size={18} className="text-white" />
             </div>
-            <h2 className="text-[18px] font-bold text-slate-800 tracking-tight">Hari Pushp PG</h2>
+            <h2 className="text-[18px] font-bold text-slate-800 tracking-tight">Hari Pushp Tower</h2>
           </div>
 
           {/* Card */}
@@ -158,7 +158,7 @@ const Login = () => {
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
                     className="w-full h-12 pl-11 pr-4 rounded-[14px] border border-slate-200 bg-white/80 text-slate-700 outline-none text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all font-medium"
-                    style={{boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'}}
+                    style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}
                   />
                 </div>
               </div>
@@ -174,7 +174,7 @@ const Login = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
                     className="w-full h-12 pl-11 pr-4 rounded-[14px] border border-slate-200 bg-white/80 text-slate-700 outline-none text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-50 transition-all font-medium"
-                    style={{boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'}}
+                    style={{ boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' }}
                   />
                 </div>
               </div>
@@ -221,11 +221,11 @@ const Login = () => {
                   onClick={() => handleQuickLogin(d.email)}
                   type="button"
                   className="flex flex-col items-center justify-center gap-1 py-3 rounded-[14px] border border-transparent cursor-pointer transition-all"
-                  style={{background: d.bg, border: `1px solid ${d.color}20`}}
+                  style={{ background: d.bg, border: `1px solid ${d.color}20` }}
                   onMouseEnter={e => (e.currentTarget.style.transform = 'translateY(-2px)')}
                   onMouseLeave={e => (e.currentTarget.style.transform = 'translateY(0)')}
                 >
-                  <span className="text-[13px] font-bold" style={{color: d.color}}>{d.label}</span>
+                  <span className="text-[13px] font-bold" style={{ color: d.color }}>{d.label}</span>
                   <span className="text-[11px] text-slate-500">{d.sublabel}</span>
                 </button>
               ))}
