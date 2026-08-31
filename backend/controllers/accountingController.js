@@ -13,10 +13,52 @@ const resolveFloorFilter = (req) => {
   return null;
 };
 
+const STANDARD_ACCOUNT_HEADS = [
+  { code: 'REV-HOSTEL',        name: 'Hostel Accommodation Income',        group: 'INCOME',    category: 'DIRECT' },
+  { code: 'REV-MESS',          name: 'Mess & Catering Income',             group: 'INCOME',    category: 'DIRECT' },
+  { code: 'REV-ELEC',          name: 'Electricity Charges Reimbursement',  group: 'INCOME',    category: 'DIRECT' },
+  { code: 'EXP-ELEC-UTIL',     name: 'Electricity Utility Bill (State)',   group: 'EXPENSE',   category: 'DIRECT' },
+  { code: 'EXP-MESS-PAYMENT',  name: 'Meenakshi Catering Payment',         group: 'EXPENSE',   category: 'DIRECT' },
+  { code: 'EXP-MAINT',         name: 'Hostel Repairs & Maintenance',       group: 'EXPENSE',   category: 'INDIRECT' },
+  { code: 'EXP-STAFF-SALARY',  name: 'Staff & Security Salaries',          group: 'EXPENSE',   category: 'INDIRECT' },
+  { code: 'ASSET-BANK',        name: 'HDFC Bank Account (Current)',        group: 'ASSET',     category: 'CURRENT' },
+  { code: 'ASSET-CASH',        name: 'Cash in Hand',                       group: 'ASSET',     category: 'CURRENT' },
+  { code: 'LIAB-SECURITY',     name: 'Student Refundable Security Deposit',group: 'LIABILITY', category: 'CURRENT' },
+  { code: 'LIAB-VENDOR-PAYABLE', name: 'Sundry Creditors / Vendor Payables', group: 'LIABILITY', category: 'CURRENT' },
+  // Daily Expense Heads
+  { code: 'EXP-CLEANING',       name: 'Cleaning Supplies & Housekeeping',   group: 'EXPENSE',   category: 'DIRECT' },
+  { code: 'EXP-PETTY-CASH',     name: 'Petty Cash / Miscellaneous',         group: 'EXPENSE',   category: 'INDIRECT' },
+  { code: 'EXP-WATER',          name: 'Water Supply & Tanker Charges',      group: 'EXPENSE',   category: 'DIRECT' },
+  { code: 'EXP-TRANSPORT',      name: 'Transport & Travel Expenses',        group: 'EXPENSE',   category: 'INDIRECT' },
+  { code: 'EXP-STATIONERY',     name: 'Stationery & Office Supplies',       group: 'EXPENSE',   category: 'INDIRECT' },
+  { code: 'EXP-INTERNET',       name: 'Internet / WiFi & Telecom',          group: 'EXPENSE',   category: 'INDIRECT' },
+  { code: 'EXP-PEST-CONTROL',   name: 'Pest Control & Fumigation',          group: 'EXPENSE',   category: 'DIRECT' },
+  { code: 'EXP-KITCHEN',        name: 'Kitchen & Pantry Supplies',          group: 'EXPENSE',   category: 'DIRECT' },
+  { code: 'EXP-OTHERS',         name: 'Other / General Expenses',           group: 'EXPENSE',   category: 'INDIRECT' },
+];
+
+let headsEnsured = false;
+const ensureAccountHeads = async () => {
+  if (headsEnsured) return;
+  try {
+    const existing = await prisma.accountHead.findMany({ select: { code: true } });
+    const existingCodes = new Set(existing.map(e => e.code));
+    for (const head of STANDARD_ACCOUNT_HEADS) {
+      if (!existingCodes.has(head.code)) {
+        await prisma.accountHead.create({ data: head });
+      }
+    }
+    headsEnsured = true;
+  } catch (err) {
+    console.error('[Accounting] Failed to ensure account heads:', err.message);
+  }
+};
+
 // @desc    Get Account Heads List
 // @route   GET /api/v1/accounting/heads
 const getAccountHeads = async (req, res) => {
   try {
+    await ensureAccountHeads();
     const heads = await prisma.accountHead.findMany({
       orderBy: { code: 'asc' }
     });
@@ -336,6 +378,7 @@ const createVoucher = async (req, res) => {
   }
 
   try {
+    await ensureAccountHeads();
     const drHead = await prisma.accountHead.findUnique({ where: { code: debitHeadCode } });
     const crHead = await prisma.accountHead.findUnique({ where: { code: creditHeadCode } });
 
