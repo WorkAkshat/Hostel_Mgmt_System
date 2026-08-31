@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
 
 // @desc    Log a new visitor check-in (Warden/Staff only)
 // @route   POST /api/visitors
@@ -44,8 +45,9 @@ const createVisitor = async (req, res) => {
     });
 
     res.status(201).json(visitor);
+
+    logActivity({ req, action: 'CREATE', module: 'VISITOR', description: `Visitor ${name} (${relationship}) checked in for student ${studentRollNumber}`, targetId: visitor.id, targetType: 'Visitor' });
   } catch (error) {
-    console.error('Error logging visitor:', error);
     res.status(500).json({ message: 'Server error logging visitor check-in' });
   }
 };
@@ -104,8 +106,9 @@ const logVisitorCheckout = async (req, res) => {
     });
 
     res.json(updatedVisitor);
+
+    logActivity({ req, action: 'CHECKOUT', module: 'VISITOR', description: `Visitor ${visitor.name} checked out`, targetId: id, targetType: 'Visitor' });
   } catch (error) {
-    console.error('Error checking out visitor:', error);
     res.status(500).json({ message: 'Server error logging visitor check-out' });
   }
 };

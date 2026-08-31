@@ -44,6 +44,7 @@ model Student {
   status         String         @default("CHECKED_IN") // "CHECKED_IN", "CHECKED_OUT", "SUSPENDED"
   roomId         String?
   room           Room?          @relation(fields: [roomId], references: [id])
+  bedId          String?        // Specific Bed ID e.g. "101-A", "104-Single"
   
   // Registration Personal Details
   dateOfJoining    DateTime?
@@ -87,6 +88,7 @@ model Room {
   isAc                Boolean              @default(false)
   status              String               @default("AVAILABLE") // "AVAILABLE", "OCCUPIED", "MAINTENANCE"
   assets              String               @default("[]") // JSON string of room assets
+  bedMapping          String               @default("[]") // JSON string of bed IDs e.g. ["101-A", "101-B", "101-C"]
   students            Student[]
   electricityReadings ElectricityReading[]
 }
@@ -275,4 +277,54 @@ model PollVote {
   createdAt DateTime @default(now())
 
   @@unique([pollId, userId])
+}
+
+// ─── Tally ERP Accounting Models ─────────────────────────────────────────────
+model AccountHead {
+  id        String         @id @default(uuid())
+  code      String         @unique // e.g. "REV-HOSTEL", "EXP-ELEC", "LIAB-SEC"
+  name      String         // e.g. "Hostel Rent Income", "Electricity Expense"
+  group     String         // "INCOME", "EXPENSE", "ASSET", "LIABILITY"
+  category  String?        // "DIRECT", "INDIRECT"
+  entries   VoucherEntry[]
+  createdAt DateTime       @default(now())
+}
+
+model Voucher {
+  id          String         @id @default(uuid())
+  voucherNo   String         @unique // e.g. "VCH-2026-0001"
+  voucherType String         // "RECEIPT", "PAYMENT", "JOURNAL"
+  date        DateTime
+  floorNumber Int?           // 1-5 or null (Consolidated)
+  companyName String?        // "Rajken Enterprises", "Vandana Enterprises", etc.
+  narration   String         // Description e.g. "August hostel fee receipt"
+  amount      Float
+  createdBy   String         // Warden / Admin email
+  createdAt   DateTime       @default(now())
+  entries     VoucherEntry[]
+}
+
+model VoucherEntry {
+  id            String      @id @default(uuid())
+  voucherId     String
+  voucher       Voucher     @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  accountHeadId String
+  accountHead   AccountHead @relation(fields: [accountHeadId], references: [id])
+  type          String      // "DEBIT" or "CREDIT"
+  amount        Float
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String?          // Who performed the action (null = system)
+  userName    String?          // Denormalized for fast reads
+  userRole    String?          // "ADMIN", "STUDENT", "STAFF"
+  action      String           // "LOGIN", "LOGOUT", "CREATE", "UPDATE", "DELETE", "APPROVE", "REJECT", etc.
+  module      String           // "AUTH", "LEAVE", "COMPLAINT", "FEE", "ROOM", "VISITOR", "MESS", "ACCOUNTING", etc.
+  description String           // Human-readable: "Approved leave request for Sneha Patel"
+  targetId    String?          // ID of the affected record
+  targetType  String?          // "Student", "LeaveRequest", "Complaint", "Voucher", etc.
+  metadata    String?          // JSON string for extra details
+  ipAddress   String?
+  createdAt   DateTime @default(now())
 }

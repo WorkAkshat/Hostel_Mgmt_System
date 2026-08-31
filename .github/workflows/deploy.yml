@@ -1,0 +1,56 @@
+name: Continuous Deployment (CD)
+
+on:
+  push:
+    branches: [ prod, main ]
+
+jobs:
+  deploy:
+    name: Auto-Deploy to Hostinger Production VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy via SSH to Hostinger VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+          password: ${{ secrets.VPS_PASSWORD || '' }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            echo "🚀 Starting Automated Production Deployment for Hari Pushp PG..."
+            
+            # Go to app directory
+            cd /var/www/hms.haripushphostel.in
+            
+            # Pull latest git commit from prod branch
+            git fetch origin
+            git checkout prod || git checkout main
+            git pull origin prod || git pull origin main
+            
+            # --- 1. Backend Deployment ---
+            echo "📦 Deploying Backend API..."
+            cd /var/www/hms.haripushphostel.in/backend
+            npm ci --production
+            npx prisma generate
+            npx prisma db push --skip-generate
+            pm2 reload /var/www/hms.haripushphostel.in/deploy/ecosystem.config.js --env production || pm2 start /var/www/hms.haripushphostel.in/deploy/ecosystem.config.js --env production
+            
+            # --- 2. Frontend Web App Deployment ---
+            echo "🌐 Building Frontend Web App..."
+            cd /var/www/hms.haripushphostel.in/frontend
+            npm ci
+            VITE_API_URL=https://hms-api.haripushphostel.in/api/v1 npm run build
+            
+            # Copy static build files to Nginx web root
+            mkdir -p /var/www/hms.haripushphostel.in/html
+            cp -r dist/* /var/www/hms.haripushphostel.in/html/
+            
+            # Reload Nginx
+            sudo systemctl reload nginx
+            
+            echo "✅ Automated CI/CD Deployment to Production Complete!"

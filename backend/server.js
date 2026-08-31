@@ -21,10 +21,12 @@ const staffRoutes = require('./routes/staffRoutes');
 const messRoutes = require('./routes/messRoutes');
 const pollRoutes = require('./routes/pollRoutes');
 const floorRoutes = require('./routes/floorRoutes');
+const accountingRoutes = require('./routes/accountingRoutes');
 const electricityRoutes = require('./routes/electricityRoutes');
 const demandNoteRoutes = require('./routes/demandNoteRoutes');
 const suggestionRoutes = require('./routes/suggestionRoutes');
 const nightAttendanceRoutes = require('./routes/nightAttendanceRoutes');
+const activityLogRoutes = require('./routes/activityLogRoutes');
 
 const app = express();
 
@@ -69,7 +71,7 @@ app.use(logger);
 // Rate Limiting Config
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per 15 minutes
+  max: 10000, // Limit each IP to 100 requests per 15 minutes
   message: { message: 'Too many requests from this IP, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -118,10 +120,14 @@ app.use('/api/v1/electricity', electricityRoutes);
 app.use('/api/electricity', electricityRoutes);
 app.use('/api/v1/demand-notes', demandNoteRoutes);
 app.use('/api/demand-notes', demandNoteRoutes);
+app.use('/api/v1/accounting', accountingRoutes);
+app.use('/api/accounting', accountingRoutes);
 app.use('/api/v1/suggestions', suggestionRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/v1/attendance/night', nightAttendanceRoutes);
 app.use('/api/attendance/night', nightAttendanceRoutes);
+app.use('/api/v1/activity-logs', activityLogRoutes);
+app.use('/api/activity-logs', activityLogRoutes);
 
 // Health Check Endpoint
 app.get('/api/v1/health', (req, res) => {
@@ -137,6 +143,7 @@ app.use((req, res, next) => {
     message: `We couldn't find the page or service you requested (${req.originalUrl}). Please verify the address and try again.`
   });
 });
+
 
 // Global Error Handler Middleware
 app.use((err, req, res, next) => {

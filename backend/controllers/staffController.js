@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const { logActivity } = require('../utils/activityLogger');
 
 const prisma = new PrismaClient();
 
@@ -72,6 +73,8 @@ const createStaff = async (req, res) => {
     });
 
     res.status(201).json(newStaff);
+
+    logActivity({ req, action: 'CREATE', module: 'STAFF', description: `Added staff ${name} (${department} - ${designation})`, targetId: newStaff.id, targetType: 'Staff' });
   } catch (error) {
     console.error('Error creating staff:', error);
     res.status(500).json({ message: 'Server error creating staff entry' });
@@ -99,6 +102,8 @@ const deleteStaff = async (req, res) => {
     });
 
     res.json({ message: 'Staff member deleted successfully' });
+
+    logActivity({ req, action: 'DELETE', module: 'STAFF', description: `Deleted staff member (${staff.department} - ${staff.designation})`, targetId: id, targetType: 'Staff' });
   } catch (error) {
     console.error('Error deleting staff:', error);
     res.status(500).json({ message: 'Server error deleting staff entry' });

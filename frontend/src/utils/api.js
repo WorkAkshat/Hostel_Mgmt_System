@@ -14,6 +14,7 @@ import * as electricity from './api/electricity';
 import * as suggestions from './api/suggestions';
 import * as nightAttendance from './api/nightAttendance';
 import * as floors from './api/floors';
+import * as activityLogs from './api/activityLogs';
 
 export default client;
 export {
@@ -32,5 +33,6 @@ export {
   electricity,
   suggestions,
   nightAttendance,
-  floors
+  floors,
+  activityLogs
 };

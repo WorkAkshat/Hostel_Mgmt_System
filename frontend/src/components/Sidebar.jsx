@@ -1,14 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Home, 
-  FileCheck, 
-  Wrench, 
-  UserCheck, 
-  Receipt, 
+import {
+  LayoutDashboard,
+  Users,
+  Home,
+  FileCheck,
+  Wrench,
+  UserCheck,
+  Receipt,
   Sparkles,
   Contact,
   LogOut,
@@ -19,7 +19,8 @@ import {
   PlusCircle,
   AlertCircle,
   ShieldCheck,
-  Building2
+  Building2,
+  Activity
 } from 'lucide-react';
 
 const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
@@ -37,14 +38,15 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
     switch (user.role) {
       case 'ADMIN':
         return [
-          { path: '/admin/dashboard', name: 'Dashboard',          icon: <LayoutDashboard size={18} /> },
-          { path: '/admin/floors',    name: 'Floor Directory 🏢',  icon: <Building2 size={18} /> },
-          { path: '/admin/reports',   name: 'Financial Reports 📊', icon: <FileCheck size={18} /> },
+          { path: '/admin/dashboard', name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
+          { path: '/admin/tally', name: 'Tally ERP Ledger 📖', icon: <Receipt size={18} /> },
+          { path: '/admin/floors', name: 'Floor Directory 🏢', icon: <Building2 size={18} /> },
+          { path: '/admin/reports', name: 'Financial Reports 📊', icon: <FileCheck size={18} /> },
           { path: '/admin/demand-notes', name: 'Demand Notes & Sub-meters 🧾', icon: <Receipt size={18} /> },
           { path: '/admin/cook-dashboard', name: 'Cook Dashboard 🍽️', icon: <Sparkles size={18} /> },
           { path: '/admin/suggestions', name: 'Suggestion Box 💬', icon: <Wrench size={18} /> },
           { path: '/admin/night-attendance', name: 'Night Attendance 🌙', icon: <ShieldCheck size={18} /> },
-          { path: '/admin/approvals', name: 'User Approvals',      icon: <ShieldCheck size={18} /> },
+          { path: '/admin/approvals', name: 'User Approvals', icon: <ShieldCheck size={18} /> },
           { path: '/admin/students', name: 'Students Directory', icon: <Users size={18} /> },
           { path: '/admin/rooms', name: 'Rooms & Assets', icon: <Home size={18} /> },
           { path: '/admin/leaves', name: 'Leave Approvals', icon: <FileCheck size={18} /> },
@@ -53,6 +55,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
           { path: '/admin/complaints', name: 'Complaints Logs', icon: <Wrench size={18} /> },
           { path: '/admin/visitors', name: 'Visitor Log', icon: <UserCheck size={18} /> },
           { path: '/admin/staff', name: 'Staff Roster', icon: <Contact size={18} /> },
+          { path: '/admin/activity-log', name: 'Activity Log 📋', icon: <Activity size={18} /> },
         ];
       case 'STUDENT':
         return [
@@ -90,7 +93,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
             </div>
           )}
         </div>
-        
+
       </div>
 
       {/* Navigation List */}
@@ -100,13 +103,11 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
             key={link.path}
             to={link.path}
             onClick={isMobileOpen ? onClose : undefined}
-            className={({ isActive }) => 
-              `flex items-center gap-3 px-3.5 py-3 rounded-[16px] font-medium text-[14px] transition-all duration-200 cursor-pointer group relative ${
-                isCollapsed ? 'justify-center px-0 mx-auto w-[48px]' : ''
-              } ${
-                isActive 
-                  ? 'bg-gradient-to-r from-[#2563eb] to-[#4f46e5] text-white shadow-[0_4px_14px_rgba(37,99,235,0.3)] border border-white/10' 
-                  : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 border border-transparent'
+            className={({ isActive }) =>
+              `flex items-center gap-3 px-3.5 py-3 rounded-[16px] font-medium text-[14px] transition-all duration-200 cursor-pointer group relative ${isCollapsed ? 'justify-center px-0 mx-auto w-[48px]' : ''
+              } ${isActive
+                ? 'bg-gradient-to-r from-[#2563eb] to-[#4f46e5] text-white shadow-[0_4px_14px_rgba(37,99,235,0.3)] border border-white/10'
+                : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 border border-transparent'
               }`
             }
             style={({ isActive }) => (isActive ? { color: '#ffffff' } : {})}
@@ -125,7 +126,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
           </NavLink>
         ))}
 
-      {/* Profile Card Summary */}
+        {/* Profile Card Summary */}
       </nav>
 
       <div className="mt-auto pt-4 px-2">
@@ -176,7 +177,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
   return (
     <>
       {/* Desktop Sidebar - fixed, always visible on lg+ */}
-      <aside 
+      <aside
         className="h-screen fixed left-0 top-0 z-40 lg:flex flex-col p-4 transition-all duration-300 ease-in-out hidden"
         style={{ width: isCollapsed ? '100px' : '280px' }}
       >
@@ -188,14 +189,14 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
       {/* Mobile Drawer Sidebar Overlay */}
       <AnimatePresence>
         {isMobileOpen && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 lg:hidden flex"
             onClick={onClose}
           >
-            <motion.div 
+            <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -204,7 +205,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Close button */}
-              <button 
+              <button
                 onClick={onClose}
                 className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 border-none flex items-center justify-center cursor-pointer text-slate-500"
               >

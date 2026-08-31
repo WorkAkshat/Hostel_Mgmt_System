@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
 const fs = require('fs');
 const path = require('path');
 const MENU_FILE_PATH = path.join(__dirname, '../mess_menu.json');
@@ -69,6 +70,8 @@ const biometricVerifyMess = async (req, res) => {
       timestamp: entry.timestamp,
       message: `Biometric Access Approved for ${selectedMeal} on ${dateStr}. Enjoy your meal!`
     });
+
+    logActivity({ req, userId: student.userId, userName: student.user.name, userRole: 'STUDENT', action: 'CHECKIN', module: 'MESS', description: `${student.user.name} checked in for ${selectedMeal} (${method || 'BIOMETRIC'})`, targetId: entry.id, targetType: 'MessAttendance' });
   } catch (error) {
     console.error('Mess biometric error:', error);
     res.status(500).json({ message: 'Server error registering dining check-in' });
@@ -191,6 +194,8 @@ const optOutMeal = async (req, res) => {
       message: `Successfully opted out of ${mealType} for ${targetDate}`,
       optOut
     });
+
+    logActivity({ req, action: 'OPT_OUT', module: 'MESS', description: `Opted out of ${mealType.toUpperCase()} on ${targetDate}`, targetId: optOut.id, targetType: 'MealOptOut' });
   } catch (error) {
     if (error.code === 'P2002') {
       return res.status(400).json({ message: 'You have already opted out of this meal for today.' });
@@ -212,6 +217,8 @@ const cancelOptOut = async (req, res) => {
     });
 
     res.json({ message: 'Meal opt-out cancelled successfully. Re-enrolled for meal.' });
+
+    logActivity({ req, action: 'CANCEL', module: 'MESS', description: `Cancelled meal opt-out (Re-enrolled)`, targetId: id, targetType: 'MealOptOut' });
   } catch (error) {
     console.error('Error cancelling meal opt-out:', error);
     res.status(500).json({ message: 'Server error cancelling meal opt-out' });
@@ -297,6 +304,8 @@ const updateMessMenu = async (req, res) => {
     }
     fs.writeFileSync(MENU_FILE_PATH, JSON.stringify(newMenu, null, 2));
     res.json({ message: 'Mess menu updated successfully', menu: newMenu });
+
+    logActivity({ req, action: 'UPDATE', module: 'MESS', description: `Updated weekly mess menu`, targetType: 'MessMenu' });
   } catch (error) {
     console.error('Error updating mess menu:', error);
     res.status(500).json({ message: 'Server error saving mess menu' });

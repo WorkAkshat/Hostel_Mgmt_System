@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const { logActivity } = require('../utils/activityLogger');
 
 const prisma = new PrismaClient();
 
@@ -189,6 +190,8 @@ const createStudent = async (req, res) => {
     });
 
     res.status(201).json(newStudent);
+
+    logActivity({ req, action: 'CREATE', module: 'STUDENT', description: `Added student ${name} (${finalRoll})`, targetId: newStudent.id, targetType: 'Student' });
   } catch (error) {
     console.error('Error creating student:', error);
     res.status(500).json({ message: 'Server error creating student' });
@@ -314,6 +317,8 @@ const updateStudent = async (req, res) => {
     });
 
     res.json(updatedStudent);
+
+    logActivity({ req, action: 'UPDATE', module: 'STUDENT', description: `Updated student ${updatedStudent.user.name} (${updatedStudent.rollNumber})`, targetId: id, targetType: 'Student' });
   } catch (error) {
     console.error('Error updating student:', error);
     res.status(500).json({ message: error.message || 'Server error updating student' });
@@ -349,6 +354,8 @@ const deleteStudent = async (req, res) => {
     });
 
     res.json({ message: 'Student deleted successfully' });
+
+    logActivity({ req, action: 'DELETE', module: 'STUDENT', description: `Deleted student ${student.rollNumber}`, targetId: id, targetType: 'Student' });
   } catch (error) {
     console.error('Error deleting student:', error);
     res.status(500).json({ message: 'Server error deleting student' });

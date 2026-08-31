@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const { sendPushNotification } = require('../services/pushService');
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
 
 // @desc    Submit a complaint (Student only)
 // @route   POST /api/complaints
@@ -32,8 +33,9 @@ const createComplaint = async (req, res) => {
     });
 
     res.status(201).json(complaint);
+
+    logActivity({ req, action: 'CREATE', module: 'COMPLAINT', description: `Filed complaint: ${category} — ${description.substring(0, 80)}`, targetId: complaint.id, targetType: 'Complaint' });
   } catch (error) {
-    console.error('Error creating complaint:', error);
     res.status(500).json({ message: 'Server error filing complaint' });
   }
 };
@@ -140,8 +142,9 @@ const updateComplaint = async (req, res) => {
     }
 
     res.json(updatedComplaint);
+
+    logActivity({ req, action: 'UPDATE', module: 'COMPLAINT', description: `Updated complaint status to ${status} (${complaint.category})`, targetId: id, targetType: 'Complaint' });
   } catch (error) {
-    console.error('Error updating complaint:', error);
     res.status(500).json({ message: 'Server error updating ticket' });
   }
 };

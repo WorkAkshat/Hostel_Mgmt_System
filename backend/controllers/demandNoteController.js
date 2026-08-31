@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
 const { COMPANY_CONFIG, FEE_STRUCTURE, generateDemandNoteNumber, numberToWords } = require('../config/companyConfig');
 
 // @desc    Generate 10-to-10 Demand Notes for a billing month
@@ -120,9 +121,12 @@ const generateDemandNotes = async (req, res) => {
     }
 
     res.status(201).json({
-      message: `Successfully generated ${generated.length} Demand Notes for cycle ${billingMonth}`,
-      generated
+      message: `Generated ${generated.length} Demand Notes for ${billingMonth}`,
+      count: generated.length,
+      demandNotes: generated
     });
+
+    logActivity({ req, action: 'CREATE', module: 'FEE', description: `Generated ${generated.length} demand notes for ${billingMonth}`, metadata: { count: generated.length, billingMonth } });
   } catch (error) {
     console.error('Error generating demand notes:', error);
     res.status(500).json({ message: 'Server error generating demand notes' });
@@ -217,6 +221,8 @@ const markPaid = async (req, res) => {
       message: 'Demand note marked as PAID',
       demandNote: updated
     });
+
+    logActivity({ req, action: 'UPDATE', module: 'FEE', description: `Marked demand note (${updated.billingMonth}) as PAID (₹${updated.totalAmount})`, targetId: id, targetType: 'DemandNote' });
   } catch (error) {
     console.error('Error marking demand note paid:', error);
     res.status(500).json({ message: 'Server error updating demand note' });
@@ -254,6 +260,8 @@ const payOnline = async (req, res) => {
       paidAt: updated.paidAt,
       demandNote: updated
     });
+
+    logActivity({ req, action: 'PAYMENT', module: 'FEE', description: `Paid ₹${note.totalAmount} for ${note.billingMonth} via ${paymentMethod} (${txnRef})`, targetId: id, targetType: 'DemandNote' });
   } catch (error) {
     console.error('Error processing payment:', error);
     res.status(500).json({ message: 'Server error processing online payment' });

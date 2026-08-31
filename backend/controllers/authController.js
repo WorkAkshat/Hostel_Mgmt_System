@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
 
 // Generate JWT Token Helper
 const generateToken = (userId, email, role, name, assignedFloor = null) => {
@@ -25,10 +26,16 @@ const loginUser = async (req, res) => {
     return res.status(400).json({ message: 'Please provide email and password' });
   }
 
+  // Normalize domain variations & common typos (e.g. haripushappg.com -> haripushppg.com)
+  const rawEmail = email.trim().toLowerCase();
+  const normalizedEmail = rawEmail
+    .replace('@haripushappg.com', '@haripushppg.com')
+    .replace('@haripushphostel.in', '@haripushppg.com');
+
   try {
-    // 1. Find user by email
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // 1. Find user by email (try normalized first, fallback to raw)
+    let user = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
       include: {
         student: {
           include: {
@@ -38,6 +45,20 @@ const loginUser = async (req, res) => {
         staff: true
       }
     });
+
+    if (!user && rawEmail !== normalizedEmail) {
+      user = await prisma.user.findUnique({
+        where: { email: rawEmail },
+        include: {
+          student: {
+            include: {
+              room: true
+            }
+          },
+          staff: true
+        }
+      });
+    }
 
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password' });
@@ -95,8 +116,10 @@ const loginUser = async (req, res) => {
         } : null
       }
     });
+
+    // Log successful login
+    logActivity({ req, userId: user.id, userName: user.name, userRole: user.role, action: 'LOGIN', module: 'AUTH', description: `${user.name} (${user.role}) logged in`, targetId: user.id, targetType: 'User' });
   } catch (error) {
-    console.error('Login error:', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 };
@@ -271,8 +294,10 @@ const registerUser = async (req, res) => {
       message: 'Registration request submitted successfully. Waiting for admin approval.',
       userId: newUser.id
     });
+
+    // Log registration
+    logActivity({ req, userId: newUser.id, userName: name, userRole: pendingRole, action: 'REGISTER', module: 'AUTH', description: `${name} registered as ${role} (pending approval)`, targetId: newUser.id, targetType: 'User' });
   } catch (error) {
-    console.error('Registration error:', error);
     res.status(500).json({ message: 'Server error during registration.' });
   }
 };
@@ -505,6 +530,9 @@ const approveUser = async (req, res) => {
     });
 
     res.json({ message: `User approved successfully as ${finalRole}.` });
+
+    // Log approval
+    logActivity({ req, action: 'APPROVE', module: 'AUTH', description: `Approved ${user.name} (${user.email}) as ${finalRole}`, targetId: id, targetType: 'User' });
   } catch (error) {
     console.error('Approve user error:', error);
     res.status(500).json({ message: error.message || 'Server error approving user.' });
@@ -536,6 +564,9 @@ const rejectUser = async (req, res) => {
     });
 
     res.json({ message: 'Registration rejected and user deleted successfully.' });
+
+    // Log rejection
+    logActivity({ req, action: 'REJECT', module: 'AUTH', description: `Rejected registration of ${user.name} (${user.email})`, targetId: id, targetType: 'User' });
   } catch (error) {
     console.error('Reject user error:', error);
     res.status(500).json({ message: 'Server error rejecting user.' });
@@ -551,6 +582,7 @@ const logoutUser = async (req, res) => {
   // server-side token blacklisting (Redis / DB).
   try {
     console.log(`[Auth] User ${req.user?.email} logged out at ${new Date().toISOString()}`);
+    logActivity({ req, action: 'LOGOUT', module: 'AUTH', description: `${req.user?.name || req.user?.email} logged out` });
     res.json({ success: true, message: 'Logged out successfully. Please clear your client token.' });
   } catch (error) {
     console.error('Logout error:', error);
