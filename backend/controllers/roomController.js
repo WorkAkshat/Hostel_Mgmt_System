@@ -25,7 +25,7 @@ const getAllRooms = async (req, res) => {
           }
         }
       },
-      orderBy: { id: 'asc' }
+      orderBy: { roomNumber: 'asc' }
     };
 
     if (limit !== null) {
