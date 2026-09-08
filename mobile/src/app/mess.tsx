@@ -40,10 +40,10 @@ const DAYS = Object.keys(WEEKLY_MENU);
 const MEAL_TYPES = ['breakfast', 'lunch', 'snacks', 'dinner'];
 
 const MEAL_META: Record<string, { icon: any; color: string; time: string; label: string }> = {
-  breakfast: { icon: Sun,     color: '#F59E0B', time: '7:00–9:00 AM',    label: 'Breakfast' },
-  lunch:     { icon: Coffee,  color: '#10B981', time: '12:30–2:30 PM',   label: 'Lunch'     },
+  breakfast: { icon: Sun,     color: '#F59E0B', time: '7:30–9:00 AM',    label: 'Breakfast' },
+  lunch:     { icon: Coffee,  color: '#10B981', time: '12:30–2:00 PM',   label: 'Lunch'     },
   snacks:    { icon: Star,    color: '#3B82F6', time: '4:30–5:30 PM',    label: 'Snacks'    },
-  dinner:    { icon: Moon,    color: '#8B5CF6', time: '7:30–9:30 PM',    label: 'Dinner'    },
+  dinner:    { icon: Moon,    color: '#8B5CF6', time: '7:00–9:00 PM',    label: 'Dinner'    },
 };
 
 export default function MessScreen() {

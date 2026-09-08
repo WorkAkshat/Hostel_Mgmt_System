@@ -239,21 +239,37 @@ const ModulesView = ({ defaultTab = 'reports' }) => {
   return (
     <div className="p-4 max-w-7xl mx-auto">
       {/* Top Header */}
-      <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-black text-slate-800">Hari Pushp PG Operations & Modules</h1>
-          <p className="text-sm text-slate-500 font-medium">
-            Financial Reports · Demand Notes · Cook Dashboard · Suggestions · Night Roll Call
-          </p>
+      {user?.role === 'STUDENT' || activeTab === 'suggestions' ? (
+        <div className="mb-6 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-black text-slate-800">Student Suggestion Box</h1>
+            <p className="text-sm text-slate-500 font-medium">Share your feedback, ideas, or concerns directly with hostel management</p>
+          </div>
+          <button
+            onClick={fetchTabData}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition-all border border-indigo-100"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
         </div>
-        <button
-          onClick={fetchTabData}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition-all border border-indigo-100"
-        >
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-          <span>Refresh Data</span>
-        </button>
-      </div>
+      ) : (
+        <div className="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-black text-slate-800">Hari Pushp PG Operations & Modules</h1>
+            <p className="text-sm text-slate-500 font-medium">
+              Financial Reports · Demand Notes · Cook Dashboard · Suggestions · Night Roll Call
+            </p>
+          </div>
+          <button
+            onClick={fetchTabData}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition-all border border-indigo-100"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh Data</span>
+          </button>
+        </div>
+      )}
 
       {feedbackMsg !== '' && (
         <div className="mb-6 p-4 rounded-xl bg-indigo-600 text-white font-bold flex items-center justify-between shadow-lg animate-fade-in">
@@ -262,33 +278,35 @@ const ModulesView = ({ defaultTab = 'reports' }) => {
         </div>
       )}
 
-      {/* Tabs Bar */}
-      <div className="flex overflow-x-auto gap-2 mb-6 p-1.5 bg-slate-100 rounded-2xl custom-scrollbar">
-        {[
-          { id: 'reports', label: '📊 Financial Reports', icon: FileText },
-          { id: 'demand-notes', label: '🧾 Demand Notes & Sub-meters', icon: Zap },
-          { id: 'cook-dashboard', label: '🍽️ Cook Dashboard & Opt-Out', icon: Coffee },
-          { id: 'suggestions', label: '💬 Suggestion Box', icon: MessageSquare },
-          { id: 'night-attendance', label: 'Night Roll Call', icon: Moon },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-xs whitespace-nowrap transition-all ${
-                isActive
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md'
-                  : 'text-slate-600 hover:bg-white/60'
-              }`}
-            >
-              <Icon size={16} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* Tabs Bar - Only visible for Warden/Admin users */}
+      {user?.role !== 'STUDENT' && (
+        <div className="flex overflow-x-auto gap-2 mb-6 p-1.5 bg-slate-100 rounded-2xl custom-scrollbar">
+          {[
+            { id: 'reports', label: '📊 Financial Reports', icon: FileText },
+            { id: 'demand-notes', label: '🧾 Demand Notes & Sub-meters', icon: Zap },
+            { id: 'cook-dashboard', label: '🍽️ Cook Dashboard & Opt-Out', icon: Coffee },
+            { id: 'suggestions', label: '💬 Suggestion Box', icon: MessageSquare },
+            { id: 'night-attendance', label: 'Night Roll Call', icon: Moon },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 px-4 py-3 rounded-xl font-bold text-xs whitespace-nowrap transition-all ${
+                  isActive
+                    ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md'
+                    : 'text-slate-600 hover:bg-white/60'
+                }`}
+              >
+                <Icon size={16} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* TAB 1: FINANCIAL REPORTS */}
       {activeTab === 'reports' && (
@@ -301,7 +319,7 @@ const ModulesView = ({ defaultTab = 'reports' }) => {
               onChange={(e) => setReportFloor(e.target.value)}
               className="px-3 py-2 border border-slate-300 rounded-xl font-semibold text-slate-800 text-sm focus:outline-none focus:border-indigo-600"
             >
-              <option value="combined">🌐 Consolidated View (All 5 Floors + Meenakshi Catering)</option>
+              <option value="combined">🌐 Common Expenses View (All 5 Floors + Meenakshi Catering)</option>
               <option value="1">Floor 1 – Rajken Enterprises (Hari Pushp Girls Hostel)</option>
               <option value="2">Floor 2 – Vandana Enterprises (Vandana Girls Hostel)</option>
               <option value="3">Floor 3 – Pushpa Enterprises (Pushpa Girls Hostel)</option>

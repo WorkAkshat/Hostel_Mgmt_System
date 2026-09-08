@@ -10,7 +10,7 @@ const COMPANY_CONFIG = {
     address: 'Hari Pushp Tower, Plot No. 10, First Floor, Gayatri Nagar B, Maharani Farm, Durgapura, Jaipur, Rajasthan - 302018',
     san: '', // To be filled
     udyamRegNo: '', // To be filled
-    proprietorName: 'Kapil Sankhla',
+    proprietorName: 'Kapil Sankhala',
     notePrefix: 'RJK',
     fssai: null,
   },
@@ -22,7 +22,7 @@ const COMPANY_CONFIG = {
     address: 'Hari Pushp Tower, Plot No. 10, Second Floor, Gayatri Nagar B, Maharani Farm, Durgapura, Jaipur, Rajasthan - 302018',
     san: '', // To be filled
     udyamRegNo: 'UDYAM-RJ-17-0654053',
-    proprietorName: 'Vandana Sankhla',
+    proprietorName: 'Vandana Sankhala',
     notePrefix: 'VAN',
     fssai: null,
   },
@@ -34,7 +34,7 @@ const COMPANY_CONFIG = {
     address: 'Hari Pushp Tower, Plot No. 10, Third Floor, Gayatri Nagar B, Maharani Farm, Durgapura, Jaipur, Rajasthan - 302018',
     san: '8007170053000004',
     udyamRegNo: 'UDYAM-RJ-17-0654175',
-    proprietorName: 'Pushpa Sankhla',
+    proprietorName: 'Pushpa Sankhala',
     notePrefix: 'PSH',
     fssai: null,
   },
@@ -54,11 +54,11 @@ const COMPANY_CONFIG = {
     floorNumber: 5,
     companyName: 'Ramesh Enterprises',
     hostelName: 'Ramesh Girls Hostel',
-    floorLabel: 'Fifth & Sixth Floor',
-    address: 'Hari Pushp Tower, Plot No. 10, Fifth & Sixth Floor, Gayatri Nagar B, Maharani Farm, Durgapura, Jaipur, Rajasthan - 302018',
+    floorLabel: 'Fifth / Sixth Floor',
+    address: 'Hari Pushp Tower, Plot No. 10, Fifth / Sixth Floor, Gayatri Nagar B, Maharani Farm, Durgapura, Jaipur, Rajasthan - 302018',
     san: '', // To be filled
     udyamRegNo: '', // To be filled
-    proprietorName: 'Ramesh Sankhla',
+    proprietorName: 'Ramesh Sankhala',
     notePrefix: 'RME',
     fssai: null,
   },
@@ -80,9 +80,9 @@ const COMPANY_CONFIG = {
 // Fee structure
 const FEE_STRUCTURE = {
   hostel: {
-    1: 16000, // Single sharing
-    2: 14000, // Twin sharing
-    3: 12000, // Triple sharing
+    1: 13000, // Single sharing (Room fee: ₹13,000 + Catering ₹3,000 = Total ₹16,000)
+    2: 11000, // Twin sharing (Room fee: ₹11,000 + Catering ₹3,000 = Total ₹14,000)
+    3: 9000,  // Triple sharing (Room fee: ₹9,000 + Catering ₹3,000 = Total ₹12,000)
   },
   mess: 3000, // Meenakshi Enterprises monthly catering
   electricityRate: 12.0, // ₹ per unit

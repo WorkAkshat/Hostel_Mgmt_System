@@ -125,7 +125,7 @@ const Rooms = () => {
       {/* Floor selection and legend */}
       <div className="glass-card p-5 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          {['All', '1', '2', '3'].map((floor) => (
+          {['All', '1', '2', '3', '4', '5'].map((floor) => (
             <button
               key={floor}
               onClick={() => setSelectedFloor(floor)}
@@ -161,8 +161,8 @@ const Rooms = () => {
           {rooms
             .filter((room) => {
               if (selectedFloor === 'All') return true;
-              const firstDigit = room.roomNumber.replace(/\D/g, '').charAt(0);
-              return firstDigit === selectedFloor;
+              const fl = room.floorNumber ? String(room.floorNumber) : room.roomNumber.replace(/\D/g, '').charAt(0);
+              return fl === selectedFloor;
             })
             .map((room) => {
               const occupiedBeds = room.students?.length || 0;

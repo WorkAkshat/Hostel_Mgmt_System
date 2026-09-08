@@ -614,7 +614,7 @@ const Mess = () => {
                 <th>Breakfast (7:30 - 9:00 AM)</th>
                 <th>Lunch (12:30 - 2:00 PM)</th>
                 <th>Evening Snacks (4:30 - 5:30 PM)</th>
-                <th>Dinner (8:00 - 9:30 PM)</th>
+                <th>Dinner (7:00 - 9:00 PM)</th>
               </tr>
             </thead>
             <tbody>

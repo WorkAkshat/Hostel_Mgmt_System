@@ -51,7 +51,7 @@ export default function TallyAccounting() {
   const firmMap = {
     '1': 'Rajken Enterprises', '2': 'Vandana Enterprises',
     '3': 'Pushpa Enterprises', '4': 'Harish Chandra Enterprises',
-    '5': 'Ramesh Enterprises', 'combined': 'Hari Pushp PG (Consolidated)'
+    '5': 'Ramesh Enterprises', 'combined': 'Hari Pushp PG (Common Expenses)'
   };
 
   // --- Data Fetchers ---
@@ -237,7 +237,7 @@ export default function TallyAccounting() {
             ) : (
               <select value={selectedFloor} onChange={(e) => { setSelectedFloor(e.target.value); fetchedRef.current = {}; }}
                 className="bg-transparent text-[11px] font-black text-slate-800 outline-none cursor-pointer">
-                <option value="combined">Consolidated (All Firms)</option>
+                <option value="combined">Common Expenses (All Firms)</option>
                 {[1,2,3,4,5].map(n => <option key={n} value={String(n)}>Floor {n} – {firmMap[String(n)]}</option>)}
               </select>
             )}
