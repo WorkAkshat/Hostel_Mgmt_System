@@ -258,35 +258,35 @@ const Dashboard = () => {
           <div>
             <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h1 className="text-[28px] font-bold text-slate-800 tracking-tight leading-tight">Dashboard</h1>
-              <span className="bg-indigo-50 border border-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
+              <span className="bg-indigo-100 border border-indigo-200 text-indigo-800 px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-sm">
                 <span>{activeFloorConfig.icon}</span>
                 <span>{activeFloorConfig.name}</span>
               </span>
             </div>
-            <p className="text-[14px] text-slate-500 font-medium">
-              Active Workspace: <b>{activeFloorConfig.name}</b> ({activeFloorConfig.sub})
+            <p className="text-[14px] text-slate-600 font-medium">
+              Active Workspace: <b className="text-slate-800">{activeFloorConfig.name}</b> ({activeFloorConfig.sub})
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap">
             <button 
               onClick={() => navigate('/admin/tally')}
-              className="flex items-center gap-2 bg-slate-900 text-emerald-400 px-4 py-2.5 rounded-[12px] text-[13px] font-bold shadow-md hover:bg-slate-800 transition-all border-none cursor-pointer"
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-[12px] text-[13px] font-extrabold shadow-md transition-all border-none cursor-pointer"
             >
-              <BookOpen size={16} />
-              <span>📖 Tally ERP Ledger</span>
+              <BookOpen size={16} className="text-white" />
+              <span>Tally ERP Ledger 📖</span>
             </button>
 
             <button 
               onClick={() => setShowFloorModal(true)}
-              className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-[12px] text-[13px] font-bold shadow-md hover:bg-indigo-700 transition-all border-none cursor-pointer"
+              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-[12px] text-[13px] font-extrabold shadow-md transition-all border-none cursor-pointer"
             >
-              <Layers size={16} />
+              <Layers size={16} className="text-white" />
               <span>Choose Floor Workspace</span>
             </button>
 
-            <button className="flex items-center gap-2 bg-white border border-slate-200 px-4 py-2.5 rounded-[12px] text-[13px] font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
-              <CalendarDays size={16} className="text-slate-500" />
+            <button className="flex items-center gap-2 bg-white border border-slate-300 px-4 py-2.5 rounded-[12px] text-[13px] font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition-colors">
+              <CalendarDays size={16} className="text-indigo-600" />
               {new Date().toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
             </button>
           </div>
@@ -300,13 +300,13 @@ const Dashboard = () => {
                 <Building2 size={20} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-800">Select Floor & Company Workspace</h3>
-                <p className="text-xs text-slate-400 font-medium">Click any floor below to instantly load its specific dashboard, rooms, and financial reports</p>
+                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Select Floor & Company Workspace</h3>
+                <p className="text-xs text-slate-500 font-medium">Click any floor below to instantly load its specific dashboard, rooms, and financial reports</p>
               </div>
             </div>
             <button 
-              onClick={() => navigate('/admin/floors')}
-              className="flex items-center gap-1.5 text-indigo-600 hover:text-indigo-800 text-xs font-bold border-none bg-transparent cursor-pointer"
+              onClick={() => navigate('/admin/floors')} 
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-indigo-50 border border-indigo-100 px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
             >
               <span>Full Directory Page</span>
               <ArrowRight size={14} />
@@ -323,25 +323,25 @@ const Dashboard = () => {
                   className={`p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between min-h-[110px] relative overflow-hidden ${
                     isSelected
                       ? 'bg-indigo-600 text-white border-indigo-600 shadow-xl scale-[1.03]'
-                      : 'bg-white border-slate-100 hover:border-indigo-300 hover:shadow-lg hover:-translate-y-0.5'
+                      : 'bg-white border-slate-200 hover:border-indigo-400 hover:shadow-lg hover:-translate-y-0.5'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-2xl">{item.icon}</span>
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+                    <span className={`text-[10px] font-extrabold uppercase tracking-wider ${isSelected ? 'text-indigo-100' : 'text-slate-500'}`}>
                       {item.label}
                     </span>
                   </div>
                   <div className="mt-3">
-                    <p className={`text-xs font-extrabold leading-tight truncate ${isSelected ? 'text-white' : 'text-slate-800'}`}>
+                    <p className={`text-xs font-black leading-tight truncate ${isSelected ? 'text-white' : 'text-slate-800'}`}>
                       {item.name}
                     </p>
-                    <p className={`text-[10px] font-medium truncate mt-0.5 ${isSelected ? 'text-white/70' : 'text-slate-400'}`}>
+                    <p className={`text-[10px] font-semibold truncate mt-0.5 ${isSelected ? 'text-indigo-100' : 'text-slate-500'}`}>
                       {item.sub}
                     </p>
                   </div>
                   {isSelected && (
-                    <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-white animate-pulse" />
+                    <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-white animate-pulse" />
                   )}
                 </div>
               );

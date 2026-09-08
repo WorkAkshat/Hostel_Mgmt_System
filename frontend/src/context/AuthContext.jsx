@@ -4,7 +4,14 @@ import { auth as authApi } from '../utils/api';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -13,6 +20,8 @@ export const AuthProvider = ({ children }) => {
     const initializeAuth = async () => {
       const token = localStorage.getItem('token');
       if (!token) {
+        setUser(null);
+        localStorage.removeItem('user');
         setLoading(false);
         return;
       }
@@ -20,20 +29,25 @@ export const AuthProvider = ({ children }) => {
       try {
         const userData = await authApi.getMe();
         setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
         
         // Silently refresh token in background to extend session
         try {
           const refreshData = await authApi.refresh();
-          localStorage.setItem('token', refreshData.token);
-          console.log('[AuthContext] Token refreshed on app init');
+          if (refreshData?.token) {
+            localStorage.setItem('token', refreshData.token);
+          }
         } catch (refreshErr) {
           console.log('[AuthContext] Token refresh failed on init:', refreshErr.message);
-          // Continue with existing token if refresh fails
         }
       } catch (err) {
-        console.error('Failed to authenticate token:', err.message);
-        localStorage.removeItem('token');
-        setUser(null);
+        console.error('Failed to authenticate token on init:', err.message);
+        const errStr = String(err.message || err.status || '');
+        if (errStr.includes('401') || errStr.includes('403') || errStr.includes('Unauthorized') || errStr.includes('invalid')) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -49,6 +63,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const data = await authApi.login(email, password);
       localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
       setUser(data.user);
       return data.user;
     } catch (err) {
@@ -62,15 +77,14 @@ export const AuthProvider = ({ children }) => {
   // Logout handler
   const logout = async () => {
     try {
-      // Call backend logout endpoint for audit trail
       await authApi.logout().catch((err) => {
         console.warn('[AuthContext] Backend logout call failed:', err.message);
-        // Continue with client-side logout even if backend fails
       });
     } catch (err) {
       console.warn('[AuthContext] Logout error:', err.message);
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       setUser(null);
     }
   };
