@@ -164,6 +164,12 @@ const Rooms = () => {
               const fl = room.floorNumber ? String(room.floorNumber) : room.roomNumber.replace(/\D/g, '').charAt(0);
               return fl === selectedFloor;
             })
+            .sort((a, b) => {
+              const numA = parseInt(a.roomNumber.replace(/\D/g, ''), 10) || 0;
+              const numB = parseInt(b.roomNumber.replace(/\D/g, ''), 10) || 0;
+              if (numA !== numB) return numA - numB;
+              return a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true, sensitivity: 'base' });
+            })
             .map((room) => {
               const occupiedBeds = room.students?.length || 0;
               const capacity = room.sharingType;
@@ -186,17 +192,29 @@ const Rooms = () => {
                   className="glass-card p-5 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300 flex flex-col gap-4 relative group"
                 >
                   {/* Card Header */}
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 overflow-hidden">
                       <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shadow-sm shrink-0">
                         <Home size={16} />
                       </div>
-                      <div className="flex flex-col">
-                        <h4 className="text-sm font-extrabold text-slate-800 leading-tight">Room {room.roomNumber}</h4>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{room.block}</span>
+                      <div className="flex flex-col overflow-hidden">
+                        <h4 className="text-sm font-extrabold text-slate-800 leading-tight truncate">Room {room.roomNumber}</h4>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">{room.block}</span>
                       </div>
                     </div>
-                    <span className={`badge ${statusBadgeClass}`}>{statusText}</span>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className={`badge ${statusBadgeClass}`}>{statusText}</span>
+                      {user.role === 'ADMIN' && occupiedBeds === 0 && (
+                        <button 
+                          onClick={() => handleDeleteRoom(room.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-100 transition-all cursor-pointer shrink-0"
+                          title="Delete Room Record"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Occupancy Indicator */}
@@ -222,15 +240,6 @@ const Rooms = () => {
                     }`}>
                       {room.isAc ? 'AC Premium' : 'Non-AC Standard'}
                     </span>
-                    {user.role === 'ADMIN' && occupiedBeds === 0 && (
-                      <button 
-                        onClick={() => handleDeleteRoom(room.id)}
-                        className="opacity-0 group-hover:opacity-100 absolute top-4 right-4 text-red-500 hover:text-red-700 bg-transparent border-none cursor-pointer transition-all"
-                        title="Delete Room Record"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
                   </div>
 
                   {/* Room occupants list */}
