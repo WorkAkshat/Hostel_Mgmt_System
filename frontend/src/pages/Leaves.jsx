@@ -11,6 +11,7 @@ const Leaves = () => {
   const navigate = useNavigate();
   const [leaves, setLeaves] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedFloor, setSelectedFloor] = useState('ALL');
 
   // Form State (Student)
   const [form, setForm] = useState({
@@ -335,20 +336,42 @@ const Leaves = () => {
       ) : (
         /* WARDEN & SECURITY PORTAL VIEW */
         <div className="glass-card p-6 shadow-sm flex flex-col">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-5">Active Leave Registers</h3>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Active Leave Registers</h3>
+              <p className="text-xs text-slate-400 mt-0.5 font-medium">Floor-wise directory for leave approvals and gate checkouts</p>
+            </div>
+            
+            {/* Floor Directory Filter */}
+            <div className="flex items-center gap-1.5 overflow-x-auto p-1 bg-slate-100/80 rounded-xl">
+              {['ALL', '1', '2', '3', '4', '5'].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setSelectedFloor(f)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                    selectedFloor === f
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-sm'
+                      : 'text-slate-600 hover:bg-white/60'
+                  }`}
+                >
+                  {f === 'ALL' ? 'All Floors' : `Floor ${f}`}
+                </button>
+              ))}
+            </div>
+          </div>
           
           {loading ? (
             <div className="min-h-[30vh] flex flex-col items-center justify-center gap-4">
               <div className="spinner"></div>
               <p className="text-slate-400 font-medium text-sm">Loading leave records...</p>
             </div>
-          ) : leaves.length === 0 ? (
-            <p className="text-center py-12 text-slate-400 text-sm">No requests in the queue.</p>
+          ) : leaves.filter(l => selectedFloor === 'ALL' || String(l.student?.room?.floorNumber || 1) === String(selectedFloor)).length === 0 ? (
+            <p className="text-center py-12 text-slate-400 text-sm">No leave requests found for {selectedFloor === 'ALL' ? 'any floor' : `Floor ${selectedFloor}`}.</p>
           ) : (
             <div className="flex flex-col gap-4">
               {/* Responsive Mobile Cards */}
               <div className="grid grid-cols-1 gap-4 md:hidden">
-                {leaves.map((leave) => (
+                {leaves.filter(l => selectedFloor === 'ALL' || String(l.student?.room?.floorNumber || 1) === String(selectedFloor)).map((leave) => (
                   <div key={leave.id} className="glass-card p-5 shadow-sm flex flex-col gap-4">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-3">
@@ -456,7 +479,7 @@ const Leaves = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {leaves.map((leave) => (
+                    {leaves.filter(l => selectedFloor === 'ALL' || String(l.student?.room?.floorNumber || 1) === String(selectedFloor)).map((leave) => (
                       <tr key={leave.id}>
                         <td>
                           <div className="flex items-center gap-3">

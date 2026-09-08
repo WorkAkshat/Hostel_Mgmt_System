@@ -3259,11 +3259,11 @@ export default function DashboardScreen() {
             {selectedNoteReceipt && (() => {
               const fNum: number = Number(selectedNoteReceipt.floorNumber || 1);
               const companyMap: Record<number, any> = {
-                1: { companyName: 'RAJKEN ENTERPRISES', hostelName: 'HARI PUSHP GIRLS HOSTEL', floorLabel: 'First Floor', san: '[राजकेन SAN नंबर]', udyamRegNo: '[राजकेन उद्यम नंबर]', proprietorName: 'Kapil Sankhla', notePrefix: 'RJK' },
-                2: { companyName: 'VANDANA ENTERPRISES', hostelName: 'VANDANA GIRLS HOSTEL', floorLabel: 'Second Floor', san: '[वंदना SAN नंबर]', udyamRegNo: 'UDYAM-RJ-17-0654053', proprietorName: 'Vandana Sankhla', notePrefix: 'VAN' },
-                3: { companyName: 'PUSHPA ENTERPRISES', hostelName: 'PUSHPA GIRLS HOSTEL', floorLabel: 'Third Floor', san: '8007170053000004', udyamRegNo: 'UDYAM-RJ-17-0654175', proprietorName: 'Pushpa Sankhla', notePrefix: 'PSH' },
+                1: { companyName: 'RAJKEN ENTERPRISES', hostelName: 'HARI PUSHP GIRLS HOSTEL', floorLabel: 'First Floor', san: '[राजकेन SAN नंबर]', udyamRegNo: '[राजकेन उद्यम नंबर]', proprietorName: 'Kapil Sankhala', notePrefix: 'RJK' },
+                2: { companyName: 'VANDANA ENTERPRISES', hostelName: 'VANDANA GIRLS HOSTEL', floorLabel: 'Second Floor', san: '[वंदना SAN नंबर]', udyamRegNo: 'UDYAM-RJ-17-0654053', proprietorName: 'Vandana Sankhala', notePrefix: 'VAN' },
+                3: { companyName: 'PUSHPA ENTERPRISES', hostelName: 'PUSHPA GIRLS HOSTEL', floorLabel: 'Third Floor', san: '8007170053000004', udyamRegNo: 'UDYAM-RJ-17-0654175', proprietorName: 'Pushpa Sankhala', notePrefix: 'PSH' },
                 4: { companyName: 'HARISH CHANDRA ENTERPRISES', hostelName: 'HARISH CHANDRA GIRLS HOSTEL', floorLabel: 'Fourth Floor', san: '8007170053000006', udyamRegNo: 'UDYAM-RJ-17-0654078', proprietorName: 'Harish Chandra', notePrefix: 'HCE' },
-                5: { companyName: 'RAMESH ENTERPRISES', hostelName: 'RAMESH GIRLS HOSTEL', floorLabel: 'Fifth & Sixth Floor', san: '[रमेश SAN नंबर]', udyamRegNo: '[रमेश उद्यम नंबर]', proprietorName: 'Ramesh Sankhla', notePrefix: 'RME' },
+                5: { companyName: 'RAMESH ENTERPRISES', hostelName: 'RAMESH GIRLS HOSTEL', floorLabel: 'Fifth / Sixth Floor', san: '[रमेश SAN नंबर]', udyamRegNo: '[रमेश उद्यम नंबर]', proprietorName: 'Ramesh Sankhala', notePrefix: 'RME' },
               };
               const company = companyMap[fNum] || companyMap[1];
 

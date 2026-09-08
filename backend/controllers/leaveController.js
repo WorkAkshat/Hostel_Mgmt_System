@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const { sendPushNotification } = require('../services/pushService');
+const { notifyParentLeaveEvent } = require('../utils/parentNotification');
 const prisma = new PrismaClient();
 const { logActivity } = require('../utils/activityLogger');
 
@@ -142,8 +143,9 @@ const updateLeaveRequestStatus = async (req, res) => {
         student: {
           include: {
             user: {
-              select: { id: true, pushToken: true }
-            }
+              select: { id: true, name: true, email: true, pushToken: true }
+            },
+            room: true
           }
         }
       }
@@ -161,6 +163,12 @@ const updateLeaveRequestStatus = async (req, res) => {
         approvedBy: req.user.name
       }
     });
+
+    // Notify parents on WhatsApp and Email if approved
+    if (status === 'APPROVED' && leave.student) {
+      notifyParentLeaveEvent({ eventType: 'LEAVE_APPROVED', student: leave.student, leave: updatedLeave })
+        .catch(err => console.error('[Parent Approval Notification Error]', err.message));
+    }
 
     // Send targeted push notification to student about leave status
     if (leave.student?.user?.pushToken) {
@@ -193,7 +201,14 @@ const logCheckout = async (req, res) => {
   try {
     const leave = await prisma.leaveRequest.findUnique({
       where: { id },
-      include: { student: true }
+      include: {
+        student: {
+          include: {
+            user: { select: { name: true, email: true } },
+            room: true
+          }
+        }
+      }
     });
 
     if (!leave) {
@@ -220,6 +235,12 @@ const logCheckout = async (req, res) => {
         }
       });
     });
+
+    // Notify parents on WhatsApp and Email when student actually departs
+    if (leave.student) {
+      notifyParentLeaveEvent({ eventType: 'STUDENT_DEPARTED', student: leave.student, leave: updatedLeave })
+        .catch(err => console.error('[Parent Departure Notification Error]', err.message));
+    }
 
     res.json(updatedLeave);
 
