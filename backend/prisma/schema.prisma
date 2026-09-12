@@ -13,6 +13,7 @@ model User {
   password      String
   name          String
   role          String   @default("STUDENT") // "ADMIN", "STUDENT", "STAFF"
+  avatar        String?
   assignedFloor Int?     // null = Consolidated Super Admin across all floors, 1-5 = Floor Specific Warden
   pushToken     String?
   createdAt     DateTime @default(now())
@@ -45,6 +46,7 @@ model Student {
   roomId         String?
   room           Room?          @relation(fields: [roomId], references: [id])
   bedId          String?        // Specific Bed ID e.g. "101-A", "104-Single"
+  profilePic     String?
   
   // Registration Personal Details
   dateOfJoining    DateTime?
