@@ -196,7 +196,8 @@ const registerUser = async (req, res) => {
     permanentAddress,
     state,
     pincode,
-    coachingCollege
+    coachingCollege,
+    profilePic
   } = req.body;
 
   if (!name || !email || !password || !role) {
@@ -254,6 +255,7 @@ const registerUser = async (req, res) => {
           password: hashedPassword,
           name,
           role: pendingRole,
+          avatar: profilePic || null,
         }
       });
 
@@ -272,7 +274,8 @@ const registerUser = async (req, res) => {
             permanentAddress,
             state,
             pincode,
-            coachingCollege
+            coachingCollege,
+            profilePic: profilePic || null
           }
         });
       } else {
