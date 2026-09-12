@@ -943,36 +943,7 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Crop & Adjust Controls */}
-            <div className="w-full flex flex-col gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-100 text-left">
-              {/* Zoom Slider */}
-              <div className="flex items-center gap-3">
-                <ZoomOut size={16} className="text-slate-400 shrink-0" />
-                <input
-                  type="range"
-                  min="0.8"
-                  max="2.5"
-                  step="0.05"
-                  value={cropZoom}
-                  onChange={(e) => setCropZoom(parseFloat(e.target.value))}
-                  className="w-full accent-indigo-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg appearance-none"
-                />
-                <ZoomIn size={16} className="text-slate-400 shrink-0" />
-              </div>
 
-              {/* Rotation */}
-              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                <span className="text-[12px] font-semibold text-slate-600">Rotate Photo</span>
-                <button
-                  type="button"
-                  onClick={() => setCropRotation((prev) => (prev + 90) % 360)}
-                  className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 text-indigo-600 text-[12px] font-bold flex items-center gap-1.5 shadow-xs hover:bg-indigo-50 transition-all cursor-pointer"
-                >
-                  <RotateCw size={14} />
-                  <span>Rotate 90°</span>
-                </button>
-              </div>
-            </div>
 
             {/* Modal Actions */}
             <div className="grid grid-cols-2 gap-3 w-full pt-1">
