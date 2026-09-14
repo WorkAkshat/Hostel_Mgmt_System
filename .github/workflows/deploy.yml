@@ -35,7 +35,8 @@ jobs:
             # --- 1. Backend Deployment ---
             echo "📦 Deploying Backend API..."
             cd /var/www/hms.haripushphostel.in/backend
-            npm ci
+            rm -rf node_modules
+            npm ci --legacy-peer-deps
             npx prisma generate
             npx prisma db push --skip-generate
             pm2 reload /var/www/hms.haripushphostel.in/deploy/ecosystem.config.js --env production || pm2 start /var/www/hms.haripushphostel.in/deploy/ecosystem.config.js --env production
