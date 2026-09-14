@@ -4,7 +4,7 @@ const jwt = require('jsonwebtoken');
 
 const prisma = new PrismaClient();
 const { logActivity } = require('../utils/activityLogger');
-const { sendMail } = require('../utils/mail');
+const { sendMail, buildResetPasswordEmail } = require('../utils/mail');
 
 // Generate JWT Token Helper
 const generateToken = (userId, email, role, name, assignedFloor = null) => {
@@ -742,25 +742,9 @@ const forgotPassword = async (req, res) => {
     try {
       await sendMail({
         to: user.email,
-        subject: 'Hari Pushp PG — Password Reset Code',
-        text: `Hello ${user.name},\n\nYour password reset verification code is: ${resetCode}\n\nThis code will expire in 1 hour.\n\nIf you did not request this, please ignore this message.\n\nRegards,\nHari Pushp PG Hostel Management`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;">
-            <div style="text-align: center; margin-bottom: 20px;">
-              <h2 style="color: #1e293b; margin: 0; font-size: 22px;">Hari Pushp PG</h2>
-              <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Hostel Management Security Portal</p>
-            </div>
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-            <p style="color: #334155; font-size: 15px;">Hello <strong>${user.name}</strong>,</p>
-            <p style="color: #475569; font-size: 14px; line-height: 1.5;">You requested to reset your password. Use the 6-digit verification code below to authorize your password change:</p>
-            <div style="text-align: center; margin: 24px 0;">
-              <span style="display: inline-block; padding: 14px 28px; background: #2563eb; color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: 6px; border-radius: 12px; font-family: monospace;">${resetCode}</span>
-            </div>
-            <p style="color: #64748b; font-size: 13px; text-align: center;">This code will expire in 1 hour. Do not share this code with anyone.</p>
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-            <p style="color: #94a3b8; font-size: 12px; text-align: center;">Hari Pushp PG Hostel Management &bull; Official Security Alert</p>
-          </div>
-        `
+        subject: 'Hari Pushp PG — Password Reset Verification Code',
+        text: `Hello ${user.name},\n\nYour password reset verification code is: ${resetCode}\n\nThis code will expire in 60 minutes.\n\nIf you did not request this, please ignore this message.\n\nRegards,\nHari Pushp PG Administration`,
+        html: buildResetPasswordEmail({ name: user.name, resetCode })
       });
     } catch (mailError) {
       console.warn('⚠️ Email delivery notice:', mailError.message);
