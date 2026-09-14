@@ -27,18 +27,17 @@ jobs:
             # Go to app directory
             cd /var/www/hms.haripushphostel.in
             
-            # Pull latest git commit from prod branch
-            git fetch origin
-            git checkout prod || git checkout main
-            git pull origin prod || git pull origin main
+            # Reset & Pull latest git commit from prod branch
+            git fetch origin prod
+            git checkout prod
+            git reset --hard origin/prod
             
             # --- 1. Backend Deployment ---
             echo "📦 Deploying Backend API..."
             cd /var/www/hms.haripushphostel.in/backend
-            npm ci --production
+            npm ci
             npx prisma generate
             npx prisma db push --skip-generate
-            node add_daily_expense_heads.js || true
             pm2 reload /var/www/hms.haripushphostel.in/deploy/ecosystem.config.js --env production || pm2 start /var/www/hms.haripushphostel.in/deploy/ecosystem.config.js --env production
             
             # --- 2. Frontend Web App Deployment ---
@@ -52,6 +51,6 @@ jobs:
             cp -r dist/* /var/www/hms.haripushphostel.in/html/
             
             # Reload Nginx
-            sudo systemctl reload nginx
+            sudo systemctl reload nginx || true
             
             echo "✅ Automated CI/CD Deployment to Production Complete!"
