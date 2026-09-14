@@ -20,15 +20,21 @@ const sendMail = async ({ to, subject, text, html }) => {
     return { simulated: true, success: true };
   }
 
+  const portNum = parseInt(port, 10);
+  const isSecure = portNum === 465;
+
   try {
     const transporter = nodemailer.createTransport({
       host,
-      port,
-      secure: port === 465,
+      port: portNum,
+      secure: isSecure,
       auth: {
         user,
         pass,
       },
+      tls: {
+        rejectUnauthorized: false
+      }
     });
 
     const info = await transporter.sendMail({
