@@ -34,9 +34,8 @@ const loginUser = async (req, res) => {
     .replace('@haripushphostel.in', '@haripushppg.com');
 
   try {
-    // 1. Find user by email (try normalized first, fallback to raw)
-    let user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
+    // 1. Find user by email (case-insensitive & trimmed)
+    const allUsers = await prisma.user.findMany({
       include: {
         student: {
           include: {
@@ -47,22 +46,13 @@ const loginUser = async (req, res) => {
       }
     });
 
+    let user = allUsers.find(u => u.email.trim().toLowerCase() === rawEmail);
     if (!user && rawEmail !== normalizedEmail) {
-      user = await prisma.user.findUnique({
-        where: { email: rawEmail },
-        include: {
-          student: {
-            include: {
-              room: true
-            }
-          },
-          staff: true
-        }
-      });
+      user = allUsers.find(u => u.email.trim().toLowerCase() === normalizedEmail);
     }
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid email or password' });
+      return res.status(401).json({ message: 'No registered account found with this email address. Please register or check spelling.' });
     }
 
     // 2. Check password matches
