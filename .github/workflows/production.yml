@@ -67,6 +67,9 @@ jobs:
             echo "🗄️ Running production database migrations..."
             ./node_modules/.bin/prisma db push --skip-generate
 
+            echo "🧹 Purging sample mock student data from production DB..."
+            node prisma/cleanMockData.js
+
             echo "🔄 Restarting backend with PM2..."
 
             cd "$APP_DIR"
