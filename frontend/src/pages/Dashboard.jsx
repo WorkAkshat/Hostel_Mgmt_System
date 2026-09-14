@@ -441,7 +441,7 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={charts?.complaintChartData || [{name: 'PENDING', value: 1}, {name: 'IN_PROGRESS', value: 1}, {name: 'RESOLVED', value: 0}]}
+                      data={charts?.complaintChartData?.length ? charts.complaintChartData : [{name: 'PENDING', value: 0}, {name: 'IN_PROGRESS', value: 0}, {name: 'RESOLVED', value: 0}]}
                       cx="50%"
                       cy="50%"
                       innerRadius={65}
@@ -450,7 +450,7 @@ const Dashboard = () => {
                       dataKey="value"
                       stroke="none"
                     >
-                      {(charts?.complaintChartData || [{name: 'PENDING', value: 1}, {name: 'IN_PROGRESS', value: 1}, {name: 'RESOLVED', value: 0}]).map((entry, index) => (
+                      {(charts?.complaintChartData?.length ? charts.complaintChartData : [{name: 'PENDING', value: 0}, {name: 'IN_PROGRESS', value: 0}, {name: 'RESOLVED', value: 0}]).map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
