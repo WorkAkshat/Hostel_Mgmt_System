@@ -90,7 +90,7 @@ jobs:
             cd "$APP_DIR/frontend"
 
             echo "📦 Installing frontend dependencies..."
-            npm ci
+            npm install
 
             echo "🏗️ Building frontend..."
 

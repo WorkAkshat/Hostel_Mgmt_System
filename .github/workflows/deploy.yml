@@ -43,7 +43,7 @@ jobs:
             # --- 2. Frontend Web App Deployment ---
             echo "🌐 Building Frontend Web App..."
             cd /var/www/hms.haripushphostel.in/frontend
-            npm ci
+            npm install
             VITE_API_URL=https://hms-api.haripushphostel.in/api/v1 npm run build
             
             # Copy static build files to Nginx web root
