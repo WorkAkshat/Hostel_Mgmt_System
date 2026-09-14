@@ -34,38 +34,44 @@ const app = express();
 app.use(helmet());
 
 // CORS — origins loaded from environment variable for security
-const defaultOrigins = [
-  'https://hms.haripushphostel.in',
-  'http://hms.haripushphostel.in',
-  'https://www.hms.haripushphostel.in',
-  'https://hms-api.haripushphostel.in',
+const defaultAllowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
-  'http://localhost:8081'
+  'http://localhost:8081',
+  'https://hms.haripushphostel.in',
+  'http://hms.haripushphostel.in',
+  'https://haripushphostel.in',
+  'http://haripushphostel.in',
+  'https://www.haripushphostel.in',
+  'https://hms-api.haripushphostel.in'
 ];
 
 const envOrigins = process.env.CORS_ALLOWED_ORIGINS
   ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
   : [];
 
-const corsOrigins = [...new Set([...defaultOrigins, ...envOrigins])];
+const corsOrigins = [...new Set([...defaultAllowedOrigins, ...envOrigins])];
 
 // Middlewares
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
-    if (corsOrigins.includes(origin) || origin.endsWith('haripushphostel.in')) return callback(null, true);
+    if (corsOrigins.includes(origin) || /\.haripushphostel\.in$/.test(origin) || origin.includes('haripushphostel.in')) return callback(null, true);
     if (process.env.NODE_ENV !== 'production') return callback(null, true);
-    return callback(null, true); // Safe fallback
+    return callback(null, true); // Fallback allow to ensure production frontend never gets CORS blocked
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-}));
-app.options('*', cors());
-app.use(express.json());
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+>>>>>>> main
 app.use(logger);
 
 // Rate Limiting Config
