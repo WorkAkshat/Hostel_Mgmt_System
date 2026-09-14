@@ -26,10 +26,10 @@
     "firebase-admin": "^14.2.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^9.0.3"
+    "nodemailer": "^9.0.3",
+    "prisma": "^5.7.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
-    "prisma": "^5.7.0"
+    "nodemon": "^3.0.2"
   }
 }
