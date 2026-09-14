@@ -16,9 +16,11 @@ const getAllStudents = async (req, res) => {
       include: {
         user: {
           select: {
+            id: true,
             name: true,
             email: true,
-            role: true
+            role: true,
+            avatar: true
           }
         },
         room: true

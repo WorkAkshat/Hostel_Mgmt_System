@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { students as studentsApi, rooms as roomsApi } from '../utils/api';
-import { Search, UserPlus, Edit, Trash2, Mail, Phone, Home, ShieldAlert, Hash } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, Mail, Phone, Home, ShieldAlert, Hash, ZoomIn, Camera, X, Maximize2 } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
 
 const Students = () => {
@@ -10,6 +10,7 @@ const Students = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [previewImage, setPreviewImage] = useState(null); // { url, name }
   const location = useLocation();
   
   // Modals state
@@ -56,6 +57,33 @@ const Students = () => {
       window.history.replaceState({}, document.title);
     }
   }, [location]);
+
+  const getStudentAvatar = (student, size = "w-12 h-12", textSize = "text-base") => {
+    const avatarUrl = student.user?.avatar || student.profilePic;
+    const name = student.user?.name || 'Student';
+    if (avatarUrl) {
+      return (
+        <div
+          className={`relative group cursor-pointer ${size} rounded-2xl overflow-hidden border-2 border-indigo-500/80 shadow-sm shrink-0 transition-transform duration-200 hover:scale-105`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setPreviewImage({ url: avatarUrl, name });
+          }}
+          title="Click to view full photo"
+        >
+          <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+            <ZoomIn size={16} className="text-white drop-shadow-md" />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div className={`${size} rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-extrabold ${textSize} flex items-center justify-center shadow-sm shrink-0 border border-white/20`}>
+        {name.charAt(0).toUpperCase()}
+      </div>
+    );
+  };
 
   // Filter students
   const filteredStudents = students.filter(student => {
@@ -172,31 +200,35 @@ const Students = () => {
         </div>
       ) : (
         <>
-          {/* Card Grid View (Unified for Desktop and Mobile) */}
+          {/* Card Grid View */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredStudents.map((student) => {
               const displayId = student.id ? student.id.substring(0, 8).toUpperCase() : 'N/A';
+              const isCheckedIn = student.status === 'CHECKED_IN';
+              const isCheckedOut = student.status === 'CHECKED_OUT';
               return (
                 <div 
                   key={student.id} 
                   className="glass-card hover-lift p-6 shadow-sm flex flex-col justify-between border border-slate-100 bg-white/90 relative overflow-hidden transition-all duration-300 group"
                 >
                   {/* Card Header & Profile */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-extrabold text-lg flex items-center justify-center shadow-md shadow-blue-500/10 group-hover:scale-105 transition-transform shrink-0">
-                        {student.user?.name?.charAt(0).toUpperCase()}
-                      </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      {getStudentAvatar(student, "w-12 h-12", "text-base")}
                       <div className="flex flex-col overflow-hidden text-left">
                         <h4 className="text-base font-bold text-slate-800 truncate">{student.user?.name}</h4>
-                        <span className="text-xs text-slate-400 truncate mt-0.5">{student.user?.email}</span>
+                        <span className="text-xs text-slate-400 font-medium truncate mt-0.5">{student.user?.email?.toLowerCase()}</span>
                       </div>
                     </div>
-                    <span className={`badge shrink-0 ${
-                      student.status === 'CHECKED_IN' ? 'badge-success' : 
-                      student.status === 'CHECKED_OUT' ? 'badge-warning' : 'badge-danger'
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 ${
+                      isCheckedIn ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80' : 
+                      isCheckedOut ? 'bg-amber-50 text-amber-700 border border-amber-200/80' : 
+                      'bg-rose-50 text-rose-700 border border-rose-200/80'
                     }`}>
-                      {student.status.replace('_', ' ').toLowerCase()}
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        isCheckedIn ? 'bg-emerald-500' : isCheckedOut ? 'bg-amber-500' : 'bg-rose-500'
+                      }`} />
+                      <span>{isCheckedIn ? 'Checked In' : isCheckedOut ? 'Checked Out' : 'Suspended'}</span>
                     </span>
                   </div>
 
@@ -209,7 +241,7 @@ const Students = () => {
                         <Hash size={11} className="text-slate-400" />
                         <span>Student ID</span>
                       </span>
-                      <code className="font-mono font-extrabold text-blue-600 text-[11px]">#{displayId}</code>
+                      <code className="font-mono font-extrabold text-indigo-600 text-[11px]">#{displayId}</code>
                     </div>
 
                     <div className="flex justify-between items-center bg-slate-50 border border-slate-100 p-2 rounded-xl">
@@ -219,7 +251,7 @@ const Students = () => {
                       </span>
                       {student.room ? (
                         <span className="inline-flex items-center gap-1 text-slate-700 text-[11px] font-bold">
-                          Room {student.room.roomNumber} ({student.room.block})
+                          Room {student.room.roomNumber} ({student.room.block || 'Hostel'})
                         </span>
                       ) : (
                         <span className="text-slate-400 italic text-[11px]">Unallocated</span>
@@ -233,7 +265,7 @@ const Students = () => {
 
                     <div className="flex justify-between items-center px-1">
                       <span className="font-semibold text-slate-400 text-[10px]">Emergency Phone:</span>
-                      <span className="font-semibold text-slate-700">{student.parentContact}</span>
+                      <span className="font-semibold text-emerald-600">{student.parentContact}</span>
                     </div>
                   </div>
 
@@ -250,7 +282,7 @@ const Students = () => {
                     </button>
                     <button 
                       onClick={() => handleDelete(student.id)}
-                      className="w-10 h-10 border border-red-100 hover:border-red-200 hover:bg-red-50 text-red-500 rounded-xl flex items-center justify-center cursor-pointer transition-all bg-white"
+                      className="w-10 h-10 border border-rose-100 hover:border-rose-200 hover:bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center cursor-pointer transition-all bg-white"
                       title="Delete Student"
                     >
                       <Trash2 size={14} />
@@ -433,6 +465,58 @@ const Students = () => {
           </div>
         </form>
       </CustomModal>
+
+      {/* PHOTO PREVIEW LIGHTBOX MODAL */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative max-w-2xl w-full bg-slate-900 rounded-3xl p-5 border border-white/10 shadow-2xl flex flex-col items-center gap-4 text-white text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between px-2 pt-1 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Camera size={18} className="text-indigo-400" />
+                <h4 className="font-bold text-base text-white">{previewImage.name} — Student Profile Photo</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer border-none"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="w-full max-h-[70vh] flex items-center justify-center overflow-hidden rounded-2xl bg-black/60 p-2 border border-white/5">
+              <img
+                src={previewImage.url}
+                alt={previewImage.name}
+                className="max-h-[65vh] max-w-full object-contain rounded-xl shadow-2xl"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <a
+                href={previewImage.url}
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md no-underline flex items-center gap-1.5"
+              >
+                <Maximize2 size={14} />
+                <span>Open Original Image</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border-none cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

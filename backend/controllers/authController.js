@@ -718,9 +718,9 @@ const forgotPassword = async (req, res) => {
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() }
-    });
+    const cleanEmail = email.trim().toLowerCase();
+    const allUsers = await prisma.user.findMany();
+    const user = allUsers.find(u => u.email.trim().toLowerCase() === cleanEmail);
 
     if (!user) {
       return res.status(404).json({ message: 'No registered user account found with that email address.' });
@@ -802,9 +802,9 @@ const resetPassword = async (req, res) => {
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() }
-    });
+    const cleanEmail = email.trim().toLowerCase();
+    const allUsers = await prisma.user.findMany();
+    const user = allUsers.find(u => u.email.trim().toLowerCase() === cleanEmail);
 
     if (
       !user ||
