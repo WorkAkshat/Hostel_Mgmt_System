@@ -3,7 +3,7 @@ import { auth as authApi, rooms as roomsApi } from '../utils/api';
 import {
   Check, X, ShieldAlert, Users, Calendar, Mail, Phone, Home, FileText,
   CheckSquare, XSquare, Plus, User, Heart, Map, MapPin, GraduationCap,
-  Briefcase, ShieldCheck, Sparkles, Building, Layers
+  Briefcase, ShieldCheck, Sparkles, Building, Layers, ZoomIn, Eye, Camera, Maximize2
 } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
 
@@ -55,6 +55,7 @@ const Approvals = () => {
   // Approval Modal State
   const [selectedUser, setSelectedUser] = useState(null);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState(null); // { url, name }
   const [approveForm, setApproveForm] = useState({
     role: '',
     roomId: '',
@@ -166,13 +167,27 @@ const Approvals = () => {
     }
   };
 
-  const getUserAvatar = (u) => {
+  const getUserAvatar = (u, size = "w-11 h-11", textSize = "text-sm") => {
     const avatarUrl = u.avatar || u.student?.profilePic;
     if (avatarUrl) {
-      return <img src={avatarUrl} alt={u.name} className="w-11 h-11 rounded-full object-cover border-2 border-indigo-500 shadow-sm shrink-0" />;
+      return (
+        <div
+          className={`relative group cursor-pointer ${size} rounded-2xl overflow-hidden border-2 border-indigo-500/80 shadow-sm shrink-0 transition-transform duration-200 hover:scale-105`}
+          onClick={(e) => {
+            e.stopPropagation();
+            setPreviewImage({ url: avatarUrl, name: u.name });
+          }}
+          title="Click to view full photo"
+        >
+          <img src={avatarUrl} alt={u.name} className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+            <ZoomIn size={16} className="text-white drop-shadow-md" />
+          </div>
+        </div>
+      );
     }
     return (
-      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-extrabold text-sm flex items-center justify-center shadow-sm shrink-0">
+      <div className={`${size} rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-extrabold ${textSize} flex items-center justify-center shadow-sm shrink-0 border border-white/20`}>
         {u.name.charAt(0).toUpperCase()}
       </div>
     );
@@ -399,22 +414,32 @@ const Approvals = () => {
         {/* Premium Profile Banner Card */}
         {selectedUser && (
           <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-5 shadow-md flex flex-col gap-4 text-left">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4 flex-wrap sm:flex-nowrap">
               <div className="flex items-center gap-4">
                 {selectedUser.avatar || selectedUser.student?.profilePic ? (
-                  <img
-                    src={selectedUser.avatar || selectedUser.student?.profilePic}
-                    alt={selectedUser.name}
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-indigo-400/80 shadow-lg shrink-0"
-                  />
+                  <div
+                    className="relative group cursor-pointer w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-indigo-400 shadow-xl shrink-0 transition-transform duration-200 hover:scale-105"
+                    onClick={() => setPreviewImage({ url: selectedUser.avatar || selectedUser.student?.profilePic, name: selectedUser.name })}
+                    title="Click to view full profile photo"
+                  >
+                    <img
+                      src={selectedUser.avatar || selectedUser.student?.profilePic}
+                      alt={selectedUser.name}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity text-white text-[10px] font-bold">
+                      <ZoomIn size={20} className="drop-shadow-md" />
+                      <span>Enlarge Photo</span>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-extrabold text-2xl flex items-center justify-center border-2 border-white/20 shadow-lg shrink-0">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-extrabold text-3xl flex items-center justify-center border-2 border-white/20 shadow-xl shrink-0">
                     {selectedUser.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-[18px] sm:text-[20px] font-bold text-white tracking-tight">{selectedUser.name}</h3>
+                    <h3 className="text-[19px] sm:text-[22px] font-bold text-white tracking-tight">{selectedUser.name}</h3>
                     <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
                       selectedUser.role.includes('STUDENT') ? 'bg-indigo-500/30 text-indigo-200 border border-indigo-400/40' : 'bg-amber-500/30 text-amber-200 border border-amber-400/40'
                     }`}>
@@ -429,6 +454,21 @@ const Approvals = () => {
                     <Phone size={13} className="text-emerald-400 shrink-0" />
                     <span>{selectedUser.student?.phoneNumber || selectedUser.staff?.phoneNumber}</span>
                   </span>
+
+                  {(selectedUser.avatar || selectedUser.student?.profilePic) ? (
+                    <button
+                      type="button"
+                      onClick={() => setPreviewImage({ url: selectedUser.avatar || selectedUser.student?.profilePic, name: selectedUser.name })}
+                      className="mt-1 self-start px-3 py-1 rounded-lg bg-indigo-600/60 hover:bg-indigo-600 border border-indigo-400/40 text-white text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Eye size={13} />
+                      <span>View Full Profile Photo</span>
+                    </button>
+                  ) : (
+                    <span className="mt-1 self-start px-2.5 py-0.5 rounded-md bg-white/10 text-slate-400 text-[10px] font-semibold border border-white/10">
+                      No Photo Uploaded
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -787,6 +827,58 @@ const Approvals = () => {
           </div>
         </form>
       </CustomModal>
+
+      {/* PHOTO PREVIEW LIGHTBOX MODAL */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className="relative max-w-2xl w-full bg-slate-900 rounded-3xl p-5 border border-white/10 shadow-2xl flex flex-col items-center gap-4 text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between px-2 pt-1 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Camera size={18} className="text-indigo-400" />
+                <h4 className="font-bold text-base text-white">{previewImage.name} — Profile Photo</h4>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer border-none"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="w-full max-h-[70vh] flex items-center justify-center overflow-hidden rounded-2xl bg-black/60 p-2 border border-white/5">
+              <img
+                src={previewImage.url}
+                alt={previewImage.name}
+                className="max-h-[65vh] max-w-full object-contain rounded-xl shadow-2xl"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <a
+                href={previewImage.url}
+                target="_blank"
+                rel="noreferrer"
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md no-underline flex items-center gap-1.5"
+              >
+                <Maximize2 size={14} />
+                <span>Open Original Image</span>
+              </a>
+              <button
+                type="button"
+                onClick={() => setPreviewImage(null)}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border-none cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
