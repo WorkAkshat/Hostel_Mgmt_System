@@ -71,7 +71,6 @@ app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
->>>>>>> main
 app.use(logger);
 
 // Rate Limiting Config
