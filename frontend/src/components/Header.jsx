@@ -1,14 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
-import api from '../utils/api';
-import { Bell, Megaphone, LogOut, ChevronDown, Menu, Search, Sun, Moon } from 'lucide-react';
+import api, { auth as authApi, leaves as leavesApi, complaints as complaintsApi, visitors as visitorsApi } from '../utils/api';
+import { Bell, Megaphone, LogOut, ChevronDown, Menu, Search, Sun, Moon, CheckCheck, UserCheck, FileCheck, Wrench, Users, ArrowRight } from 'lucide-react';
 
 const Header = ({ isCollapsed, onMenuToggle }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const [notices, setNotices] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [readIds, setReadIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('hms_read_notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   const [showNoticesDropdown, setShowNoticesDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -27,41 +36,139 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
     };
   }, []);
 
-  // Fetch notices for notifications badge
+  // Save readIds to localStorage
   useEffect(() => {
-    const fetchNotices = async () => {
+    try {
+      localStorage.setItem('hms_read_notifications', JSON.stringify(readIds));
+    } catch (e) {}
+  }, [readIds]);
+
+  // Real-time live notifications fetcher
+  useEffect(() => {
+    const fetchRealNotifications = async () => {
+      if (!user) return;
       try {
-        const noticesData = await api('/notices');
-        setNotices(noticesData);
+        const list = [];
+
+        if (user.role === 'ADMIN') {
+          const [pendingUsers, leavesList, complaintsList, visitorsList, noticesList] = await Promise.all([
+            authApi.getPending().catch(() => []),
+            leavesApi.getAll().catch(() => []),
+            complaintsApi.getAll().catch(() => []),
+            visitorsApi.getAll().catch(() => []),
+            api('/notices').catch(() => [])
+          ]);
+
+          if (pendingUsers && pendingUsers.length > 0) {
+            list.push({
+              id: 'pending-users',
+              title: 'Registration Approvals',
+              message: `${pendingUsers.length} pending registration request(s) awaiting your approval.`,
+              link: '/admin/approvals',
+              type: 'URGENT',
+              icon: <UserCheck size={16} className="text-red-600" />,
+              badgeBg: 'bg-red-50 text-red-600 border-red-100',
+              time: 'Action Required'
+            });
+          }
+
+          const pendingLeaves = (leavesList || []).filter(l => l.status === 'PENDING');
+          if (pendingLeaves.length > 0) {
+            list.push({
+              id: 'pending-leaves',
+              title: 'Leave Approvals',
+              message: `${pendingLeaves.length} student leave application(s) pending review.`,
+              link: '/admin/leaves',
+              type: 'WARNING',
+              icon: <FileCheck size={16} className="text-amber-600" />,
+              badgeBg: 'bg-amber-50 text-amber-600 border-amber-100',
+              time: 'Pending Review'
+            });
+          }
+
+          const openComplaints = (complaintsList || []).filter(c => c.status !== 'RESOLVED');
+          if (openComplaints.length > 0) {
+            list.push({
+              id: 'open-complaints',
+              title: 'Maintenance Issues',
+              message: `${openComplaints.length} helpdesk complaint ticket(s) currently active.`,
+              link: '/admin/complaints',
+              type: 'WARNING',
+              icon: <Wrench size={16} className="text-blue-600" />,
+              badgeBg: 'bg-blue-50 text-blue-600 border-blue-100',
+              time: 'Inspection Needed'
+            });
+          }
+
+          const activeVisitors = (visitorsList || []).filter(v => v.checkOutTime === null);
+          if (activeVisitors.length > 0) {
+            list.push({
+              id: 'active-visitors',
+              title: 'Guest Check-ins',
+              message: `${activeVisitors.length} visitor(s) currently checked-in inside premises.`,
+              link: '/admin/visitors',
+              type: 'INFO',
+              icon: <Users size={16} className="text-emerald-600" />,
+              badgeBg: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+              time: 'Live On-site'
+            });
+          }
+
+          (noticesList || []).forEach(n => {
+            list.push({
+              id: `notice-${n.id}`,
+              title: n.title,
+              message: n.content,
+              type: n.priority || 'INFO',
+              icon: <Megaphone size={16} className="text-indigo-600" />,
+              badgeBg: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+              time: new Date(n.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+            });
+          });
+        } else {
+          const noticesList = await api('/notices').catch(() => []);
+          (noticesList || []).forEach(n => {
+            list.push({
+              id: `notice-${n.id}`,
+              title: n.title,
+              message: n.content,
+              type: n.priority || 'INFO',
+              icon: <Megaphone size={16} className="text-indigo-600" />,
+              badgeBg: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+              time: new Date(n.createdAt).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+            });
+          });
+        }
+
+        setNotifications(list);
       } catch (error) {
-        console.error('Error fetching notices in header:', error);
+        console.error('Error fetching real-time notifications:', error);
       }
     };
 
-    if (user) {
-      fetchNotices();
-      const interval = setInterval(fetchNotices, 30000);
-      return () => clearInterval(interval);
-    }
+    fetchRealNotifications();
+    const interval = setInterval(fetchRealNotifications, 20000);
+    return () => clearInterval(interval);
   }, [user]);
 
   if (!user) return null;
 
-  const urgentNoticesCount = notices.length;
+  const unreadNotifications = notifications.filter(n => !readIds.includes(n.id));
+  const unreadCount = unreadNotifications.length;
 
-  const getPageTitle = () => {
-    const path = location.pathname.toLowerCase();
-    if (path.includes('dashboard')) return 'Dashboard';
-    if (path.includes('students')) return 'Students Directory';
-    if (path.includes('rooms')) return 'Rooms & Assets';
-    if (path.includes('leaves')) return 'Leave Approvals';
-    if (path.includes('mess')) return 'Mess Menu';
-    if (path.includes('fees')) return 'Fees & Invoices';
-    if (path.includes('complaints')) return 'Complaints Logs';
-    if (path.includes('visitors')) return 'Visitor Log';
-    if (path.includes('staff')) return 'Staff Roster';
-    if (path.includes('gatepass')) return 'Gate Operations';
-    return 'Home';
+  const handleNotificationClick = (notif) => {
+    if (!readIds.includes(notif.id)) {
+      setReadIds(prev => [...prev, notif.id]);
+    }
+    setShowNoticesDropdown(false);
+    if (notif.link) {
+      navigate(notif.link);
+    }
+  };
+
+  const markAllAsRead = () => {
+    const allIds = notifications.map(n => n.id);
+    setReadIds(allIds);
   };
 
   const leftOffset = isDesktop ? (isCollapsed ? '100px' : '280px') : '0px';
@@ -73,7 +180,7 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
       }`}
       style={{ left: leftOffset }}
     >
-      {/* Left Section - Mobile Hamburger / Breadcrumbs */}
+      {/* Left Section - Mobile Hamburger / Greeting */}
       <div className="flex items-center gap-2 sm:gap-4">
         <button 
           onClick={onMenuToggle}
@@ -108,7 +215,7 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
 
       {/* Right Section - Utility Buttons & Dropdown */}
       <div className="flex items-center gap-2 sm:gap-4">
-        {/* Notices Bell */}
+        {/* Real-time Notification Bell */}
         <div className="relative">
           <button
             onClick={() => {
@@ -116,44 +223,85 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
               setShowProfileDropdown(false);
             }} 
             className="w-10 h-10 rounded-full hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm flex items-center justify-center text-slate-500 cursor-pointer relative transition-all"
+            title="Real-Time Notifications"
           >
             <Bell size={20} />
-            {urgentNoticesCount > 0 && (
-              <span className="absolute top-2 right-2 bg-[var(--danger)] text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center border-2 border-white">
-                {urgentNoticesCount}
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 bg-red-600 text-white text-[10px] font-extrabold rounded-full min-w-[18px] h-[18px] px-1 flex items-center justify-center border-2 border-white shadow-sm animate-pulse">
+                {unreadCount}
               </span>
             )}
           </button>
 
-          {/* ... notices dropdown ... */}
+          {/* Real-time Interactive Notifications Panel */}
           {showNoticesDropdown && (
-            <div className="absolute -right-16 sm:right-0 top-12 w-[90vw] sm:w-[340px] max-w-[340px] max-h-[400px] rounded-[var(--border-radius-card)] flex flex-col shadow-2xl overflow-hidden border border-slate-200 bg-white/95 backdrop-blur-xl animate-fade-in z-50">
-              <div className="flex items-center gap-2 p-4 border-b border-slate-100 bg-slate-50/80">
-                <Megaphone size={18} className="text-[var(--secondary)]" />
-                <h3 className="text-sm font-bold text-[var(--text-primary)]">Notice Board</h3>
+            <div className="absolute -right-16 sm:right-0 top-12 w-[92vw] sm:w-[380px] max-w-[380px] max-h-[480px] rounded-[24px] flex flex-col shadow-2xl overflow-hidden border border-slate-200 bg-white/95 backdrop-blur-xl animate-fade-in z-50">
+              <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/80">
+                <div className="flex items-center gap-2">
+                  <Bell size={18} className="text-indigo-600" />
+                  <h3 className="text-sm font-extrabold text-slate-800">Live Notifications</h3>
+                  {unreadCount > 0 && (
+                    <span className="bg-red-50 text-red-600 text-[10px] font-extrabold px-2 py-0.5 rounded-full border border-red-100">
+                      {unreadCount} new
+                    </span>
+                  )}
+                </div>
+
+                {unreadCount > 0 && (
+                  <button 
+                    onClick={markAllAsRead}
+                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 bg-transparent border-none cursor-pointer"
+                  >
+                    <CheckCheck size={14} />
+                    <span>Mark all read</span>
+                  </button>
+                )}
               </div>
-              <div className="overflow-y-auto flex-grow p-2 custom-scrollbar">
-                {notices.length === 0 ? (
-                  <p className="py-8 px-4 text-center text-slate-400 text-[13px]">No announcements posted.</p>
+
+              <div className="overflow-y-auto flex-grow p-2.5 custom-scrollbar flex flex-col gap-2">
+                {notifications.length === 0 ? (
+                  <div className="py-12 px-4 text-center flex flex-col items-center gap-2">
+                    <CheckCheck size={32} className="text-emerald-500" />
+                    <p className="text-slate-600 font-bold text-sm">All caught up!</p>
+                    <p className="text-slate-400 text-xs">No pending requests or unread notifications.</p>
+                  </div>
                 ) : (
-                  notices.map((notice) => (
-                    <div key={notice.id} className="p-3 rounded-[14px] border border-transparent hover:border-slate-100 flex flex-col gap-1.5 hover:bg-slate-50 transition-all">
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase"
-                          style={{
-                            ...notice.priority === 'URGENT' ? { background: 'rgba(239,68,68,0.08)', color: '#ef4444' } : 
-                               notice.priority === 'WARNING' ? { background: 'rgba(245,158,11,0.08)', color: '#f59e0b' } : 
-                               { background: 'rgba(59,130,246,0.08)', color: '#3b82f6' }
-                          }}
-                        >
-                          {notice.priority}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">{new Date(notice.createdAt).toLocaleDateString()}</span>
+                  notifications.map((notif) => {
+                    const isRead = readIds.includes(notif.id);
+                    return (
+                      <div 
+                        key={notif.id} 
+                        onClick={() => handleNotificationClick(notif)}
+                        className={`p-3.5 rounded-[18px] border transition-all cursor-pointer flex items-start gap-3 text-left ${
+                          isRead
+                            ? 'bg-white border-slate-100 hover:bg-slate-50/80 opacity-75'
+                            : 'bg-indigo-50/40 border-indigo-100 hover:bg-indigo-50/70 shadow-sm'
+                        }`}
+                      >
+                        <div className="p-2 rounded-xl bg-white shadow-sm border border-slate-100 flex-shrink-0 mt-0.5">
+                          {notif.icon}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex justify-between items-center gap-2 mb-1">
+                            <h4 className="text-[13px] font-extrabold text-slate-800 truncate">{notif.title}</h4>
+                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border uppercase flex-shrink-0 ${notif.badgeBg}`}>
+                              {notif.time}
+                            </span>
+                          </div>
+
+                          <p className="text-[12px] text-slate-600 leading-snug line-clamp-2">{notif.message}</p>
+
+                          {notif.link && (
+                            <div className="mt-2 flex items-center gap-1 text-[11px] font-bold text-indigo-600 hover:text-indigo-800">
+                              <span>Open page</span>
+                              <ArrowRight size={12} />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <h4 className="text-[13px] font-bold text-slate-800">{notice.title}</h4>
-                      <p className="text-[12px] text-slate-500 leading-relaxed line-clamp-2">{notice.content}</p>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

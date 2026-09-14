@@ -274,7 +274,7 @@ const Dashboard = () => {
               className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-[12px] text-[13px] font-extrabold shadow-md transition-all border-none cursor-pointer"
             >
               <BookOpen size={16} className="text-white" />
-              <span>Tally ERP Ledger 📖</span>
+              <span>Tally ERP Ledger</span>
             </button>
 
             <button 
