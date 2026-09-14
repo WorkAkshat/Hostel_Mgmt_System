@@ -59,8 +59,7 @@ jobs:
             cd "$APP_DIR/backend"
 
             echo "📦 Installing backend dependencies..."
-            rm -rf node_modules
-            npm ci --legacy-peer-deps
+            npm install --legacy-peer-deps
 
             echo "🔧 Generating Prisma Client..."
             ./node_modules/.bin/prisma generate
