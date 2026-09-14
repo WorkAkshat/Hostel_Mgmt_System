@@ -51,7 +51,17 @@ const FEE = {
 };
 
 async function main() {
-  console.log('🌱 Seeding Hari Pushp PG Girls Hostel database...\n');
+  console.log('🌱 Checking Hari Pushp PG Girls Hostel database status...\n');
+
+  const existingUsersCount = await prisma.user.count();
+  const forceSeed = process.env.FORCE_SEED === 'true';
+
+  if (existingUsersCount > 0 && !forceSeed) {
+    console.log(`⚠️ Database already contains ${existingUsersCount} user(s).`);
+    console.log('🛡️ Skipping destructive seed reset to preserve registered users and approvals.');
+    console.log('💡 If you explicitly wish to reset the database, run: FORCE_SEED=true node prisma/seed.js\n');
+    return;
+  }
 
   // ── 1. Clear existing data (order matters for FK constraints) ──────────────
   await prisma.nightAttendance.deleteMany({});
