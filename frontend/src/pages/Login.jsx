@@ -1,13 +1,27 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, Key, Mail, ShieldAlert, Home, Building2, Users, Shield, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Key, Mail, ShieldAlert, Home, Building2, Users, Shield, Eye, EyeOff, CheckCircle2, Lock, ArrowRight, RefreshCw } from 'lucide-react';
+import { auth as authApi } from '../utils/api';
+import CustomModal from '../components/CustomModal';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState(null);
+
+  // Forgot Password Modal State
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [resetStep, setResetStep] = useState(1); // 1 = request email, 2 = enter token & new password
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState(null);
+  const [resetError, setResetError] = useState(null);
 
   const { login, loading, error, setError } = useAuth();
   const navigate = useNavigate();
@@ -33,6 +47,77 @@ const Login = () => {
       }
     } catch (err) {
       // Handled by context
+    }
+  };
+
+  const handleOpenForgotModal = () => {
+    setResetEmail(email || '');
+    setResetStep(1);
+    setResetToken('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setResetMessage(null);
+    setResetError(null);
+    setShowForgotModal(true);
+  };
+
+  const handleRequestCode = async (e) => {
+    e.preventDefault();
+    setResetError(null);
+    setResetMessage(null);
+    if (!resetEmail) {
+      setResetError('Please enter your registered email address.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const res = await authApi.forgotPassword(resetEmail);
+      setResetMessage(res.message || 'Verification code sent to your email.');
+      setResetStep(2);
+    } catch (err) {
+      setResetError(err.message || 'Failed to request password reset code.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
+  const handleResetSubmit = async (e) => {
+    e.preventDefault();
+    setResetError(null);
+    setResetMessage(null);
+    if (!resetToken || !newPassword || !confirmPassword) {
+      setResetError('Please fill in all required fields.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setResetError('Password must be at least 6 characters long.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setResetError('Passwords do not match.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      const res = await authApi.resetPassword({
+        email: resetEmail,
+        token: resetToken,
+        newPassword
+      });
+      setResetMessage(res.message || 'Password reset successfully!');
+      setEmail(resetEmail); // prefill email in main form
+      setTimeout(() => {
+        setShowForgotModal(false);
+        setResetStep(1);
+        setResetToken('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setResetMessage(null);
+      }, 1800);
+    } catch (err) {
+      setResetError(err.message || 'Failed to reset password.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -143,7 +228,16 @@ const Login = () => {
               </div>
 
               <div className="flex flex-col gap-1.5 text-left">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                  <button
+                    type="button"
+                    onClick={handleOpenForgotModal}
+                    className="text-[12px] font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer border-none bg-transparent"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <div className="relative flex items-center">
                   <Key size={16} className="absolute left-4 text-slate-400 pointer-events-none" />
                   <input
@@ -202,6 +296,167 @@ const Login = () => {
           </p>
         </div>
       </div>
+
+      {/* FORGOT PASSWORD MODAL */}
+      <CustomModal
+        isOpen={showForgotModal}
+        onClose={() => setShowForgotModal(false)}
+        title={resetStep === 1 ? "Reset Your Password" : "Enter Verification Code & Reset"}
+        size="md"
+      >
+        {resetError && (
+          <div className="flex items-center gap-3 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold mb-4">
+            <ShieldAlert size={18} className="shrink-0" />
+            <span>{resetError}</span>
+          </div>
+        )}
+
+        {resetMessage && (
+          <div className="flex items-center gap-3 p-4 rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold mb-4">
+            <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
+            <span>{resetMessage}</span>
+          </div>
+        )}
+
+        {resetStep === 1 ? (
+          <form onSubmit={handleRequestCode} className="flex flex-col gap-4 text-left">
+            <p className="text-xs text-slate-500 font-medium leading-relaxed">
+              Enter your registered email address below. We will send a 6-digit verification code to your email so you can safely reset your password.
+            </p>
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Registered Email Address *</label>
+              <div className="relative flex items-center">
+                <Mail size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type="email"
+                  placeholder="name@example.com"
+                  value={resetEmail}
+                  onChange={(e) => setResetEmail(e.target.value)}
+                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-[14px] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 font-medium"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(false)}
+                className="h-10 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+              >
+                {resetLoading ? (
+                  <span>Sending Code...</span>
+                ) : (
+                  <>
+                    <span>Send Verification Code</span>
+                    <ArrowRight size={14} />
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={handleResetSubmit} className="flex flex-col gap-4 text-left">
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs text-slate-600">
+              <span>Code sent to: <strong>{resetEmail}</strong></span>
+              <button
+                type="button"
+                onClick={() => setResetStep(1)}
+                className="text-indigo-600 font-bold hover:underline cursor-pointer border-none bg-transparent flex items-center gap-1"
+              >
+                <RefreshCw size={12} />
+                <span>Change Email</span>
+              </button>
+            </div>
+
+            {/* 6-Digit Code */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">6-Digit Verification Code *</label>
+              <div className="relative flex items-center">
+                <Lock size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Enter 6-digit code (e.g. 849201)"
+                  value={resetToken}
+                  onChange={(e) => setResetToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-[14px] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 font-mono tracking-wider font-bold"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* New Password */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">New Password *</label>
+              <div className="relative flex items-center">
+                <Key size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  placeholder="At least 6 characters"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full h-11 pl-10 pr-10 rounded-xl border border-slate-200 bg-white text-slate-800 text-[14px] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 font-medium"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 text-slate-400 hover:text-slate-600 cursor-pointer border-none bg-transparent"
+                >
+                  {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm New Password */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Confirm New Password *</label>
+              <div className="relative flex items-center">
+                <Key size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  placeholder="Re-enter new password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-[14px] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 font-medium"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 justify-end pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(false)}
+                className="h-10 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
+              >
+                {resetLoading ? (
+                  <span>Updating Password...</span>
+                ) : (
+                  <>
+                    <CheckCircle2 size={15} />
+                    <span>Update Password & Log In</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        )}
+      </CustomModal>
     </div>
   );
 };

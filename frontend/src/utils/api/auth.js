@@ -46,3 +46,17 @@ export const refresh = () => {
     method: 'POST'
   });
 };
+
+export const forgotPassword = (email) => {
+  return client('/auth/forgot-password', {
+    method: 'POST',
+    body: { email }
+  });
+};
+
+export const resetPassword = (data) => {
+  return client('/auth/reset-password', {
+    method: 'POST',
+    body: data
+  });
+};

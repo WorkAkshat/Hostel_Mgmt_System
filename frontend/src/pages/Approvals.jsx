@@ -256,9 +256,8 @@ const Approvals = () => {
                         </div>
                       </td>
                       <td>
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
-                          reqRole === 'STUDENT' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
-                        }`}>
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${reqRole === 'STUDENT' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
+                          }`}>
                           {reqRole === 'STUDENT' ? <GraduationCap size={13} /> : <Briefcase size={13} />}
                           <span>{reqRole}</span>
                         </span>
@@ -329,9 +328,8 @@ const Approvals = () => {
                         <span className="text-[11px] text-slate-500 font-medium truncate max-w-[160px]">{pUser.email}</span>
                       </div>
                     </div>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                      reqRole === 'STUDENT' ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700'
-                    }`}>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${reqRole === 'STUDENT' ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700'
+                      }`}>
                       {reqRole}
                     </span>
                   </div>
@@ -440,9 +438,8 @@ const Approvals = () => {
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-[19px] sm:text-[22px] font-bold text-white tracking-tight">{selectedUser.name}</h3>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${
-                      selectedUser.role.includes('STUDENT') ? 'bg-indigo-500/30 text-indigo-200 border border-indigo-400/40' : 'bg-amber-500/30 text-amber-200 border border-amber-400/40'
-                    }`}>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${selectedUser.role.includes('STUDENT') ? 'bg-indigo-500/30 text-indigo-200 border border-indigo-400/40' : 'bg-amber-500/30 text-amber-200 border border-amber-400/40'
+                      }`}>
                       {selectedUser.role.replace('PENDING_', '')}
                     </span>
                   </div>
@@ -455,20 +452,6 @@ const Approvals = () => {
                     <span>{selectedUser.student?.phoneNumber || selectedUser.staff?.phoneNumber}</span>
                   </span>
 
-                  {(selectedUser.avatar || selectedUser.student?.profilePic) ? (
-                    <button
-                      type="button"
-                      onClick={() => setPreviewImage({ url: selectedUser.avatar || selectedUser.student?.profilePic, name: selectedUser.name })}
-                      className="mt-1 self-start px-3 py-1 rounded-lg bg-indigo-600/60 hover:bg-indigo-600 border border-indigo-400/40 text-white text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <Eye size={13} />
-                      <span>View Full Profile Photo</span>
-                    </button>
-                  ) : (
-                    <span className="mt-1 self-start px-2.5 py-0.5 rounded-md bg-white/10 text-slate-400 text-[10px] font-semibold border border-white/10">
-                      No Photo Uploaded
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
@@ -543,11 +526,10 @@ const Approvals = () => {
                   key={r.key}
                   type="button"
                   onClick={() => setApproveForm({ ...approveForm, role: r.key })}
-                  className={`py-2 px-1 rounded-[11px] font-bold text-[12px] border-none cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5 ${
-                    approveForm.role === r.key
+                  className={`py-2 px-1 rounded-[11px] font-bold text-[12px] border-none cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5 ${approveForm.role === r.key
                       ? 'bg-indigo-600 text-white shadow-md'
                       : 'bg-transparent text-slate-600 hover:text-slate-900'
-                  }`}
+                    }`}
                 >
                   <span>{r.label}</span>
                 </button>
@@ -723,7 +705,8 @@ const Approvals = () => {
                 {/* State Select Dropdown */}
                 <div className="flex flex-col gap-1">
                   <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">State / Union Territory *</label>
-                  <div className="relative flex items-center">
+                  <div clas
+                    sName="relative flex items-center">
                     <Map size={15} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
                     <select
                       value={approveForm.state}

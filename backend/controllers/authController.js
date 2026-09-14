@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 
 const prisma = new PrismaClient();
 const { logActivity } = require('../utils/activityLogger');
+const { sendMail } = require('../utils/mail');
 
 // Generate JWT Token Helper
 const generateToken = (userId, email, role, name, assignedFloor = null) => {
@@ -706,6 +707,148 @@ const testPushNotification = async (req, res) => {
   }
 };
 
+// @desc    Request Password Reset Code via Email
+// @route   POST /api/v1/auth/forgot-password
+// @access  Public
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: 'Please provide your registered email address.' });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'No registered user account found with that email address.' });
+    }
+
+    // Generate a 6-digit numeric OTP code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // Valid for 1 hour
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetPasswordToken: resetCode,
+        resetPasswordExpires: expiry
+      }
+    });
+
+    // Send email with reset code
+    try {
+      await sendMail({
+        to: user.email,
+        subject: 'Hari Pushp PG — Password Reset Code',
+        text: `Hello ${user.name},\n\nYour password reset verification code is: ${resetCode}\n\nThis code will expire in 1 hour.\n\nIf you did not request this, please ignore this message.\n\nRegards,\nHari Pushp PG Hostel Management`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px; background: #ffffff;">
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h2 style="color: #1e293b; margin: 0; font-size: 22px;">Hari Pushp PG</h2>
+              <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Hostel Management Security Portal</p>
+            </div>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+            <p style="color: #334155; font-size: 15px;">Hello <strong>${user.name}</strong>,</p>
+            <p style="color: #475569; font-size: 14px; line-height: 1.5;">You requested to reset your password. Use the 6-digit verification code below to authorize your password change:</p>
+            <div style="text-align: center; margin: 24px 0;">
+              <span style="display: inline-block; padding: 14px 28px; background: #2563eb; color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: 6px; border-radius: 12px; font-family: monospace;">${resetCode}</span>
+            </div>
+            <p style="color: #64748b; font-size: 13px; text-align: center;">This code will expire in 1 hour. Do not share this code with anyone.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+            <p style="color: #94a3b8; font-size: 12px; text-align: center;">Hari Pushp PG Hostel Management &bull; Official Security Alert</p>
+          </div>
+        `
+      });
+    } catch (mailError) {
+      console.warn('⚠️ Email delivery notice:', mailError.message);
+    }
+
+    res.json({
+      message: 'Password reset code has been sent to your registered email address.'
+    });
+
+    logActivity({
+      req,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      action: 'FORGOT_PASSWORD_REQUEST',
+      module: 'AUTH',
+      description: `Requested password reset code for ${user.email}`,
+      targetId: user.id,
+      targetType: 'User'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error requesting password reset code.' });
+  }
+};
+
+// @desc    Reset Password with Verification Code
+// @route   POST /api/v1/auth/reset-password
+// @access  Public
+const resetPassword = async (req, res) => {
+  const { email, token, newPassword } = req.body;
+
+  if (!email || !token || !newPassword) {
+    return res.status(400).json({ message: 'Please provide email, verification code, and new password.' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: 'New password must be at least 6 characters long.' });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() }
+    });
+
+    if (
+      !user ||
+      !user.resetPasswordToken ||
+      user.resetPasswordToken !== token.toString().trim() ||
+      !user.resetPasswordExpires ||
+      new Date(user.resetPasswordExpires) < new Date()
+    ) {
+      return res.status(400).json({ message: 'Invalid or expired verification code.' });
+    }
+
+    // Hash new password and clear reset token
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetPasswordToken: null,
+        resetPasswordExpires: null
+      }
+    });
+
+    res.json({
+      message: 'Your password has been reset successfully! You can now log in with your new password.'
+    });
+
+    logActivity({
+      req,
+      userId: user.id,
+      userName: user.name,
+      userRole: user.role,
+      action: 'RESET_PASSWORD_SUCCESS',
+      module: 'AUTH',
+      description: `Successfully reset password for ${user.email}`,
+      targetId: user.id,
+      targetType: 'User'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Server error resetting password.' });
+  }
+};
+
 module.exports = {
   loginUser,
   getMe,
@@ -716,6 +859,8 @@ module.exports = {
   logoutUser,
   refreshToken,
   updatePushToken,
-  testPushNotification
+  testPushNotification,
+  forgotPassword,
+  resetPassword
 };
 

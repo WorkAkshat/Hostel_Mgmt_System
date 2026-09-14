@@ -15,8 +15,10 @@ model User {
   role          String   @default("STUDENT") // "ADMIN", "STUDENT", "STAFF"
   avatar        String?
   assignedFloor Int?     // null = Consolidated Super Admin across all floors, 1-5 = Floor Specific Warden
-  pushToken     String?
-  createdAt     DateTime @default(now())
+  pushToken            String?
+  resetPasswordToken   String?
+  resetPasswordExpires DateTime?
+  createdAt            DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   student         Student?
