@@ -30,16 +30,6 @@ export const AuthProvider = ({ children }) => {
         const userData = await authApi.getMe();
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
-        
-        // Silently refresh token in background to extend session
-        try {
-          const refreshData = await authApi.refresh();
-          if (refreshData?.token) {
-            localStorage.setItem('token', refreshData.token);
-          }
-        } catch (refreshErr) {
-          console.log('[AuthContext] Token refresh failed on init:', refreshErr.message);
-        }
       } catch (err) {
         console.error('Failed to authenticate token on init:', err.message);
         const errStr = String(err.message || err.status || '');
