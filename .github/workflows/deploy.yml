@@ -37,8 +37,8 @@ jobs:
             cd /var/www/hms.haripushphostel.in/backend
             rm -rf node_modules
             npm ci --legacy-peer-deps
-            npx prisma generate
-            npx prisma db push --skip-generate
+            ./node_modules/.bin/prisma generate
+            ./node_modules/.bin/prisma db push --skip-generate
             pm2 reload /var/www/hms.haripushphostel.in/deploy/ecosystem.config.js --env production || pm2 start /var/www/hms.haripushphostel.in/deploy/ecosystem.config.js --env production
             
             # --- 2. Frontend Web App Deployment ---

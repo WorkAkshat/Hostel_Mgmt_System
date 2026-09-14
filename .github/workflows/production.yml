@@ -63,10 +63,10 @@ jobs:
             npm ci --legacy-peer-deps
 
             echo "🔧 Generating Prisma Client..."
-            npx prisma generate
+            ./node_modules/.bin/prisma generate
 
             echo "🗄️ Running production database migrations..."
-            npx prisma db push --skip-generate
+            ./node_modules/.bin/prisma db push --skip-generate
 
             echo "🔄 Restarting backend with PM2..."
 
