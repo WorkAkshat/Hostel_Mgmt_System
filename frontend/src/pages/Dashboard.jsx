@@ -383,12 +383,12 @@ const Dashboard = () => {
 
         {/* Charts Row - Responsive 2 Columns */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Biometric dining chart */}
+          {/* Dining turnout chart */}
           <div className="glass-card p-6 flex flex-col">
             <div className="flex justify-between items-center mb-8">
               <div className="flex items-center gap-2">
                 <UtensilsCrossed size={16} className="text-[var(--primary)]" />
-                <h3 className="text-[13px] font-bold text-slate-800">Today's Dining Biometric Turnout</h3>
+                <h3 className="text-[13px] font-bold text-slate-800">Today's Dining Turnout</h3>
               </div>
             </div>
             <div className="w-full h-[280px]">
@@ -399,7 +399,7 @@ const Dashboard = () => {
                   <YAxis stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
                   <Tooltip cursor={{fill: 'rgba(226, 232, 240, 0.4)'}} contentStyle={{ background: '#fff', border: 'none', borderRadius: '12px', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                   <Legend verticalAlign="bottom" height={36} iconType="square" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }} />
-                  <Bar dataKey="Attended" name="Ate (Biometric Verified)" fill="#f43f5e" radius={[10, 10, 0, 0]} />
+                  <Bar dataKey="Attended" name="Ate (Verified)" fill="#f43f5e" radius={[10, 10, 0, 0]} />
                   <Bar dataKey="Capacity" name="Total Roster" fill="#e2e8f0" radius={[10, 10, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api, { auth as authApi, leaves as leavesApi, complaints as complaintsApi, visitors as visitorsApi } from '../utils/api';
-import { Bell, Megaphone, LogOut, ChevronDown, Menu, Search, Sun, Moon, CheckCheck, UserCheck, FileCheck, Wrench, Users, ArrowRight } from 'lucide-react';
+import { Bell, Megaphone, LogOut, ChevronDown, Menu, Search, CheckCheck, UserCheck, FileCheck, Wrench, Users, ArrowRight } from 'lucide-react';
 
 const Header = ({ isCollapsed, onMenuToggle }) => {
   const { user, logout } = useAuth();
@@ -20,7 +20,6 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
 
   const [showNoticesDropdown, setShowNoticesDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
@@ -308,14 +307,6 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
           )}
         </div>
 
-        {/* Dark Mode Toggle */}
-        <button 
-          onClick={() => setIsDarkMode(!isDarkMode)}
-          className="w-10 h-10 rounded-full hover:bg-white border border-transparent hover:border-slate-200 hover:shadow-sm flex items-center justify-center text-slate-500 cursor-pointer transition-all"
-          title="Toggle Theme"
-        >
-          {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
 
         {/* Profile Avatar & Dropdown */}
         <div className="relative">

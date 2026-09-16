@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { CalendarDays, CheckCircle, XCircle, LogOut, LogIn, Clock, ShieldAlert, Fingerprint, Home, MapPin, Plane, ArrowLeft } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
-import BiometricScanner from '../components/BiometricScanner';
 
 const Leaves = () => {
   const { user } = useAuth();
@@ -18,9 +17,6 @@ const Leaves = () => {
     startDate: '', endDate: '', type: 'NIGHT_OUT', reason: ''
   });
   const [formError, setFormError] = useState(null);
-
-  // Biometric Modal State
-  const [isBiometricModalOpen, setIsBiometricModalOpen] = useState(false);
 
   // Comment Modal State (Warden Approval/Rejection)
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
@@ -114,13 +110,6 @@ const Leaves = () => {
         alert(error.message || 'Failed to log gate check-in');
       }
     }
-  };
-
-  // Biometric scanner responses
-  const handleBiometricSuccess = (data) => {
-    alert(data.message || 'Biometric check successful!');
-    setIsBiometricModalOpen(false);
-    fetchLeaves();
   };
 
   return (
@@ -260,23 +249,6 @@ const Leaves = () => {
               </form>
             </div>
 
-            {/* Biometric Gate Trigger Card */}
-            <div className="glass-card p-6 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <Fingerprint size={20} className="text-slate-500" />
-                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Gate Biometric Scanner</h3>
-              </div>
-              <p className="text-xs text-slate-400 mt-1 leading-relaxed font-medium">
-                Your checkout and check-in times at the gate are automatically updated on this dashboard via the physical fingerprint devices installed at the main entrance.
-              </p>
-              <button 
-                onClick={() => setIsBiometricModalOpen(true)}
-                className="w-full h-10 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all bg-white"
-              >
-                <Fingerprint size={14} />
-                <span>Simulate Gate Fingerprint Scan</span>
-              </button>
-            </div>
           </div>
 
           {/* Leave history on right */}
@@ -317,12 +289,12 @@ const Leaves = () => {
                       <div className="flex flex-col gap-1 border-t border-slate-50 pt-2 text-[10px]">
                         {leave.checkOutTime && (
                           <p className="text-emerald-600 font-bold flex items-center gap-1">
-                            <LogOut size={12} /> Biometric Gate Out: {new Date(leave.checkOutTime).toLocaleString()}
+                            <LogOut size={12} /> Gate Out: {new Date(leave.checkOutTime).toLocaleString()}
                           </p>
                         )}
                         {leave.checkInTime && (
                           <p className="text-emerald-600 font-bold flex items-center gap-1">
-                            <LogIn size={12} /> Biometric Gate In: {new Date(leave.checkInTime).toLocaleString()}
+                            <LogIn size={12} /> Gate In: {new Date(leave.checkInTime).toLocaleString()}
                           </p>
                         )}
                       </div>

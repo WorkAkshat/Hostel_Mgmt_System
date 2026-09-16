@@ -5,7 +5,6 @@ import { mess as messApi } from '../utils/api';
 import { Sparkles, Utensils, Star, Edit3, Save, TrendingUp, Fingerprint, ArrowLeft, CheckCircle, Package, AlertTriangle, Check, XCircle, Megaphone, Plus, MessageSquare, Image as ImageIcon } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import CustomModal from '../components/CustomModal';
-import BiometricScanner from '../components/BiometricScanner';
 
 const DEFAULT_MENU = {
   Monday: { Breakfast: 'Idli Sambar & Tea', Lunch: 'Rajma Chawal, Roti & Curd', Snacks: 'Samosa & Milk', Dinner: 'Paneer Masala, Tadka Dal & Roti' },
@@ -48,9 +47,6 @@ const Mess = () => {
   // Student Attendance logs state
   const [myAttendance, setMyAttendance] = useState([]);
   const [loadingAttendance, setLoadingAttendance] = useState(true);
-
-  // Biometric Terminal Modal state
-  const [isBiometricModalOpen, setIsBiometricModalOpen] = useState(false);
 
   // Student meal rating state (unlocked after biometric check)
   const [studentRatings, setStudentRatings] = useState({
@@ -160,13 +156,6 @@ const Mess = () => {
     alert('Thank you! Your ratings have been logged.');
   };
 
-  // Biometric Verify handler
-  const handleBiometricSuccess = (data) => {
-    alert(data.message || 'Dining entrance verified successfully!');
-    setIsBiometricModalOpen(false);
-    fetchStudentAttendance();
-  };
-
   // Inventory Handlers
   const handleInventoryStatus = (id, status) => {
     const updated = inventory.map(item => item.id === id ? { ...item, status } : item);
@@ -226,11 +215,11 @@ const Mess = () => {
           )}
           <div className="page-header mb-0 flex-1">
             <h1 className="page-title leading-tight">
-              {user.role === 'ADMIN' ? 'Mess Biometrics & Schedule' : 'Mess Schedule & Dining'}
+              {user.role === 'ADMIN' ? 'Mess Management & Schedule' : 'Mess Schedule & Dining'}
             </h1>
             <p className="page-subtitle mb-0 mt-1 text-sm sm:text-base">
               {user.role === 'ADMIN' ? 'Inspect the weekly dining menu, verify dining log-ins, and review satisfaction indexes.' :
-               'Hari Pushp PG biometric mess logs and daily satisfaction surveys'}
+               'Hari Pushp PG mess logs and daily satisfaction surveys'}
             </p>
           </div>
         </div>
@@ -247,7 +236,7 @@ const Mess = () => {
               <div className="glass-card p-6 flex flex-col">
                 <div className="flex items-center gap-2 mb-6">
                   <TrendingUp size={18} className="text-slate-500" />
-                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Today's Dining Turnout (Biometric)</h3>
+                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Today's Dining Turnout</h3>
                 </div>
                 <div className="w-full h-[240px]">
                   <ResponsiveContainer width="100%" height="100%">
@@ -390,27 +379,20 @@ const Mess = () => {
           <div className="glass-card p-6 shadow-sm flex flex-col gap-4 text-left">
             <div className="flex items-center gap-2 border-b border-slate-50 pb-3">
               <CheckCircle size={20} className="text-emerald-500 shrink-0" />
-              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Biometric Terminal Registry</h3>
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Mess Dining Registry</h3>
             </div>
             <p className="text-xs text-slate-400 font-medium leading-relaxed">
-              Hostel dining hall attendance is registered automatically via the physical biometric terminals installed at the mess entrance.
+              Hostel dining hall attendance is registered automatically upon entry at the mess hall.
             </p>
             {myAttendance.length > 0 ? (
               <div className="mt-2 p-4 bg-emerald-50 border border-emerald-100 text-emerald-800 rounded-xl text-xs font-semibold">
-                Last Terminal Entry: {myAttendance[0].mealType} ({myAttendance[0].date})
+                Last Dining Entry: {myAttendance[0].mealType} ({myAttendance[0].date})
               </div>
             ) : (
               <div className="mt-2 p-4 bg-slate-50 border border-slate-200 text-slate-400 rounded-xl text-xs font-medium">
-                No mess biometric entries recorded for today yet.
+                No mess dining entries recorded for today yet.
               </div>
             )}
-            <button 
-              onClick={() => setIsBiometricModalOpen(true)}
-              className="w-full h-11 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all bg-white"
-            >
-              <Fingerprint size={14} />
-              <span>Simulate Biometric Mess Check-In</span>
-            </button>
           </div>
 
           {/* Rating Widget */}
@@ -645,7 +627,7 @@ const Mess = () => {
       {/* Student Personal Dining History Logs */}
       {user.role === 'STUDENT' && (
         <div className="glass-card p-6 shadow-sm flex flex-col">
-          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-5">My Dining Biometric Logs</h3>
+          <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-5">My Dining Logs</h3>
           {loadingAttendance ? (
             <p className="text-slate-400 font-medium text-center py-12 text-sm">Loading logs...</p>
           ) : myAttendance.length === 0 ? (
@@ -668,17 +650,6 @@ const Mess = () => {
           )}
         </div>
       )}
-
-      {/* BIOMETRIC SIMULATION SCANNER POPUP */}
-      <CustomModal isOpen={isBiometricModalOpen} onClose={() => setIsBiometricModalOpen(false)} title="Biometric Gate Terminal">
-        <div className="py-2">
-          <BiometricScanner 
-            rollNumber={user.studentDetails?.rollNumber}
-            endpoint="/leaves/biometric-verify"
-            onSuccess={handleBiometricSuccess}
-          />
-        </div>
-      </CustomModal>
     </div>
   );
 };
