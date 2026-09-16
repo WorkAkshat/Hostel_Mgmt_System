@@ -551,17 +551,6 @@ const Leaves = () => {
         </div>
       )}
 
-      {/* BIOMETRIC SIMULATION SCANNER POPUP */}
-      <CustomModal isOpen={isBiometricModalOpen} onClose={() => setIsBiometricModalOpen(false)} title="Biometric Gate Terminal">
-        <div className="py-2">
-          <BiometricScanner 
-            rollNumber={user.studentDetails?.rollNumber}
-            endpoint="/leaves/biometric-verify"
-            onSuccess={handleBiometricSuccess}
-          />
-        </div>
-      </CustomModal>
-
       {/* WARDEN COMMENTS COMMENT MODAL */}
       <CustomModal 
         isOpen={isCommentModalOpen} 
