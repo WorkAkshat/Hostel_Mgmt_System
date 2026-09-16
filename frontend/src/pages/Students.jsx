@@ -166,12 +166,11 @@ const Students = () => {
 
       {/* Filters Bar */}
       <div className="glass-card p-5 flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <div className="relative flex items-center w-full sm:max-w-md">
-          <Search size={18} className="absolute left-4 text-slate-400" />
+        <div className="w-full sm:max-w-md">
           <input 
             type="text" 
             placeholder="Search by name, roll number, or room..." 
-            className="form-input pl-11 w-full"
+            className="form-input w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />

@@ -202,8 +202,7 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
       </div>
 
       {/* Middle Section - Search (Pill shaped) */}
-      <div className="hidden md:flex items-center w-[360px] h-10 rounded-full bg-white shadow-sm border border-slate-200 px-4 gap-3 group focus-within:border-[var(--primary)] focus-within:shadow-md transition-all">
-        <Search size={16} className="text-slate-400 group-focus-within:text-[var(--primary)]" />
+      <div className="hidden md:flex items-center w-[360px] h-10 rounded-full bg-white shadow-sm border border-slate-200 px-4 group focus-within:border-[var(--primary)] focus-within:shadow-md transition-all">
         <input 
           type="text" 
           placeholder="Search anything..." 

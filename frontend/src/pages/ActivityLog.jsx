@@ -375,13 +375,12 @@ export default function ActivityLog() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
           {/* Search Box */}
           <div className="md:col-span-4 relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search user name or description..."
               value={search}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-indigo-400 focus:bg-white transition-all"
+              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-indigo-400 focus:bg-white transition-all"
             />
             {search && (
               <button

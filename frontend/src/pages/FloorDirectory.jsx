@@ -390,13 +390,12 @@ export default function FloorDirectory() {
         <>
           {/* Search */}
           <div className="relative mb-5">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Search by name, roll number or phone…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-[12px] bg-white border border-slate-200 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors"
+              className="w-full px-4 py-2.5 rounded-[12px] bg-white border border-slate-200 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors shadow-xs"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-slate-400"><X size={14} /></button>
