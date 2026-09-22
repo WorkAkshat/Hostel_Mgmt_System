@@ -44,6 +44,21 @@ const Fees = () => {
   });
   const [generateError, setGenerateError] = useState(null);
   const [generateLoading, setGenerateLoading] = useState(false);
+  const [autoBillingLoading, setAutoBillingLoading] = useState(false);
+
+  // Trigger Month-End Auto Billing for All Approved Students
+  const handleTriggerAutoBilling = async () => {
+    try {
+      setAutoBillingLoading(true);
+      const res = await feesApi.autoGenerateMonthly();
+      alert(res.message || 'Month-end auto billing completed successfully!');
+      fetchInvoices();
+    } catch (error) {
+      alert(error.message || 'Failed to run month-end auto billing');
+    } finally {
+      setAutoBillingLoading(false);
+    }
+  };
 
   // Payment Form state (Student)
   const [paymentForm, setPaymentForm] = useState({
@@ -401,10 +416,21 @@ const Fees = () => {
         </div>
 
         {user.role === 'ADMIN' && (
-          <button className="btn-primary shrink-0 shadow-sm" onClick={() => setIsGenerateModalOpen(true)}>
-            <Plus size={16} />
-            <span>Generate Student Bill</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button 
+              className="bg-slate-50 border border-slate-200/80 hover:bg-slate-100 text-slate-700 font-bold text-xs h-11 px-4 rounded-xl flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+              onClick={handleTriggerAutoBilling}
+              disabled={autoBillingLoading}
+              title="Automatically generate monthly fee invoices for all approved hostel residents"
+            >
+              <RefreshCw size={15} className={`text-blue-600 ${autoBillingLoading ? 'animate-spin' : ''}`} />
+              <span>{autoBillingLoading ? 'Running Auto Billing...' : 'Run Month-End Auto Billing'}</span>
+            </button>
+            <button className="btn-primary shrink-0 shadow-sm h-11" onClick={() => setIsGenerateModalOpen(true)}>
+              <Plus size={16} />
+              <span>Generate Student Bill</span>
+            </button>
+          </div>
         )}
       </div>
 
@@ -715,15 +741,15 @@ const Fees = () => {
           {/* Student Selector */}
           <div className="form-group mb-0 full-width">
             <label className="form-label">Select Student Resident</label>
-            {studentsList.length > 0 ? (
+            {studentsList.filter(st => st.user?.role === 'STUDENT').length > 0 ? (
               <select 
                 className="form-input"
                 required
                 value={generateForm.studentRollNumber}
                 onChange={(e) => setGenerateForm({ ...generateForm, studentRollNumber: e.target.value })}
               >
-                <option value="">-- Choose Student from Directory --</option>
-                {studentsList.map(st => (
+                <option value="">-- Select Approved Student Resident --</option>
+                {studentsList.filter(st => st.user?.role === 'STUDENT').map(st => (
                   <option key={st.id} value={st.rollNumber}>
                     {st.user?.name} (Roll: {st.rollNumber}) {st.room ? `- Room ${st.room.roomNumber}` : ''}
                   </option>
@@ -733,7 +759,7 @@ const Fees = () => {
               <input 
                 type="text" 
                 className="form-input" 
-                placeholder="e.g. 2024CS101"
+                placeholder="e.g. HARIPUSHP_001"
                 required
                 value={generateForm.studentRollNumber}
                 onChange={(e) => setGenerateForm({...generateForm, studentRollNumber: e.target.value})}

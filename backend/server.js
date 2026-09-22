@@ -169,11 +169,26 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 9000;
 
+const { generateMonthlyBillingRun } = require('./controllers/invoiceController');
+
 const server = app.listen(PORT, () => {
   console.log(`\n==================================================`);
   console.log(`  Hari Pushp PG Backend Server online at port ${PORT}`);
   console.log(`  API Base Endpoint: http://localhost:${PORT}/api/v1`);
   console.log(`==================================================\n`);
+
+  // Automated background runner for month-end student billing
+  setTimeout(() => {
+    generateMonthlyBillingRun()
+      .then(res => console.log(`[Auto-Billing Engine] Checked for ${res.monthName}: ${res.generatedCount} new invoices generated, ${res.skippedCount} already billed.`))
+      .catch(e => console.error('[Auto-Billing Engine Error]', e));
+  }, 5000);
+
+  setInterval(() => {
+    generateMonthlyBillingRun()
+      .then(res => console.log(`[Auto-Billing Engine Periodic Run] Completed for ${res.monthName}.`))
+      .catch(e => console.error('[Auto-Billing Engine Error]', e));
+  }, 24 * 60 * 60 * 1000);
 });
 
 server.on('error', (err) => {

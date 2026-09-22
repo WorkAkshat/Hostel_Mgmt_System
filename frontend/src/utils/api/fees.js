@@ -20,3 +20,9 @@ export const pay = (id) => {
     method: 'PUT'
   });
 };
+
+export const autoGenerateMonthly = () => {
+  return client('/invoices/auto-generate-monthly', {
+    method: 'POST'
+  });
+};

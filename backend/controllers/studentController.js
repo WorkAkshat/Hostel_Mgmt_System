@@ -117,15 +117,20 @@ const createStudent = async (req, res) => {
       return res.status(400).json({ message: 'User with this email already exists' });
     }
 
-    // 2. Check if roll number already exists
+    // 2. Format roll number as HARIPUSHP_SerialNumber
+    const count = await prisma.student.count();
+    const serial = String(count + 1).padStart(3, '0');
     let finalRoll = rollNumber;
-    if (rollNumber) {
-      const rollExists = await prisma.student.findUnique({ where: { rollNumber } });
-      if (rollExists) {
-        return res.status(400).json({ message: 'Student with this roll number already exists' });
-      }
+    if (rollNumber && rollNumber.trim()) {
+      const raw = rollNumber.trim().toUpperCase();
+      finalRoll = raw.startsWith('HARIPUSHP_') ? raw : `HARIPUSHP_${raw}`;
     } else {
-      finalRoll = `ROLL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+      finalRoll = `HARIPUSHP_${serial}`;
+    }
+
+    const rollExists = await prisma.student.findUnique({ where: { rollNumber: finalRoll } });
+    if (rollExists) {
+      return res.status(400).json({ message: `Student with roll number ${finalRoll} already exists` });
     }
 
     // 3. Optional Room capacity check

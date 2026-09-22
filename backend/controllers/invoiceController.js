@@ -141,9 +141,90 @@ const payInvoice = async (req, res) => {
   }
 };
 
+// Helper & controller for automated month-end invoicing
+const generateMonthlyBillingRun = async () => {
+  const today = new Date();
+  const monthName = today.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  
+  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+
+  // Due date: 5th of next month
+  const dueDate = new Date(today.getFullYear(), today.getMonth() + 1, 5);
+
+  // Fetch all approved students (whose user approval is done -> user.role === 'STUDENT')
+  const approvedStudents = await prisma.student.findMany({
+    where: {
+      user: {
+        role: 'STUDENT'
+      }
+    },
+    include: {
+      user: {
+        select: { id: true, name: true, email: true, role: true }
+      },
+      room: true
+    }
+  });
+
+  let generatedCount = 0;
+  let skippedCount = 0;
+
+  for (const student of approvedStudents) {
+    // Check if invoice created within current billing month already exists for this student
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: {
+        studentId: student.id,
+        createdAt: {
+          gte: startOfMonth,
+          lte: endOfMonth
+        }
+      }
+    });
+
+    if (existingInvoice) {
+      skippedCount++;
+      continue;
+    }
+
+    const billingAmount = student.room?.price ? parseFloat(student.room.price) : 15000;
+
+    await prisma.invoice.create({
+      data: {
+        studentId: student.id,
+        amount: billingAmount,
+        dueDate,
+        status: 'UNPAID'
+      }
+    });
+
+    generatedCount++;
+  }
+
+  return { monthName, totalApprovedStudents: approvedStudents.length, generatedCount, skippedCount };
+};
+
+// @desc    Trigger automated month-end invoicing for all approved students (Warden/Admin)
+// @route   POST /api/invoices/auto-generate-monthly
+// @access  Private (Admin/Warden only)
+const triggerAutoMonthlyInvoices = async (req, res) => {
+  try {
+    const result = await generateMonthlyBillingRun();
+    res.json({
+      message: `Automated month-end billing complete for ${result.monthName}. Generated ${result.generatedCount} invoices (${result.skippedCount} students already billed).`,
+      result
+    });
+  } catch (error) {
+    console.error('Error running auto monthly billing:', error);
+    res.status(500).json({ message: 'Server error during automated monthly invoice generation' });
+  }
+};
+
 module.exports = {
   createInvoice,
   getAllInvoices,
   getMyInvoices,
-  payInvoice
+  payInvoice,
+  generateMonthlyBillingRun,
+  triggerAutoMonthlyInvoices
 };

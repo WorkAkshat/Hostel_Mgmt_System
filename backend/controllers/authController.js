@@ -216,13 +216,19 @@ const registerUser = async (req, res) => {
       if (!/^[0-9]{10}$/.test(phoneNumber) || !/^[0-9]{10}$/.test(parentContact)) {
         return res.status(400).json({ message: 'Phone and parent contact numbers must be exactly 10 digits.' });
       }
-      if (rollNumber) {
-        const rollExists = await prisma.student.findUnique({ where: { rollNumber } });
-        if (rollExists) {
-          return res.status(400).json({ message: 'Student with this roll number already exists' });
-        }
+      
+      const count = await prisma.student.count();
+      const serial = String(count + 1).padStart(3, '0');
+      if (rollNumber && rollNumber.trim()) {
+        const raw = rollNumber.trim().toUpperCase();
+        finalRoll = raw.startsWith('HARIPUSHP_') ? raw : `HARIPUSHP_${raw}`;
       } else {
-        finalRoll = `ROLL-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+        finalRoll = `HARIPUSHP_${serial}`;
+      }
+
+      const rollExists = await prisma.student.findUnique({ where: { rollNumber: finalRoll } });
+      if (rollExists) {
+        finalRoll = `HARIPUSHP_${String(count + Math.floor(Math.random() * 90) + 10).padStart(3, '0')}`;
       }
     }
 
@@ -396,7 +402,15 @@ const approveUser = async (req, res) => {
           await tx.staff.delete({ where: { id: user.staff.id } });
         }
 
-        const studentRoll = rollNumber || user.student?.rollNumber || `ROLL-${Date.now()}`;
+        const count = await prisma.student.count();
+        const serial = String(count + 1).padStart(3, '0');
+        let studentRoll = rollNumber || user.student?.rollNumber;
+        if (studentRoll && studentRoll.trim()) {
+          const raw = studentRoll.trim().toUpperCase();
+          studentRoll = raw.startsWith('HARIPUSHP_') ? raw : `HARIPUSHP_${raw}`;
+        } else {
+          studentRoll = `HARIPUSHP_${serial}`;
+        }
         const studentPhone = phoneNumber || user.student?.phoneNumber || '0000000000';
         const studentParent = parentContact || user.student?.parentContact || '0000000000';
 

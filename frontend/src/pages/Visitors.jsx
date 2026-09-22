@@ -306,7 +306,7 @@ const Visitors = () => {
             <input 
               type="text" 
               className="form-input" 
-              placeholder="e.g. 2024CS101"
+              placeholder="e.g. HARIPUSHP_001"
               required
               value={form.studentRollNumber}
               onChange={(e) => setForm({...form, studentRollNumber: e.target.value})}
