@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { students as studentsApi, rooms as roomsApi } from '../utils/api';
-import { Search, UserPlus, Edit, Trash2, Mail, Phone, Home, ShieldAlert, Hash, ZoomIn, Camera, X, Maximize2 } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, Mail, Phone, Home, ShieldAlert, Hash, ZoomIn, Camera, X, Maximize2, Printer } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
+import StudentAdmissionFormPrint from '../components/StudentAdmissionFormPrint';
 
 const Students = () => {
   const [students, setStudents] = useState([]);
@@ -11,6 +12,7 @@ const Students = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [previewImage, setPreviewImage] = useState(null); // { url, name }
+  const [printingStudent, setPrintingStudent] = useState(null);
   const location = useLocation();
   
   // Modals state
@@ -271,13 +273,21 @@ const Students = () => {
                   <div className="h-[1px] bg-slate-100/80 my-4" />
 
                   {/* Actions */}
-                  <div className="flex gap-3">
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setPrintingStudent(student)}
+                      className="border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-700 rounded-xl font-bold text-xs px-3 h-10 flex items-center justify-center gap-1.5 cursor-pointer transition-all shrink-0"
+                      title="Print Official Hostel Admission Form"
+                    >
+                      <Printer size={14} />
+                      <span>Form</span>
+                    </button>
                     <button 
                       onClick={() => openEditModal(student)}
                       className="flex-1 h-10 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all bg-white"
                     >
                       <Edit size={14} />
-                      <span>Edit Profile</span>
+                      <span>Edit</span>
                     </button>
                     <button 
                       onClick={() => handleDelete(student.id)}
@@ -515,6 +525,14 @@ const Students = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* PRINTABLE ADMISSION FORM MODAL */}
+      {printingStudent && (
+        <StudentAdmissionFormPrint 
+          student={printingStudent} 
+          onClose={() => setPrintingStudent(null)} 
+        />
       )}
     </div>
   );

@@ -54,6 +54,12 @@ model Student {
   dateOfJoining    DateTime?
   maritalStatus    String?
   fatherName       String?
+  motherName       String?
+  motherContact    String?
+  siblingContact   String?
+  course           String?
+  bloodGroup       String?
+  emergencyContact String?
   dob              DateTime?
   permanentAddress String?
   state            String?

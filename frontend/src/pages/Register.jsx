@@ -73,6 +73,12 @@ const Register = () => {
   // Student specific details
   const [studentPhone, setStudentPhone] = useState('');
   const [parentContact, setParentContact] = useState('');
+  const [motherName, setMotherName] = useState('');
+  const [motherContact, setMotherContact] = useState('');
+  const [siblingContact, setSiblingContact] = useState('');
+  const [emergencyContact, setEmergencyContact] = useState('');
+  const [course, setCourse] = useState('');
+  const [bloodGroup, setBloodGroup] = useState('O+');
   const [dateOfJoining, setDateOfJoining] = useState('');
   const [maritalStatus, setMaritalStatus] = useState('Unmarried');
   const [fatherName, setFatherName] = useState('');
@@ -299,6 +305,12 @@ const Register = () => {
 
       payload.phoneNumber = studentPhone;
       payload.parentContact = parentContact;
+      payload.motherName = motherName;
+      payload.motherContact = motherContact;
+      payload.siblingContact = siblingContact;
+      payload.emergencyContact = emergencyContact;
+      payload.course = course;
+      payload.bloodGroup = bloodGroup;
       payload.dateOfJoining = dateOfJoining;
       payload.maritalStatus = maritalStatus;
       payload.fatherName = fatherName;
@@ -685,6 +697,109 @@ const Register = () => {
                     {getFieldError('fatherName') && (
                       <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('fatherName')}</span>
                     )}
+                  </div>
+
+                  {/* Mother's Name */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Mother's Name</label>
+                    <div className="relative flex items-center">
+                      <User size={15} className="absolute left-3.5 pointer-events-none text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Mother's Full Name"
+                        value={motherName}
+                        onChange={(e) => setMotherName(e.target.value)}
+                        disabled={loading}
+                        className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mother's Mobile */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Mother's Mobile Number</label>
+                    <div className="relative flex items-center">
+                      <Phone size={15} className="absolute left-3.5 pointer-events-none text-slate-400" />
+                      <input
+                        type="tel"
+                        placeholder="Mother's 10-digit mobile"
+                        value={motherContact}
+                        onChange={(e) => setMotherContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        disabled={loading}
+                        className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Brother/Sister Mobile */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Brother / Sister Mobile Number</label>
+                    <div className="relative flex items-center">
+                      <Phone size={15} className="absolute left-3.5 pointer-events-none text-slate-400" />
+                      <input
+                        type="tel"
+                        placeholder="Sibling's 10-digit mobile"
+                        value={siblingContact}
+                        onChange={(e) => setSiblingContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        disabled={loading}
+                        className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Emergency Contact */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Emergency Contact Person & Phone</label>
+                    <div className="relative flex items-center">
+                      <Phone size={15} className="absolute left-3.5 pointer-events-none text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Emergency contact name & mobile"
+                        value={emergencyContact}
+                        onChange={(e) => setEmergencyContact(e.target.value)}
+                        disabled={loading}
+                        className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Course & Blood Group */}
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Course / Branch</label>
+                    <div className="relative flex items-center">
+                      <GraduationCap size={15} className="absolute left-3.5 pointer-events-none text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="e.g. B.Tech CS / NEET Prep / B.Com"
+                        value={course}
+                        onChange={(e) => setCourse(e.target.value)}
+                        disabled={loading}
+                        className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Blood Group</label>
+                    <div className="relative flex items-center">
+                      <Heart size={15} className="absolute left-3.5 pointer-events-none text-slate-400 z-10" />
+                      <select
+                        value={bloodGroup}
+                        onChange={(e) => setBloodGroup(e.target.value)}
+                        disabled={loading}
+                        className="w-full h-11 pl-9 sm:pl-10 pr-8 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 appearance-none cursor-pointer transition-all"
+                      >
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="O+">O+</option>
+                        <option value="O-">O-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                      </select>
+                      <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-slate-400 w-0 h-0" />
+                    </div>
                   </div>
 
                   {/* Marital Status */}

@@ -104,10 +104,10 @@ const getStudentById = async (req, res) => {
 // @route   POST /api/students
 // @access  Private (Admin/Warden only)
 const createStudent = async (req, res) => {
-  const { name, email, password, rollNumber, phoneNumber, parentContact, roomId } = req.body;
+  const { name, email, password, rollNumber, phoneNumber, parentContact, roomId, fatherName, motherName, motherContact, siblingContact, course, bloodGroup, emergencyContact, permanentAddress, state, pincode, coachingCollege, dob, dateOfJoining } = req.body;
 
   if (!name || !email || !password || !phoneNumber || !parentContact) {
-    return res.status(400).json({ message: 'All fields except Room ID and Roll Number are required' });
+    return res.status(400).json({ message: 'All mandatory fields are required' });
   }
 
   try {
@@ -171,6 +171,19 @@ const createStudent = async (req, res) => {
           rollNumber: finalRoll,
           phoneNumber,
           parentContact,
+          fatherName,
+          motherName,
+          motherContact,
+          siblingContact,
+          course,
+          bloodGroup,
+          emergencyContact,
+          permanentAddress,
+          state,
+          pincode,
+          coachingCollege,
+          dob: dob ? new Date(dob) : null,
+          dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
           roomId: roomId || null,
           status: 'CHECKED_IN'
         },
@@ -305,6 +318,12 @@ const updateStudent = async (req, res) => {
           dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : student.dateOfJoining,
           maritalStatus: maritalStatus !== undefined ? maritalStatus : student.maritalStatus,
           fatherName: fatherName !== undefined ? fatherName : student.fatherName,
+          motherName: motherName !== undefined ? motherName : student.motherName,
+          motherContact: motherContact !== undefined ? motherContact : student.motherContact,
+          siblingContact: siblingContact !== undefined ? siblingContact : student.siblingContact,
+          course: course !== undefined ? course : student.course,
+          bloodGroup: bloodGroup !== undefined ? bloodGroup : student.bloodGroup,
+          emergencyContact: emergencyContact !== undefined ? emergencyContact : student.emergencyContact,
           dob: dob ? new Date(dob) : student.dob,
           permanentAddress: permanentAddress !== undefined ? permanentAddress : student.permanentAddress,
           state: state !== undefined ? state : student.state,
