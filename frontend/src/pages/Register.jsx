@@ -77,7 +77,6 @@ const Register = () => {
   const [motherContact, setMotherContact] = useState('');
   const [siblingContact, setSiblingContact] = useState('');
   const [emergencyContact, setEmergencyContact] = useState('');
-  const [course, setCourse] = useState('');
   const [bloodGroup, setBloodGroup] = useState('O+');
   const [dateOfJoining, setDateOfJoining] = useState('');
   const [maritalStatus, setMaritalStatus] = useState('Unmarried');
@@ -309,7 +308,6 @@ const Register = () => {
       payload.motherContact = motherContact;
       payload.siblingContact = siblingContact;
       payload.emergencyContact = emergencyContact;
-      payload.course = course;
       payload.bloodGroup = bloodGroup;
       payload.dateOfJoining = dateOfJoining;
       payload.maritalStatus = maritalStatus;
@@ -763,21 +761,7 @@ const Register = () => {
                     </div>
                   </div>
 
-                  {/* Course & Blood Group */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Course / Branch</label>
-                    <div className="relative flex items-center">
-                      <GraduationCap size={15} className="absolute left-3.5 pointer-events-none text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="e.g. B.Tech CS / NEET Prep / B.Com"
-                        value={course}
-                        onChange={(e) => setCourse(e.target.value)}
-                        disabled={loading}
-                        className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
-                      />
-                    </div>
-                  </div>
+
 
                   <div className="flex flex-col gap-1">
                     <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Blood Group</label>
