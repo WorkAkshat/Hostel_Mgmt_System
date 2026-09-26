@@ -476,7 +476,7 @@ const Approvals = () => {
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">College / Coaching</span>
+                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Company / College</span>
                   <span className="font-semibold text-white truncate block">{selectedUser.student?.coachingCollege || 'N/A'}</span>
                 </div>
                 <div>
@@ -670,14 +670,14 @@ const Approvals = () => {
                   </div>
                 </div>
 
-                {/* College / Coaching Name */}
+                {/* Company / College Name */}
                 <div className="flex flex-col gap-1 sm:col-span-2">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">College / Coaching Institute *</label>
+                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Company / College *</label>
                   <div className="relative flex items-center">
                     <GraduationCap size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
                     <input
                       type="text"
-                      placeholder="e.g. Allen Institute / University of Rajasthan"
+                      placeholder="e.g. Company Name / University / College"
                       className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium"
                       required
                       value={approveForm.coachingCollege}

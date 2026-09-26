@@ -108,7 +108,7 @@ const StudentAdmissionFormPrint = ({ student, onClose }) => {
 
 
                 <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">College / Coaching Institute</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Company / College</span>
                   <span className="font-bold text-slate-800 text-xs">{student.coachingCollege || 'N/A'}</span>
                 </div>
               </div>

@@ -139,7 +139,7 @@ const Register = () => {
       case 'maritalStatus':
         return role === 'STUDENT' && !maritalStatus ? 'Marital status is required' : null;
       case 'coachingCollege':
-        return role === 'STUDENT' && !coachingCollege.trim() ? 'College or coaching institute is required' : null;
+        return role === 'STUDENT' && !coachingCollege.trim() ? 'Company or college name is required' : null;
       case 'permanentAddress':
         return role === 'STUDENT' && !permanentAddress.trim() ? 'Permanent address is required' : null;
       case 'state':
@@ -812,14 +812,14 @@ const Register = () => {
                     )}
                   </div>
 
-                  {/* College / Coaching Name */}
+                  {/* Company / College Name */}
                   <div className="flex flex-col gap-1 sm:col-span-2">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">College / Coaching Institute *</label>
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Company / College *</label>
                     <div className="relative flex items-center">
                       <GraduationCap size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('coachingCollege') ? 'text-red-400' : 'text-slate-400'}`} />
                       <input
                         type="text"
-                        placeholder="e.g. Allen Institute / University of Rajasthan"
+                        placeholder="e.g. Company Name / University / College"
                         value={coachingCollege}
                         onChange={(e) => setCoachingCollege(e.target.value)}
                         disabled={loading}
