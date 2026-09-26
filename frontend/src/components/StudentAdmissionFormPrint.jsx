@@ -19,15 +19,15 @@ const StudentAdmissionFormPrint = ({ student, onClose }) => {
   const dobDate = student.dob ? new Date(student.dob).toLocaleDateString('en-IN') : 'N/A';
 
   return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
       {/* Modal Container */}
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden animate-fade-in text-slate-800 text-left border border-slate-200">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] my-auto flex flex-col overflow-hidden animate-fade-in text-slate-800 text-left border border-slate-200">
         
         {/* Top Control Bar (Hidden when printing) */}
         <div className="p-4 bg-slate-900 text-white flex justify-between items-center shrink-0 print:hidden">
           <div className="flex items-center gap-2">
             <GraduationCap className="text-blue-400" size={20} />
-            <h3 className="font-bold text-sm sm:text-base tracking-wide">Official Hostel Admission Form</h3>
+            <h3 className="font-bold text-sm sm:text-base tracking-wide !text-white" style={{ color: '#ffffff' }}>Official Hostel Admission Form</h3>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -106,8 +106,7 @@ const StudentAdmissionFormPrint = ({ student, onClose }) => {
                   <span className="font-bold text-slate-800 text-xs">{dobDate} | Blood: {student.bloodGroup || 'O+'}</span>
                 </div>
 
-
-                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 sm:col-span-2">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Company / College</span>
                   <span className="font-bold text-slate-800 text-xs">{student.coachingCollege || 'N/A'}</span>
                 </div>

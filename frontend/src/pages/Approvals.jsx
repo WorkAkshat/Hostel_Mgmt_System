@@ -446,12 +446,12 @@ const Approvals = () => {
 
         {/* Premium Profile Banner Card */}
         {selectedUser && (
-          <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-5 shadow-md flex flex-col gap-4 text-left">
-            <div className="flex items-start justify-between gap-4 flex-wrap sm:flex-nowrap">
+          <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-5 shadow-lg flex flex-col gap-4 text-left border border-indigo-500/20">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 {selectedUser.avatar || selectedUser.student?.profilePic ? (
                   <div
-                    className="relative group cursor-pointer w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-indigo-400 shadow-xl shrink-0 transition-transform duration-200 hover:scale-105"
+                    className="relative group cursor-pointer w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden border-2 border-indigo-400 shadow-xl shrink-0 transition-transform duration-200 hover:scale-105"
                     onClick={() => setPreviewImage({ url: selectedUser.avatar || selectedUser.student?.profilePic, name: selectedUser.name })}
                     title="Click to view full profile photo"
                   >
@@ -461,18 +461,20 @@ const Approvals = () => {
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity text-white text-[10px] font-bold">
-                      <ZoomIn size={20} className="drop-shadow-md" />
+                      <ZoomIn size={18} className="drop-shadow-md" />
                       <span>Enlarge Photo</span>
                     </div>
                   </div>
                 ) : (
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-extrabold text-3xl flex items-center justify-center border-2 border-white/20 shadow-xl shrink-0">
+                  <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-extrabold text-3xl flex items-center justify-center border-2 border-white/20 shadow-xl shrink-0">
                     {selectedUser.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-[19px] sm:text-[22px] font-bold text-white tracking-tight">{selectedUser.name}</h3>
+                    <h3 className="text-[20px] sm:text-[22px] font-bold tracking-tight !text-white" style={{ color: '#ffffff' }}>
+                      {selectedUser.name}
+                    </h3>
                     <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${selectedUser.role.includes('STUDENT') ? 'bg-indigo-500/30 text-indigo-200 border border-indigo-400/40' : 'bg-amber-500/30 text-amber-200 border border-amber-400/40'
                       }`}>
                       {selectedUser.role.replace('PENDING_', '')}
@@ -486,58 +488,58 @@ const Approvals = () => {
                     <Phone size={13} className="text-emerald-400 shrink-0" />
                     <span>{selectedUser.student?.phoneNumber || selectedUser.staff?.phoneNumber}</span>
                   </span>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPrintingStudent({
-                        ...selectedUser.student,
-                        name: selectedUser.name,
-                        email: selectedUser.email,
-                        user: { name: selectedUser.name, email: selectedUser.email, avatar: selectedUser.avatar || selectedUser.student?.profilePic },
-                        rollNumber: selectedUser.student?.rollNumber || 'PENDING_APPROVAL',
-                        room: selectedUser.student?.room || null,
-                      });
-                    }}
-                    className="mt-1 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600/90 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer border border-blue-400/30 w-fit"
-                  >
-                    <Printer size={14} />
-                    <span>Print Hostel Admission Form</span>
-                  </button>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPrintingStudent({
+                    ...selectedUser.student,
+                    name: selectedUser.name,
+                    email: selectedUser.email,
+                    user: { name: selectedUser.name, email: selectedUser.email, avatar: selectedUser.avatar || selectedUser.student?.profilePic },
+                    rollNumber: selectedUser.student?.rollNumber || 'PENDING_APPROVAL',
+                    room: selectedUser.student?.room || null,
+                  });
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all cursor-pointer border border-blue-400/30 flex items-center gap-2 shrink-0 self-start sm:self-center"
+              >
+                <Printer size={15} />
+                <span>Print Hostel Admission Form</span>
+              </button>
             </div>
 
             {/* Application Details Summary */}
             {selectedUser.role.includes('STUDENT') ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/10 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 text-xs">
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Father's Name</span>
-                  <span className="font-semibold text-white truncate block">{selectedUser.student?.fatherName || 'N/A'}</span>
+                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Father's Name</span>
+                  <span className="font-bold text-white truncate block">{selectedUser.student?.fatherName || 'N/A'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Date of Birth</span>
-                  <span className="font-semibold text-white truncate block">
+                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Date of Birth</span>
+                  <span className="font-bold text-white truncate block">
                     {selectedUser.student?.dob ? new Date(selectedUser.student.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Joining Date</span>
-                  <span className="font-semibold text-white truncate block">
+                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Joining Date</span>
+                  <span className="font-bold text-white truncate block">
                     {selectedUser.student?.dateOfJoining ? new Date(selectedUser.student.dateOfJoining).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Company / College</span>
-                  <span className="font-semibold text-white truncate block">{selectedUser.student?.coachingCollege || 'N/A'}</span>
+                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Company / College</span>
+                  <span className="font-bold text-white truncate block">{selectedUser.student?.coachingCollege || 'N/A'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">State & PIN</span>
-                  <span className="font-semibold text-white truncate block">{selectedUser.student?.state || 'N/A'} ({selectedUser.student?.pincode || 'N/A'})</span>
+                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">State & PIN</span>
+                  <span className="font-bold text-white truncate block">{selectedUser.student?.state || 'N/A'} ({selectedUser.student?.pincode || 'N/A'})</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Parent Contact</span>
-                  <span className="font-semibold text-emerald-300 truncate block">{selectedUser.student?.parentContact || 'N/A'}</span>
+                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Parent Contact</span>
+                  <span className="font-bold text-emerald-300 truncate block">{selectedUser.student?.parentContact || 'N/A'}</span>
                 </div>
                 {selectedUser.student?.permanentAddress && (
                   <div className="col-span-2 sm:col-span-3 pt-1 border-t border-white/10">
