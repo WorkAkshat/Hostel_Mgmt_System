@@ -15,6 +15,7 @@ import * as suggestions from './api/suggestions';
 import * as nightAttendance from './api/nightAttendance';
 import * as floors from './api/floors';
 import * as activityLogs from './api/activityLogs';
+import * as notices from './api/notices';
 
 export default client;
 export {
@@ -34,5 +35,6 @@ export {
   suggestions,
   nightAttendance,
   floors,
-  activityLogs
+  activityLogs,
+  notices
 };

@@ -11,6 +11,7 @@ const {
   rejectProfileRequest,
   uploadDocument,
   verifyDocument,
+  getAllDocuments,
   getStudentDocuments
 } = require('../controllers/studentController');
 const { protect, authorize } = require('../middleware/auth');
@@ -35,6 +36,9 @@ router.route('/profile-requests/:id/reject')
 // ID Documents
 router.route('/documents/upload')
   .post(protect, uploadDocument);
+
+router.route('/documents')
+  .get(protect, authorize('ADMIN'), getAllDocuments);
 
 router.route('/documents/:id/verify')
   .post(protect, authorize('ADMIN'), verifyDocument);

@@ -17,9 +17,13 @@ const getAllRooms = async (req, res) => {
             id: true,
             rollNumber: true,
             bedId: true,
+            status: true,
+            phoneNumber: true,
+            profilePic: true,
             user: {
               select: {
-                name: true
+                name: true,
+                avatar: true
               }
             }
           }
@@ -97,11 +101,20 @@ const getRoomById = async (req, res) => {
 // @desc    Create new room
 // @route   POST /api/rooms
 // @access  Private (Admin/Warden only)
-const createRoom = async (req, res) => {
-  const { roomNumber, block, sharingType, isAc, assets } = req.body;
+// Bed labels like ["101-A", "101-B"] for a room
+const bedLabels = (roomNumber, count) =>
+  Array.from({ length: count }, (_, i) => `${roomNumber}-${String.fromCharCode(65 + i)}`);
 
-  if (!roomNumber || !block || !sharingType) {
-    return res.status(400).json({ message: 'Room number, block, and sharing type are required' });
+const createRoom = async (req, res) => {
+  const { roomNumber, block, sharingType, isAc, assets, floorNumber } = req.body;
+
+  if (!roomNumber || !sharingType) {
+    return res.status(400).json({ message: 'Room number and sharing type are required' });
+  }
+
+  const beds = parseInt(sharingType, 10);
+  if (![1, 2, 3].includes(beds)) {
+    return res.status(400).json({ message: 'Sharing type must be 1, 2 or 3' });
   }
 
   try {
@@ -109,6 +122,10 @@ const createRoom = async (req, res) => {
     if (roomExists) {
       return res.status(400).json({ message: 'Room with this number already exists' });
     }
+
+    // Link the room to its floor (falls back to the first digit of the room number)
+    const floorNum = parseInt(floorNumber, 10) || parseInt(String(roomNumber).replace(/\D/g, '').charAt(0), 10) || 1;
+    const floor = await prisma.floor.findUnique({ where: { floorNumber: floorNum } });
 
     // Default assets list if not provided
     const defaultAssets = JSON.stringify([
@@ -122,17 +139,21 @@ const createRoom = async (req, res) => {
     const newRoom = await prisma.room.create({
       data: {
         roomNumber,
-        block,
-        sharingType: parseInt(sharingType, 10),
+        block: block || floor?.hostelName || 'Hari Pushp',
+        floorNumber: floorNum,
+        floorId: floor?.id || null,
+        sharingType: beds,
+        capacity: beds,
         isAc: !!isAc,
         status: 'AVAILABLE',
+        bedMapping: JSON.stringify(bedLabels(roomNumber, beds)),
         assets: assets ? JSON.stringify(assets) : defaultAssets
       }
     });
 
     res.status(201).json(newRoom);
 
-    logActivity({ req, action: 'CREATE', module: 'ROOM', description: `Created room ${roomNumber} (Block ${block}, ${sharingType}-sharing)`, targetId: newRoom.id, targetType: 'Room' });
+    logActivity({ req, action: 'CREATE', module: 'ROOM', description: `Created room ${roomNumber} (Floor ${floorNum}, ${beds}-sharing)`, targetId: newRoom.id, targetType: 'Room' });
   } catch (error) {
     console.error('Error creating room:', error);
     res.status(500).json({ message: 'Server error creating room' });
@@ -144,7 +165,7 @@ const createRoom = async (req, res) => {
 // @access  Private (Admin/Warden only)
 const updateRoom = async (req, res) => {
   const { id } = req.params;
-  const { roomNumber, block, sharingType, isAc, status, assets } = req.body;
+  const { roomNumber, block, sharingType, isAc, status, assets, floorNumber } = req.body;
 
   try {
     const room = await prisma.room.findUnique({
@@ -156,24 +177,46 @@ const updateRoom = async (req, res) => {
       return res.status(404).json({ message: 'Room not found' });
     }
 
-    // Determine target occupancy status
-    let updatedStatus = status || room.status;
-
-    if (sharingType && room.students.length >= parseInt(sharingType, 10)) {
-      updatedStatus = 'FULL';
-    } else if (sharingType && room.students.length < parseInt(sharingType, 10)) {
-      updatedStatus = 'AVAILABLE';
+    const beds = sharingType ? parseInt(sharingType, 10) : room.sharingType;
+    if (sharingType && room.students.length > beds) {
+      return res.status(400).json({ message: `This room has ${room.students.length} residents. Move someone out before reducing it to ${beds} bed(s).` });
     }
+
+    if (roomNumber && roomNumber !== room.roomNumber) {
+      const taken = await prisma.room.findUnique({ where: { roomNumber } });
+      if (taken) return res.status(400).json({ message: `Room ${roomNumber} already exists` });
+    }
+
+    // Maintenance is set explicitly; otherwise the status follows occupancy
+    let updatedStatus = room.status;
+    if (status === 'MAINTENANCE') {
+      updatedStatus = 'MAINTENANCE';
+    } else if (status || sharingType) {
+      updatedStatus = room.students.length >= beds ? 'FULL' : 'AVAILABLE';
+    }
+
+    let floorData = {};
+    const floorNum = parseInt(floorNumber, 10);
+    if (floorNum && floorNum !== room.floorNumber) {
+      const floor = await prisma.floor.findUnique({ where: { floorNumber: floorNum } });
+      floorData = { floorNumber: floorNum, floorId: floor?.id || null };
+    }
+
+    const finalNumber = roomNumber || room.roomNumber;
+    const bedsChanged = beds !== room.sharingType || finalNumber !== room.roomNumber;
 
     const updatedRoom = await prisma.room.update({
       where: { id },
       data: {
-        roomNumber: roomNumber || room.roomNumber,
+        roomNumber: finalNumber,
         block: block || room.block,
-        sharingType: sharingType ? parseInt(sharingType, 10) : room.sharingType,
+        sharingType: beds,
+        capacity: beds,
         isAc: isAc !== undefined ? !!isAc : room.isAc,
         status: updatedStatus,
-        assets: assets ? JSON.stringify(assets) : room.assets
+        assets: assets ? JSON.stringify(assets) : room.assets,
+        ...(bedsChanged ? { bedMapping: JSON.stringify(bedLabels(finalNumber, beds)) } : {}),
+        ...floorData
       }
     });
 

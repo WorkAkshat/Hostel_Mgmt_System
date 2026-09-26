@@ -27,3 +27,21 @@ export const remove = (id) => {
     method: 'DELETE'
   });
 };
+
+// Profile edit requests raised by students from the app
+export const getProfileRequests = () => client('/students/profile-requests');
+
+export const approveProfileRequest = (id) =>
+  client(`/students/profile-requests/${id}/approve`, { method: 'POST' });
+
+export const rejectProfileRequest = (id) =>
+  client(`/students/profile-requests/${id}/reject`, { method: 'POST' });
+
+// ID documents (Aadhaar / PAN / Passport numbers)
+export const getDocuments = (status) =>
+  client(`/students/documents${status ? `?status=${encodeURIComponent(status)}` : ''}`);
+
+export const getStudentDocuments = (studentId) => client(`/students/documents/${studentId}`);
+
+export const verifyDocument = (id, status) =>
+  client(`/students/documents/${id}/verify`, { method: 'POST', body: { status } });

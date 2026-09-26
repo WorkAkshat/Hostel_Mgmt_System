@@ -1,12 +1,13 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { FEE_STRUCTURE } = require('../config/companyConfig');
 
 // @desc    Submit sub-meter electricity reading for a room
 // @route   POST /api/v1/electricity/readings
 // @access  Private (Admin / Warden)
 const submitReading = async (req, res) => {
   try {
-    const { roomId, readingMonth, readingDate, previousReading, currentReading, ratePerUnit = 8.0 } = req.body;
+    const { roomId, readingMonth, readingDate, previousReading, currentReading, ratePerUnit = FEE_STRUCTURE.electricityRate } = req.body;
 
     if (!roomId || !readingMonth || previousReading === undefined || currentReading === undefined) {
       return res.status(400).json({ message: 'Please provide roomId, readingMonth, previousReading, and currentReading.' });
@@ -14,6 +15,10 @@ const submitReading = async (req, res) => {
 
     const prev = parseFloat(previousReading);
     const curr = parseFloat(currentReading);
+
+    if (!Number.isFinite(prev) || !Number.isFinite(curr) || prev < 0) {
+      return res.status(400).json({ message: 'Meter readings must be positive numbers.' });
+    }
 
     if (curr < prev) {
       return res.status(400).json({ message: 'Current reading cannot be less than previous reading.' });
@@ -69,6 +74,7 @@ const getReadings = async (req, res) => {
     const where = {};
     if (month) where.readingMonth = month;
     if (floorNumber) where.room = { floorNumber: parseInt(floorNumber, 10) };
+    if (req.query.roomId) where.roomId = req.query.roomId;
 
     const readings = await prisma.electricityReading.findMany({
       where,

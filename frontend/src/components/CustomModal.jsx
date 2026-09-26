@@ -31,7 +31,7 @@ const CustomModal = ({ isOpen, onClose, title, size = 'md', children }) => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
           className="fixed inset-0 flex items-end md:items-center justify-center z-[9999] p-0 md:p-4" 
-          style={{ background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(27, 42, 41, 0.4)' }}
           onClick={onClose}
         >
           <motion.div 
@@ -40,28 +40,16 @@ const CustomModal = ({ isOpen, onClose, title, size = 'md', children }) => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 100, scale: 0.98 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className={`w-full md:w-[95%] max-w-full ${maxWClass} rounded-t-[24px] md:rounded-[var(--border-radius-modal)] overflow-hidden shadow-2xl flex flex-col max-h-[85dvh] md:max-h-[85dvh] bg-white relative`}
-            style={{
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-              borderTop: '1px solid rgba(255, 255, 255, 0.6)',
-              boxShadow: '0 -10px 40px rgba(15, 23, 42, 0.1)',
-            }}
+            className={`w-full md:w-[95%] max-w-full ${maxWClass} rounded-t-[var(--border-radius-modal)] md:rounded-[var(--border-radius-modal)] overflow-hidden shadow-[var(--shadow-lg)] flex flex-col max-h-[85dvh] bg-white relative`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div 
-              className="flex items-center justify-between px-6 py-5 border-b shrink-0"
-              style={{ borderColor: 'rgba(226, 232, 240, 0.6)', background: 'rgba(248, 250, 252, 0.6)' }}
-            >
-              <h3 className="text-[17px] text-slate-800 font-bold tracking-tight">{title}</h3>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)] bg-mint-50 shrink-0">
+              <h3 className="text-[17px] font-bold tracking-tight m-0">{title}</h3>
               <button 
-                className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-800 cursor-pointer transition-all border-none"
-                style={{ background: 'rgba(226, 232, 240, 0.5)' }}
-                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(226, 232, 240, 0.9)')}
-                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(226, 232, 240, 0.5)')}
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-mint-100 hover:bg-mint-200 cursor-pointer transition-colors border-none"
                 onClick={onClose}
-                title="Close Modal"
+                aria-label="Close"
               >
                 <X size={16} />
               </button>

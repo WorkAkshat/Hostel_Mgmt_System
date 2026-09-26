@@ -31,3 +31,9 @@ export const cancelOptOut = (id) => {
 export const getCookDashboard = (date) => {
   return client(`/mess/cook-dashboard${date ? `?date=${date}` : ''}`);
 };
+
+export const getMenu = () => client('/mess/menu');
+
+export const updateMenu = (menu) => client('/mess/menu', { method: 'POST', body: menu });
+
+export const getMyOptOuts = () => client('/mess/my-opt-outs');

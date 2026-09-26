@@ -232,6 +232,12 @@ const updateStudent = async (req, res) => {
     dateOfJoining,
     maritalStatus,
     fatherName,
+    motherName,
+    motherContact,
+    siblingContact,
+    course,
+    bloodGroup,
+    emergencyContact,
     dob,
     permanentAddress,
     state,
@@ -600,6 +606,39 @@ const verifyDocument = async (req, res) => {
   }
 };
 
+// @desc    All ID documents, optionally filtered by status, with the student's name and room
+// @route   GET /api/students/documents?status=PENDING
+// @access  Private (Admin only)
+const getAllDocuments = async (req, res) => {
+  const { status } = req.query;
+
+  try {
+    const docs = loadFile(DOCUMENTS_PATH).filter(d => !status || d.status === status);
+    const studentIds = [...new Set(docs.map(d => d.studentId))];
+    const students = studentIds.length
+      ? await prisma.student.findMany({
+          where: { id: { in: studentIds } },
+          select: {
+            id: true,
+            rollNumber: true,
+            user: { select: { name: true, email: true } },
+            room: { select: { roomNumber: true, floorNumber: true } }
+          }
+        })
+      : [];
+    const byId = new Map(students.map(s => [s.id, s]));
+
+    res.json(
+      docs
+        .map(d => ({ ...d, student: byId.get(d.studentId) || null }))
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    );
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    res.status(500).json({ message: 'Server error retrieving ID documents' });
+  }
+};
+
 const getStudentDocuments = async (req, res) => {
   const { studentId } = req.params;
 
@@ -625,5 +664,6 @@ module.exports = {
   rejectProfileRequest,
   uploadDocument,
   verifyDocument,
+  getAllDocuments,
   getStudentDocuments
 };

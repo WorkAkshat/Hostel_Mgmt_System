@@ -4,6 +4,7 @@ const {
   getMessStats,
   getMyMessAttendance,
   optOutMeal,
+  getMyOptOuts,
   cancelOptOut,
   getCookDashboard,
   getMessMenu,
@@ -19,6 +20,7 @@ router.get('/my-attendance', protect, getMyMessAttendance);
 
 // Meal Opt-Outs & Cook Dashboard
 router.post('/opt-out', protect, optOutMeal);
+router.get('/my-opt-outs', protect, getMyOptOuts);
 router.delete('/opt-out/:id', protect, cancelOptOut);
 router.get('/cook-dashboard', protect, getCookDashboard);
 

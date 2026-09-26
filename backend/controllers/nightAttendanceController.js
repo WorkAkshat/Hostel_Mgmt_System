@@ -80,7 +80,7 @@ const getNightAttendance = async (req, res) => {
           include: {
             user: { select: { name: true, email: true } },
             leaveRequests: {
-              where: { status: 'APPROVED' },
+              where: { status: { in: ['APPROVED', 'CHECKED_OUT'] } },
               orderBy: { createdAt: 'desc' },
               take: 1
             }
@@ -167,6 +167,8 @@ const getNightAttendance = async (req, res) => {
       presentCount,
       absentCount,
       onLeaveCount,
+      submitted: existingLogs.length > 0,
+      submittedAt: existingLogs.length ? existingLogs.reduce((latest, l) => (l.createdAt > latest ? l.createdAt : latest), existingLogs[0].createdAt) : null,
       roomsChart
     });
   } catch (error) {

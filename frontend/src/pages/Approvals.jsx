@@ -1,956 +1,412 @@
-import { useState, useEffect } from 'react';
-import { auth as authApi, rooms as roomsApi } from '../utils/api';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Check, X, ShieldAlert, Users, Calendar, Mail, Phone, Home, FileText,
-  CheckSquare, XSquare, Plus, User, Heart, Map, MapPin, GraduationCap,
-  Briefcase, ShieldCheck, Sparkles, Building, Layers, ZoomIn, Eye, Camera, Maximize2, Printer
+  ArrowRight, Briefcase, Check, CircleCheck, FileText, GraduationCap, IdCard, Phone, Printer, RefreshCw, ShieldCheck, TriangleAlert, UserPen, X,
 } from 'lucide-react';
-import CustomModal from '../components/CustomModal';
+import { auth as authApi, rooms as roomsApi, students as studentsApi } from '../utils/api';
 import StudentAdmissionFormPrint from '../components/StudentAdmissionFormPrint';
+import Avatar from '../components/ui/Avatar';
+import ImageLightbox from '../components/ui/ImageLightbox';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import FilterChips from '../components/ui/FilterChips';
+import { useToast } from '../components/ui/Toast';
+import ApproveRegistrationModal, { requestedRole } from './approvals/ApproveRegistrationModal';
+import { DOCUMENT_TYPES } from '../config/hostel';
 
-const INDIAN_STATES_AND_UTS = [
-  'Andaman and Nicobar Islands',
-  'Andhra Pradesh',
-  'Arunachal Pradesh',
-  'Assam',
-  'Bihar',
-  'Chandigarh',
-  'Chhattisgarh',
-  'Dadra and Nagar Haveli and Daman and Diu',
-  'Delhi',
-  'Goa',
-  'Gujarat',
-  'Haryana',
-  'Himachal Pradesh',
-  'Jammu and Kashmir',
-  'Jharkhand',
-  'Karnataka',
-  'Kerala',
-  'Ladakh',
-  'Lakshadweep',
-  'Madhya Pradesh',
-  'Maharashtra',
-  'Manipur',
-  'Meghalaya',
-  'Mizoram',
-  'Nagaland',
-  'Odisha',
-  'Puducherry',
-  'Punjab',
-  'Rajasthan',
-  'Sikkim',
-  'Tamil Nadu',
-  'Telangana',
-  'Tripura',
-  'Uttar Pradesh',
-  'Uttarakhand',
-  'West Bengal'
-];
+const timeAgo = (value) => {
+  if (!value) return '';
+  const minutes = Math.floor((Date.now() - new Date(value).getTime()) / 60000);
+  if (minutes < 60) return minutes < 1 ? 'just now' : `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return days < 7 ? `${days}d ago` : new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+};
+
+const PROFILE_FIELDS = {
+  phoneNumber: 'Phone',
+  parentContact: 'Parent phone',
+  fatherName: "Father's name",
+  coachingCollege: 'College / company',
+  permanentAddress: 'Address',
+  state: 'State',
+  pincode: 'PIN code',
+};
+
+// Shape a pending user into what the admission form printer expects
+const printPayload = (user, form, rooms) => {
+  const s = user.student || {};
+  const roomId = form?.roomId || s.roomId;
+  const room = (roomId && rooms.find((r) => r.id === roomId)) || s.room || null;
+  return {
+    ...s,
+    ...(form || {}),
+    name: user.name,
+    email: user.email,
+    user: { name: user.name, email: user.email, avatar: user.avatar || s.profilePic },
+    rollNumber: s.rollNumber || 'Assigned on approval',
+    room,
+  };
+};
+
+const Empty = ({ icon: Icon, title, text }) => (
+  <div className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-12 flex flex-col items-center text-center gap-2.5">
+    <span className="w-14 h-14 rounded-full bg-[var(--success-bg)] text-[var(--success)] flex items-center justify-center"><Icon size={24} /></span>
+    <h3 className="text-[16px] font-bold m-0">{title}</h3>
+    <p className="text-[14px] text-[var(--text-secondary)] m-0 max-w-sm">{text}</p>
+  </div>
+);
+
+const SourceError = ({ message, onRetry }) => (
+  <div className="flex items-center gap-3 p-4 rounded-2xl bg-[var(--danger-bg)] text-[var(--danger)] text-[13px] font-medium">
+    <TriangleAlert size={17} className="shrink-0" />
+    <span className="flex-1">{message}</span>
+    <button onClick={onRetry} className="font-semibold underline bg-transparent border-none cursor-pointer text-[var(--danger)]">Retry</button>
+  </div>
+);
+
+const listItem = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, x: 40, transition: { duration: 0.2 } },
+};
 
 const Approvals = () => {
+  const toast = useToast();
+  const [tab, setTab] = useState('registrations');
   const [pendingUsers, setPendingUsers] = useState([]);
+  const [profileRequests, setProfileRequests] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [students, setStudents] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
 
-  // Approval Modal State
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null); // { url, name }
-  // Room fee structure mapping (Shared source of truth)
-  const ROOM_PRICING = {
-    1: { sharingLabel: 'Single Sharing', roomRent: 13000, messFee: 3000, total: 16000 },
-    2: { sharingLabel: 'Twin Sharing', roomRent: 11000, messFee: 3000, total: 14000 },
-    3: { sharingLabel: 'Triple Sharing', roomRent: 9000, messFee: 3000, total: 12000 },
-  };
+  const [reviewing, setReviewing] = useState(null);
+  const [rejecting, setRejecting] = useState(null);
+  const [printing, setPrinting] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busyId, setBusyId] = useState(null);
 
-  const getPrintingStudentPayload = (user, formState = null) => {
-    if (!user) return null;
-    const targetRoomId = formState?.roomId || user.student?.roomId;
-    const allocatedRoom = targetRoomId ? rooms.find(r => r.id === targetRoomId) : user.student?.room;
-
-    return {
-      ...user.student,
-      fatherName: formState?.fatherName ?? user.student?.fatherName,
-      parentContact: formState?.parentContact ?? user.student?.parentContact,
-      motherName: formState?.motherName ?? user.student?.motherName,
-      motherContact: formState?.motherContact ?? user.student?.motherContact,
-      siblingContact: formState?.siblingContact ?? user.student?.siblingContact,
-      emergencyContact: formState?.emergencyContact ?? user.student?.emergencyContact,
-      phoneNumber: formState?.phoneNumber ?? user.student?.phoneNumber,
-      permanentAddress: formState?.permanentAddress ?? user.student?.permanentAddress,
-      state: formState?.state ?? user.student?.state,
-      pincode: formState?.pincode ?? user.student?.pincode,
-      coachingCollege: formState?.coachingCollege ?? user.student?.coachingCollege,
-      dob: formState?.dob ?? user.student?.dob,
-      dateOfJoining: formState?.dateOfJoining ?? user.student?.dateOfJoining,
-      name: user.name,
-      email: user.email,
-      user: { name: user.name, email: user.email, avatar: user.avatar || user.student?.profilePic },
-      rollNumber: user.student?.rollNumber || (allocatedRoom ? `HARIPUSHP_${(allocatedRoom.block || 'HP').replace(/\s+/g, '').slice(0, 4).toUpperCase()}_001` : 'HARIPUSHP_PENDING'),
-      room: allocatedRoom || user.student?.room || null,
-    };
-  };
-  const [approveError, setApproveError] = useState(null);
-  const [approving, setApproving] = useState(false);
-
-  // Fetch pending registrations and rooms
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const [pendingData, roomsData] = await Promise.all([
-        authApi.getPending(),
-        roomsApi.getAll()
-      ]);
-      setPendingUsers(pendingData);
-      setRooms(roomsData);
-    } catch (err) {
-      console.error('Error fetching approvals data:', err);
-      setError(err.message || 'Failed to load approvals queue.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
+  const load = useCallback(async () => {
+    const results = await Promise.allSettled([
+      authApi.getPending(),
+      studentsApi.getProfileRequests(),
+      studentsApi.getDocuments('PENDING'),
+      studentsApi.getAll(),
+      roomsApi.getAll(),
+    ]);
+    const [users, requests, docs, studentList, roomList] = results;
+    const value = (r) => (r.status === 'fulfilled' ? r.value || [] : []);
+    setPendingUsers(value(users));
+    setProfileRequests(value(requests));
+    setDocuments(value(docs));
+    setStudents(value(studentList));
+    setRooms(value(roomList));
+    setErrors({
+      registrations: users.status === 'rejected' ? users.reason?.message || 'Could not load registrations.' : null,
+      profile: requests.status === 'rejected' ? requests.reason?.message || 'Could not load profile requests.' : null,
+      documents: docs.status === 'rejected'
+        ? `Could not load ID documents${docs.reason?.status === 404 ? ' — restart the backend so the new documents list is available' : ''}.`
+        : null,
+    });
+    setLoading(false);
   }, []);
 
-  const openApproveModal = (user) => {
-    const originalRole = user.role.replace('PENDING_', '');
-    setSelectedUser(user);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-    // Pre-populate details from registration
-    setApproveForm({
-      role: originalRole,
-      roomId: '',
-      phoneNumber: user.student?.phoneNumber || user.staff?.phoneNumber || '',
-      parentContact: user.student?.parentContact || '',
-      motherName: user.student?.motherName || '',
-      motherContact: user.student?.motherContact || '',
-      siblingContact: user.student?.siblingContact || '',
-      emergencyContact: user.student?.emergencyContact || '',
-      department: user.staff?.department || 'Warden',
-      designation: user.staff?.designation || '',
-      dateOfJoining: user.student?.dateOfJoining ? new Date(user.student.dateOfJoining).toISOString().split('T')[0] : '',
-      maritalStatus: user.student?.maritalStatus || 'Unmarried',
-      fatherName: user.student?.fatherName || '',
-      dob: user.student?.dob ? new Date(user.student.dob).toISOString().split('T')[0] : '',
-      permanentAddress: user.student?.permanentAddress || '',
-      state: user.student?.state || 'Rajasthan',
-      pincode: user.student?.pincode || '',
-      coachingCollege: user.student?.coachingCollege || ''
-    });
+  const studentById = useMemo(() => new Map(students.map((s) => [s.id, s])), [students]);
 
-    setApproveError(null);
-    setIsApproveModalOpen(true);
+  const approveRegistration = async (user, form) => {
+    await authApi.approve(user.id, form);
+    toast.success(`${user.name} approved`, `Access given as ${form.role.toLowerCase()}.`);
+    setReviewing(null);
+    setPendingUsers((list) => list.filter((u) => u.id !== user.id));
+    load();
   };
 
-  const handleApproveSubmit = async (e) => {
-    e.preventDefault();
-    setApproveError(null);
-
-    // Validate phone length
-    if (approveForm.role === 'STUDENT' || approveForm.role === 'STAFF') {
-      if (approveForm.phoneNumber.length !== 10) {
-        setApproveError('Contact phone number must be exactly 10 digits.');
-        return;
-      }
-    }
-    if (approveForm.role === 'STUDENT' && approveForm.parentContact.length !== 10) {
-      setApproveError('Emergency/Parent phone number must be exactly 10 digits.');
-      return;
-    }
-
-    setApproving(true);
-
+  const rejectRegistration = async () => {
     try {
-      await authApi.approve(selectedUser.id, approveForm);
-      setIsApproveModalOpen(false);
-      setSelectedUser(null);
-      fetchData();
+      await authApi.reject(rejecting.id);
+      toast.success('Registration rejected', `${rejecting.name}'s request has been removed.`);
+      setPendingUsers((list) => list.filter((u) => u.id !== rejecting.id));
     } catch (err) {
-      setApproveError(err.message || 'Failed to approve registration.');
+      toast.error('Could not reject', err.message);
+      throw err;
+    }
+  };
+
+  const decideProfile = async (request, approve) => {
+    setBusyId(request.id);
+    try {
+      if (approve) await studentsApi.approveProfileRequest(request.id);
+      else await studentsApi.rejectProfileRequest(request.id);
+      setProfileRequests((list) => list.filter((r) => r.id !== request.id));
+      toast.success(approve ? 'Profile updated' : 'Request declined', request.studentName);
+      if (approve) load();
+    } catch (err) {
+      toast.error('Could not update the request', err.message);
     } finally {
-      setApproving(false);
+      setBusyId(null);
     }
   };
 
-  const handleReject = async (id, name) => {
-    if (window.confirm(`Are you sure you want to reject the registration request from ${name}? This will delete their pending credentials.`)) {
-      try {
-        setLoading(true);
-        await authApi.reject(id);
-        fetchData();
-      } catch (err) {
-        alert(err.message || 'Failed to reject registration request.');
-        setLoading(false);
-      }
+  const decideDocument = async (doc, status) => {
+    setBusyId(doc.id);
+    try {
+      await studentsApi.verifyDocument(doc.id, status);
+      setDocuments((list) => list.filter((d) => d.id !== doc.id));
+      toast.success(status === 'VERIFIED' ? 'Document verified' : 'Document rejected', `${DOCUMENT_TYPES[doc.docType] || doc.docType} · ${doc.student?.user?.name || ''}`);
+    } catch (err) {
+      toast.error('Could not update the document', err.message);
+    } finally {
+      setBusyId(null);
     }
   };
 
-  const getUserAvatar = (u, size = "w-11 h-11", textSize = "text-sm") => {
-    const avatarUrl = u.avatar || u.student?.profilePic;
-    if (avatarUrl) {
-      return (
-        <div
-          className={`relative group cursor-pointer ${size} rounded-2xl overflow-hidden border-2 border-indigo-500/80 shadow-sm shrink-0 transition-transform duration-200 hover:scale-105`}
-          onClick={(e) => {
-            e.stopPropagation();
-            setPreviewImage({ url: avatarUrl, name: u.name });
-          }}
-          title="Click to view full photo"
-        >
-          <img src={avatarUrl} alt={u.name} className="w-full h-full object-cover" />
-          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-            <ZoomIn size={16} className="text-white drop-shadow-md" />
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div className={`${size} rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-extrabold ${textSize} flex items-center justify-center shadow-sm shrink-0 border border-white/20`}>
-        {u.name.charAt(0).toUpperCase()}
-      </div>
-    );
-  };
+  const tabs = [
+    { value: 'registrations', label: 'Registrations', count: pendingUsers.length },
+    { value: 'profile', label: 'Profile changes', count: profileRequests.length },
+    { value: 'documents', label: 'ID documents', count: documents.length },
+  ];
+  const total = pendingUsers.length + profileRequests.length + documents.length;
 
   return (
-    <div className="animate-fade-in flex flex-col gap-6 text-left">
-      <div className="page-header">
-        <h1 className="page-title">User Approvals Queue</h1>
-        <p className="page-subtitle">
-          Review pending user registrations, verify student background profiles, assign rooms, and authorize system access rights.
-        </p>
-      </div>
-
-      {error && (
-        <div className="flex items-center gap-3 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-sm font-semibold">
-          <ShieldAlert size={18} className="shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {loading ? (
-        <div className="min-h-[40vh] flex flex-col items-center justify-center gap-4">
-          <div className="spinner"></div>
-          <p className="text-slate-400 font-medium text-sm">Loading pending registration requests...</p>
-        </div>
-      ) : pendingUsers.length === 0 ? (
-        <div className="glass-card p-12 text-center flex flex-col items-center justify-center gap-3 rounded-[28px]">
-          <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-sm">
-            <ShieldCheck size={36} />
-          </div>
-          <h3 className="text-slate-800 font-bold text-lg">No Pending Registrations</h3>
-          <p className="text-slate-500 text-sm max-w-sm">
-            All user registration requests have been reviewed and approved. There are no users waiting in the queue.
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h1 className="page-title">Approvals</h1>
+          <p className="page-subtitle">
+            {loading ? 'Checking for requests…' : total ? `${total} request${total === 1 ? '' : 's'} waiting for you` : 'Nothing waiting — all requests are handled'}
           </p>
         </div>
+        <button className="btn-secondary h-10 self-start sm:self-auto" onClick={() => { setLoading(true); load(); }}>
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
+        </button>
+      </div>
+
+      <FilterChips id="approvals-tabs" options={tabs} value={tab} onChange={setTab} />
+
+      {loading ? (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4" aria-busy="true">
+          {[0, 1, 2, 3].map((i) => <div key={i} className="h-[190px] rounded-[var(--border-radius-card)] skeleton-loading" />)}
+        </div>
       ) : (
-        <>
-          {/* Desktop Table View */}
-          <div className="hidden md:block custom-table-container rounded-[24px] overflow-hidden shadow-sm border border-slate-200/80">
-            <table className="custom-table">
-              <thead>
-                <tr>
-                  <th>User Profile</th>
-                  <th>Requested Role</th>
-                  <th>Contact Info</th>
-                  <th>Application Highlights</th>
-                  <th className="text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingUsers.map((pUser) => {
-                  const reqRole = pUser.role.replace('PENDING_', '');
-                  return (
-                    <tr key={pUser.id}>
-                      <td>
-                        <div className="flex items-center gap-3">
-                          {getUserAvatar(pUser)}
-                          <div className="flex flex-col">
-                            <h4 className="text-sm font-bold text-slate-800">{pUser.name}</h4>
-                            <span className="text-xs text-slate-400 font-medium flex items-center gap-1 mt-0.5">
-                              <Mail size={12} />
-                              <span>{pUser.email}</span>
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${reqRole === 'STUDENT' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
-                          }`}>
-                          {reqRole === 'STUDENT' ? <GraduationCap size={13} /> : <Briefcase size={13} />}
-                          <span>{reqRole}</span>
-                        </span>
-                      </td>
-                      <td>
-                        <div className="flex flex-col gap-1 text-slate-600 text-xs font-medium">
-                          <span className="flex items-center gap-1.5">
-                            <Phone size={13} className="text-slate-400" />
-                            <span>{pUser.student?.phoneNumber || pUser.staff?.phoneNumber}</span>
-                          </span>
-                          {pUser.student?.state && (
-                            <span className="flex items-center gap-1.5 text-slate-400">
-                              <Map size={13} />
-                              <span>{pUser.student.state}</span>
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td>
-                        {reqRole === 'STUDENT' ? (
-                          <div className="flex flex-col gap-0.5 text-slate-500 text-xs">
-                            <span>Father: <strong className="text-slate-800">{pUser.student?.fatherName || 'N/A'}</strong></span>
-                            <span>College: <strong className="text-slate-800">{pUser.student?.coachingCollege || 'N/A'}</strong></span>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col gap-0.5 text-slate-500 text-xs">
-                            <span>Dept: <strong className="text-slate-800">{pUser.staff?.department || 'N/A'}</strong></span>
-                            <span>Designation: <strong className="text-slate-800">{pUser.staff?.designation || 'N/A'}</strong></span>
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => {
-                              setPrintingStudent(getPrintingStudentPayload(pUser));
-                            }}
-                            className="h-9 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/60 text-blue-700 flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-all"
-                            title="Print Admission Form"
-                          >
-                            <Printer size={14} />
-                            <span>Form</span>
-                          </button>
-                          <button
-                            onClick={() => openApproveModal(pUser)}
-                            className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-all shadow-sm"
-                          >
-                            <Check size={14} />
-                            <span>Review & Approve</span>
-                          </button>
-                          <button
-                            onClick={() => handleReject(pUser.id, pUser.name)}
-                            className="h-9 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200/60 flex items-center gap-1 text-rose-600 text-xs font-bold cursor-pointer transition-all"
-                          >
-                            <X size={14} />
-                            <span>Reject</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Card Grid View */}
-          <div className="grid grid-cols-1 gap-4 md:hidden">
-            {pendingUsers.map((pUser) => {
-              const reqRole = pUser.role.replace('PENDING_', '');
-              return (
-                <div key={pUser.id} className="glass-card p-5 flex flex-col gap-4 rounded-[24px]">
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="flex items-center gap-3">
-                      {getUserAvatar(pUser)}
-                      <div className="flex flex-col">
-                        <h4 className="text-sm font-bold text-slate-800">{pUser.name}</h4>
-                        <span className="text-[11px] text-slate-500 font-medium truncate max-w-[160px]">{pUser.email}</span>
-                      </div>
-                    </div>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${reqRole === 'STUDENT' ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700'
-                      }`}>
-                      {reqRole}
-                    </span>
-                  </div>
-
-                  <div className="h-[1px] bg-slate-100" />
-
-                  <div className="flex flex-col gap-2 text-xs text-slate-600">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Mobile Contact:</span>
-                      <span className="font-semibold">{pUser.student?.phoneNumber || pUser.staff?.phoneNumber}</span>
-                    </div>
-                    {reqRole === 'STUDENT' ? (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Father's Name:</span>
-                          <span className="font-semibold">{pUser.student?.fatherName}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">College/Institute:</span>
-                          <span className="font-semibold">{pUser.student?.coachingCollege}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">State:</span>
-                          <span className="font-semibold">{pUser.student?.state}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Department:</span>
-                          <span className="font-semibold">{pUser.staff?.department}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Designation:</span>
-                          <span className="font-semibold">{pUser.staff?.designation}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="h-[1px] bg-slate-100" />
-
-                  <div className="grid grid-cols-3 gap-2 mt-1">
-                    <button
-                      onClick={() => {
-                        setPrintingStudent(getPrintingStudentPayload(pUser));
-                      }}
-                      className="h-10 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all"
-                    >
-                      <Printer size={14} />
-                      <span>Form</span>
-                    </button>
-                    <button
-                      onClick={() => openApproveModal(pUser)}
-                      className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all shadow-sm"
-                    >
-                      <Check size={14} />
-                      <span>Approve</span>
-                    </button>
-                    <button
-                      onClick={() => handleReject(pUser.id, pUser.name)}
-                      className="h-10 bg-rose-50 hover:bg-rose-100 border border-rose-200/60 rounded-xl text-rose-600 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all"
-                    >
-                      <X size={14} />
-                      <span>Reject</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-
-      {/* APPROVAL MODAL */}
-      <CustomModal
-        isOpen={isApproveModalOpen}
-        onClose={() => setIsApproveModalOpen(false)}
-        title="Approve Candidate Registration"
-        size="lg"
-      >
-        {approveError && (
-          <div className="flex items-center gap-3 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold mb-4">
-            <ShieldAlert size={18} className="shrink-0" />
-            <span>{approveError}</span>
-          </div>
-        )}
-
-        {/* Premium Profile Banner Card */}
-        {selectedUser && (
-          <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-5 shadow-lg flex flex-col gap-4 text-left border border-indigo-500/20">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                {selectedUser.avatar || selectedUser.student?.profilePic ? (
-                  <div
-                    className="relative group cursor-pointer w-20 h-20 sm:w-22 sm:h-22 rounded-2xl overflow-hidden border-2 border-indigo-400 shadow-xl shrink-0 transition-transform duration-200 hover:scale-105"
-                    onClick={() => setPreviewImage({ url: selectedUser.avatar || selectedUser.student?.profilePic, name: selectedUser.name })}
-                    title="Click to view full profile photo"
-                  >
-                    <img
-                      src={selectedUser.avatar || selectedUser.student?.profilePic}
-                      alt={selectedUser.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity text-white text-[10px] font-bold">
-                      <ZoomIn size={18} className="drop-shadow-md" />
-                      <span>Enlarge Photo</span>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-white font-extrabold text-3xl flex items-center justify-center border-2 border-white/20 shadow-xl shrink-0">
-                    {selectedUser.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-[20px] sm:text-[22px] font-bold tracking-tight !text-white" style={{ color: '#ffffff' }}>
-                      {selectedUser.name}
-                    </h3>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider ${selectedUser.role.includes('STUDENT') ? 'bg-indigo-500/30 text-indigo-200 border border-indigo-400/40' : 'bg-amber-500/30 text-amber-200 border border-amber-400/40'
-                      }`}>
-                      {selectedUser.role.replace('PENDING_', '')}
-                    </span>
-                  </div>
-                  <span className="text-[13px] text-slate-300 font-medium flex items-center gap-1.5">
-                    <Mail size={13} className="text-indigo-400 shrink-0" />
-                    <span>{selectedUser.email}</span>
-                  </span>
-                  <span className="text-[12px] text-slate-300 font-medium flex items-center gap-1.5">
-                    <Phone size={13} className="text-emerald-400 shrink-0" />
-                    <span>{selectedUser.student?.phoneNumber || selectedUser.staff?.phoneNumber}</span>
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setPrintingStudent(getPrintingStudentPayload(selectedUser, approveForm));
-                }}
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all cursor-pointer border border-blue-400/30 flex items-center gap-2 shrink-0 self-start sm:self-center"
-              >
-                <Printer size={15} />
-                <span>Print Hostel Admission Form</span>
-              </button>
-            </div>
-
-            {/* Application Details Summary */}
-            {selectedUser.role.includes('STUDENT') ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 bg-white/10 backdrop-blur-md p-4 rounded-xl border border-white/10 text-xs">
-                <div>
-                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Father's Name</span>
-                  <span className="font-bold text-white truncate block">{selectedUser.student?.fatherName || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Date of Birth</span>
-                  <span className="font-bold text-white truncate block">
-                    {selectedUser.student?.dob ? new Date(selectedUser.student.dob).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Joining Date</span>
-                  <span className="font-bold text-white truncate block">
-                    {selectedUser.student?.dateOfJoining ? new Date(selectedUser.student.dateOfJoining).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Company / College</span>
-                  <span className="font-bold text-white truncate block">{selectedUser.student?.coachingCollege || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">State & PIN</span>
-                  <span className="font-bold text-white truncate block">{selectedUser.student?.state || 'N/A'} ({selectedUser.student?.pincode || 'N/A'})</span>
-                </div>
-                <div>
-                  <span className="text-slate-300/80 text-[10px] font-bold uppercase tracking-wider block mb-0.5">Parent Contact</span>
-                  <span className="font-bold text-emerald-300 truncate block">{selectedUser.student?.parentContact || 'N/A'}</span>
-                </div>
-                {selectedUser.student?.permanentAddress && (
-                  <div className="col-span-2 sm:col-span-3 pt-1 border-t border-white/10">
-                    <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Permanent Address</span>
-                    <span className="text-slate-200 text-[11px] leading-relaxed block">{selectedUser.student.permanentAddress}</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3 bg-white/10 backdrop-blur-md p-3.5 rounded-xl border border-white/10 text-xs">
-                <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Department</span>
-                  <span className="font-semibold text-white">{selectedUser.staff?.department || 'N/A'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Designation</span>
-                  <span className="font-semibold text-white">{selectedUser.staff?.designation || 'N/A'}</span>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        <form onSubmit={handleApproveSubmit} className="flex flex-col gap-4 text-left">
-          {/* Final Role Switcher */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-              <ShieldCheck size={14} className="text-indigo-600" />
-              <span>Assign System Access Role *</span>
-            </label>
-            <div className="grid grid-cols-3 gap-2.5 p-1 bg-slate-100 rounded-[14px]">
-              {[
-                { key: 'STUDENT', label: 'Student', desc: 'Resides in hostel' },
-                { key: 'STAFF', label: 'Staff', desc: 'Staff portal only' },
-                { key: 'ADMIN', label: 'Warden (Admin)', desc: 'Full admin rights' }
-              ].map((r) => (
-                <button
-                  key={r.key}
-                  type="button"
-                  onClick={() => setApproveForm({ ...approveForm, role: r.key })}
-                  className={`py-2 px-1 rounded-[11px] font-bold text-[12px] border-none cursor-pointer transition-all flex flex-col items-center justify-center gap-0.5 ${approveForm.role === r.key
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'bg-transparent text-slate-600 hover:text-slate-900'
-                    }`}
-                >
-                  <span>{r.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="w-full h-[1px] bg-slate-100 my-1"></div>
-
-          {/* Form Fields */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-            {/* Contact Phone Number */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Contact Mobile Number *</label>
-              <div className="relative flex items-center">
-                <Phone size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                <input
-                  type="tel"
-                  placeholder="10-digit mobile"
-                  className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium"
-                  required
-                  value={approveForm.phoneNumber}
-                  onChange={(e) => setApproveForm({ ...approveForm, phoneNumber: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                />
-              </div>
-            </div>
-
-            {approveForm.role === 'STUDENT' && (
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="flex flex-col gap-4"
+          >
+            {/* Registrations */}
+            {tab === 'registrations' && (
               <>
-                {/* Emergency Contact */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Parent / Emergency Contact *</label>
-                  <div className="relative flex items-center">
-                    <Phone size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                    <input
-                      type="tel"
-                      placeholder="Parent mobile number"
-                      className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium"
-                      required
-                      value={approveForm.parentContact}
-                      onChange={(e) => setApproveForm({ ...approveForm, parentContact: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                    />
-                  </div>
-                </div>
-
-                {/* Room Allocation */}
-                <div className="flex flex-col gap-1 sm:col-span-2">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                    <Home size={14} className="text-indigo-600" />
-                    <span>Assign Room Allocation</span>
-                  </label>
-                  <div className="relative flex items-center">
-                    <Home size={15} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
-                    <select
-                      value={approveForm.roomId}
-                      onChange={(e) => setApproveForm({ ...approveForm, roomId: e.target.value })}
-                      className="w-full h-11 pl-9 sm:pl-10 pr-8 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium appearance-none cursor-pointer"
-                    >
-                      <option value="">No Allocation (Keep Unallocated for now)</option>
-                      {rooms.map((room) => {
-                        const bedsAvailable = room.sharingType - room.students.length;
-                        const priceInfo = ROOM_PRICING[room.sharingType] || ROOM_PRICING[2];
+                {errors.registrations && <SourceError message={errors.registrations} onRetry={load} />}
+                {pendingUsers.length === 0 && !errors.registrations ? (
+                  <Empty icon={ShieldCheck} title="No new registrations" text="When someone signs up on the website or app, they will wait here for your approval." />
+                ) : (
+                  <ul className="list-none m-0 p-0 grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <AnimatePresence initial={false}>
+                      {pendingUsers.map((u) => {
+                        const role = requestedRole(u);
+                        const s = u.student || {};
+                        const facts = role === 'STUDENT'
+                          ? [['Father', s.fatherName], ['College / company', s.coachingCollege], ['From', s.state], ['Joining', s.dateOfJoining && new Date(s.dateOfJoining).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })]]
+                          : [['Department', u.staff?.department], ['Designation', u.staff?.designation]];
                         return (
-                          <option
-                            key={room.id}
-                            value={room.id}
-                            disabled={room.status === 'FULL' || room.status === 'MAINTENANCE' || bedsAvailable <= 0}
-                          >
-                            Room {room.roomNumber} ({room.block}) - {room.isAc ? 'AC' : 'Non-AC'} | {priceInfo.sharingLabel} (₹{priceInfo.total.toLocaleString('en-IN')}/mo) &bull; {bedsAvailable > 0 ? `${bedsAvailable} bed(s) free` : 'FULL'}
-                          </option>
+                          <motion.li key={u.id} layout {...listItem} className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-5 flex flex-col gap-4">
+                            <div className="flex items-start gap-3.5">
+                              <Avatar name={u.name} src={u.avatar || s.profilePic} size={52} rounded="rounded-2xl" onPreview={setPreview} />
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3 className="text-[16px] font-bold m-0 truncate">{u.name}</h3>
+                                  <span className={`badge ${role === 'STUDENT' ? 'badge-info' : 'bg-lilac-50 text-lilac-700'}`}>
+                                    {role === 'STUDENT' ? <GraduationCap size={12} /> : <Briefcase size={12} />} {role.toLowerCase()}
+                                  </span>
+                                </div>
+                                <p className="text-[13px] text-[var(--text-secondary)] m-0 truncate">{u.email}</p>
+                                <p className="text-[12px] text-[var(--text-tertiary)] m-0 mt-0.5 flex items-center gap-1.5">
+                                  <Phone size={12} /> {s.phoneNumber || u.staff?.phoneNumber || '—'} · applied {timeAgo(u.createdAt)}
+                                </p>
+                              </div>
+                            </div>
+                            <dl className="grid grid-cols-2 gap-2 m-0">
+                              {facts.map(([label, value]) => (
+                                <div key={label} className="rounded-xl bg-mint-50 px-3 py-2 min-w-0">
+                                  <dt className="text-[11px] text-[var(--text-tertiary)]">{label}</dt>
+                                  <dd className="m-0 text-[13px] font-semibold truncate">{value || '—'}</dd>
+                                </div>
+                              ))}
+                            </dl>
+                            <div className="flex gap-2 mt-auto">
+                              <button className="btn-primary flex-1 h-10" onClick={() => setReviewing(u)}>
+                                <span className="sm:hidden">Review</span>
+                                <span className="hidden sm:inline">Review & approve</span>
+                                <ArrowRight size={15} />
+                              </button>
+                              {role === 'STUDENT' && (
+                                <button className="btn-secondary h-10 px-3" onClick={() => setPrinting(printPayload(u, null, rooms))} title="Print admission form" aria-label="Print admission form">
+                                  <Printer size={16} />
+                                </button>
+                              )}
+                              <button
+                                className="h-10 px-3 rounded-[var(--border-radius-btn)] bg-[var(--danger-bg)] text-[var(--danger)] text-[13px] font-semibold border-none cursor-pointer flex items-center gap-1.5 hover:brightness-95"
+                                onClick={() => setRejecting(u)}
+                              >
+                                <X size={15} /> Reject
+                              </button>
+                            </div>
+                          </motion.li>
                         );
                       })}
-                    </select>
-                    <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-slate-400 w-0 h-0" />
-                  </div>
-
-                  {/* Room Pricing Live Preview Badge */}
-                  {approveForm.roomId && (() => {
-                    const selRoom = rooms.find(r => r.id === approveForm.roomId);
-                    if (!selRoom) return null;
-                    const priceInfo = ROOM_PRICING[selRoom.sharingType] || ROOM_PRICING[2];
-                    return (
-                      <div className="mt-2 p-3 bg-indigo-50/90 border border-indigo-200 rounded-xl flex items-center justify-between text-xs animate-fade-in">
-                        <div className="flex items-center gap-2 text-indigo-950 font-bold">
-                          <Sparkles size={16} className="text-indigo-600 shrink-0" />
-                          <div>
-                            <span className="block text-[10px] text-indigo-600 uppercase tracking-wider font-extrabold">Monthly Fee For Selected Room</span>
-                            <span className="text-sm font-black text-indigo-900">
-                              ₹{priceInfo.total.toLocaleString('en-IN')} / month
-                            </span>
-                            <span className="text-[11px] text-slate-600 font-medium ml-1.5">
-                              ({priceInfo.sharingLabel}: Room ₹{priceInfo.roomRent.toLocaleString('en-IN')} + Mess ₹{priceInfo.messFee.toLocaleString('en-IN')})
-                            </span>
-                          </div>
-                        </div>
-                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase ${selRoom.isAc ? 'bg-sky-100 text-sky-800 border border-sky-200' : 'bg-slate-200 text-slate-700'}`}>
-                          {selRoom.isAc ? 'AC Room' : 'Non-AC'}
-                        </span>
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Father's Name */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Father's Name *</label>
-                  <div className="relative flex items-center">
-                    <User size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="Father's Full Name"
-                      className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium"
-                      required
-                      value={approveForm.fatherName}
-                      onChange={(e) => setApproveForm({ ...approveForm, fatherName: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                {/* Date of Joining */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Date of Joining *</label>
-                  <div className="relative flex items-center">
-                    <Calendar size={15} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
-                    <input
-                      type="date"
-                      className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium cursor-pointer"
-                      required
-                      value={approveForm.dateOfJoining}
-                      onChange={(e) => setApproveForm({ ...approveForm, dateOfJoining: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                {/* Date of Birth */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Date of Birth *</label>
-                  <div className="relative flex items-center">
-                    <Calendar size={15} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
-                    <input
-                      type="date"
-                      className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium cursor-pointer"
-                      required
-                      value={approveForm.dob}
-                      onChange={(e) => setApproveForm({ ...approveForm, dob: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                {/* Marital Status */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Marital Status *</label>
-                  <div className="relative flex items-center">
-                    <Heart size={15} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
-                    <select
-                      value={approveForm.maritalStatus}
-                      onChange={(e) => setApproveForm({ ...approveForm, maritalStatus: e.target.value })}
-                      className="w-full h-11 pl-9 sm:pl-10 pr-8 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium appearance-none cursor-pointer"
-                    >
-                      <option value="Unmarried">Unmarried</option>
-                      <option value="Married">Married</option>
-                      <option value="Divorced">Divorced</option>
-                    </select>
-                    <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-slate-400 w-0 h-0" />
-                  </div>
-                </div>
-
-                {/* Company / College Name */}
-                <div className="flex flex-col gap-1 sm:col-span-2">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Company / College *</label>
-                  <div className="relative flex items-center">
-                    <GraduationCap size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="e.g. Company Name / University / College"
-                      className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium"
-                      required
-                      value={approveForm.coachingCollege}
-                      onChange={(e) => setApproveForm({ ...approveForm, coachingCollege: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                {/* Permanent Address */}
-                <div className="flex flex-col gap-1 sm:col-span-2">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Permanent Address *</label>
-                  <div className="relative flex items-center">
-                    <MapPin size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="House No, Street, Village/Town"
-                      className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium"
-                      required
-                      value={approveForm.permanentAddress}
-                      onChange={(e) => setApproveForm({ ...approveForm, permanentAddress: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                {/* State Select Dropdown */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">State / Union Territory *</label>
-                  <div clas
-                    sName="relative flex items-center">
-                    <Map size={15} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
-                    <select
-                      value={approveForm.state}
-                      onChange={(e) => setApproveForm({ ...approveForm, state: e.target.value })}
-                      className="w-full h-11 pl-9 sm:pl-10 pr-8 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium appearance-none cursor-pointer"
-                    >
-                      {INDIAN_STATES_AND_UTS.map((st) => (
-                        <option key={st} value={st}>{st}</option>
-                      ))}
-                    </select>
-                    <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-slate-400 w-0 h-0" />
-                  </div>
-                </div>
-
-                {/* Pincode */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Pincode *</label>
-                  <div className="relative flex items-center">
-                    <MapPin size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="6-digit PIN code"
-                      className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium"
-                      required
-                      value={approveForm.pincode}
-                      onChange={(e) => setApproveForm({ ...approveForm, pincode: e.target.value.replace(/\D/g, '').slice(0, 6) })}
-                    />
-                  </div>
-                </div>
+                    </AnimatePresence>
+                  </ul>
+                )}
               </>
             )}
 
-            {approveForm.role === 'STAFF' && (
+            {/* Profile change requests */}
+            {tab === 'profile' && (
               <>
-                {/* Department */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Department *</label>
-                  <div className="relative flex items-center">
-                    <Briefcase size={15} className="absolute left-3.5 text-slate-400 pointer-events-none z-10" />
-                    <select
-                      value={approveForm.department}
-                      onChange={(e) => setApproveForm({ ...approveForm, department: e.target.value })}
-                      className="w-full h-11 pl-9 sm:pl-10 pr-8 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium appearance-none cursor-pointer"
-                    >
-                      <option value="Warden">Warden Office</option>
-                      <option value="Mess">Mess Committee</option>
-                      <option value="Security">Security Guard</option>
-                      <option value="Cleaning">Cleaning & Utility</option>
-                      <option value="Maintenance">Maintenance Crew</option>
-                    </select>
-                    <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-slate-400 w-0 h-0" />
-                  </div>
-                </div>
-
-                {/* Designation */}
-                <div className="flex flex-col gap-1">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Designation *</label>
-                  <div className="relative flex items-center">
-                    <Briefcase size={15} className="absolute left-3.5 text-slate-400 pointer-events-none" />
-                    <input
-                      type="text"
-                      placeholder="e.g. Night Guard"
-                      className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white text-slate-800 outline-none text-[13px] sm:text-[14px] focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 transition-all font-medium"
-                      required
-                      value={approveForm.designation}
-                      onChange={(e) => setApproveForm({ ...approveForm, designation: e.target.value })}
-                    />
-                  </div>
-                </div>
+                {errors.profile && <SourceError message={errors.profile} onRetry={load} />}
+                {profileRequests.length === 0 && !errors.profile ? (
+                  <Empty icon={UserPen} title="No profile changes to review" text="Students can ask to update their phone, address or college from the app. Their requests show up here." />
+                ) : (
+                  <ul className="list-none m-0 p-0 grid grid-cols-1 xl:grid-cols-2 gap-4">
+                    <AnimatePresence initial={false}>
+                      {profileRequests.map((r) => {
+                        const current = studentById.get(r.studentId);
+                        const changes = Object.entries(PROFILE_FIELDS)
+                          .map(([key, label]) => ({ key, label, from: current?.[key] || '', to: r.requestedChanges?.[key] || '' }))
+                          .filter((c) => c.to && c.to !== c.from);
+                        return (
+                          <motion.li key={r.id} layout {...listItem} className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-5 flex flex-col gap-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar name={r.studentName} src={current?.user?.avatar || current?.profilePic} size={44} tone="lilac" onPreview={setPreview} />
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-[15px] font-bold m-0 truncate">{r.studentName}</h3>
+                                <p className="text-[12px] text-[var(--text-tertiary)] m-0">
+                                  {r.studentRoll}{current?.room ? ` · Room ${current.room.roomNumber}` : ''} · {timeAgo(r.createdAt)}
+                                </p>
+                              </div>
+                              <span className="badge bg-lilac-50 text-lilac-700 normal-case">{changes.length} change{changes.length === 1 ? '' : 's'}</span>
+                            </div>
+                            {changes.length === 0 ? (
+                              <p className="text-[13px] text-[var(--text-secondary)] m-0">The requested values are the same as the current profile.</p>
+                            ) : (
+                              <div className="rounded-xl border border-[var(--border-color)] overflow-hidden">
+                                {changes.map((c) => (
+                                  <div key={c.key} className="grid grid-cols-[110px_1fr] sm:grid-cols-[130px_1fr] gap-3 px-3.5 py-2.5 border-b border-[var(--border-color)] last:border-b-0 text-[13px]">
+                                    <span className="text-[var(--text-tertiary)]">{c.label}</span>
+                                    <span className="min-w-0">
+                                      {c.from && <span className="block text-[var(--text-tertiary)] line-through truncate">{c.from}</span>}
+                                      <span className="block font-semibold text-[var(--success)] break-words">{c.to}</span>
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div className="flex gap-2 mt-auto">
+                              <button className="btn-brand flex-1 h-10" disabled={busyId === r.id} onClick={() => decideProfile(r, true)}>
+                                <Check size={16} /> {busyId === r.id ? 'Saving…' : 'Apply changes'}
+                              </button>
+                              <button
+                                className="h-10 px-4 rounded-[var(--border-radius-btn)] bg-[var(--danger-bg)] text-[var(--danger)] text-[13px] font-semibold border-none cursor-pointer flex items-center gap-1.5 disabled:opacity-60"
+                                disabled={busyId === r.id}
+                                onClick={() => decideProfile(r, false)}
+                              >
+                                <X size={15} /> Decline
+                              </button>
+                            </div>
+                          </motion.li>
+                        );
+                      })}
+                    </AnimatePresence>
+                  </ul>
+                )}
               </>
             )}
-          </div>
 
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 w-full mt-3">
-            <button
-              type="button"
-              className="h-11 px-5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-[13px] font-bold cursor-pointer transition-all"
-              onClick={() => setIsApproveModalOpen(false)}
-              disabled={approving}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="h-11 px-6 text-white rounded-xl font-bold text-[13px] cursor-pointer transition-all flex items-center gap-2 shadow-md"
-              style={{
-                background: approving ? '#94a3b8' : 'linear-gradient(135deg, #2563eb, #4f46e5)',
-                boxShadow: approving ? 'none' : '0 4px 14px rgba(37,99,235,0.3)',
-              }}
-              disabled={approving}
-            >
-              {approving ? (
-                <span>Approving User...</span>
-              ) : (
-                <>
-                  <Check size={16} />
-                  <span>Grant Access & Approve Account</span>
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </CustomModal>
-
-      {/* PHOTO PREVIEW LIGHTBOX MODAL */}
-      {previewImage && (
-        <div
-          className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setPreviewImage(null)}
-        >
-          <div
-            className="relative max-w-2xl w-full bg-slate-900 rounded-3xl p-5 border border-white/10 shadow-2xl flex flex-col items-center gap-4 text-white"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="w-full flex items-center justify-between px-2 pt-1 border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <Camera size={18} className="text-indigo-400" />
-                <h4 className="font-bold text-base text-white">{previewImage.name} — Profile Photo</h4>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPreviewImage(null)}
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer border-none"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <div className="w-full max-h-[70vh] flex items-center justify-center overflow-hidden rounded-2xl bg-black/60 p-2 border border-white/5">
-              <img
-                src={previewImage.url}
-                alt={previewImage.name}
-                className="max-h-[65vh] max-w-full object-contain rounded-xl shadow-2xl"
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <a
-                href={previewImage.url}
-                target="_blank"
-                rel="noreferrer"
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow-md no-underline flex items-center gap-1.5"
-              >
-                <Maximize2 size={14} />
-                <span>Open Original Image</span>
-              </a>
-              <button
-                type="button"
-                onClick={() => setPreviewImage(null)}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border-none cursor-pointer"
-              >
-                Close Preview
-              </button>
-            </div>
-          </div>
-        </div>
+            {/* ID documents */}
+            {tab === 'documents' && (
+              <>
+                {errors.documents && <SourceError message={errors.documents} onRetry={load} />}
+                {documents.length === 0 && !errors.documents ? (
+                  <Empty icon={CircleCheck} title="All documents checked" text="Aadhaar, PAN and passport numbers that students submit will appear here for verification." />
+                ) : documents.length > 0 && (
+                  <div className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] overflow-hidden">
+                    <ul className="list-none m-0 p-0">
+                      <AnimatePresence initial={false}>
+                        {documents.map((d) => (
+                          <motion.li key={d.id} layout {...listItem} className="flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 border-b border-[var(--border-color)] last:border-b-0">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <span className="w-10 h-10 rounded-xl bg-lilac-50 text-lilac-700 flex items-center justify-center shrink-0"><IdCard size={18} /></span>
+                              <div className="min-w-0">
+                                <div className="text-[14px] font-semibold truncate">
+                                  {d.student?.user?.name || 'Unknown student'}
+                                  <span className="font-normal text-[var(--text-tertiary)]"> · {DOCUMENT_TYPES[d.docType] || d.docType}</span>
+                                </div>
+                                <div className="text-[12px] text-[var(--text-tertiary)] flex flex-wrap gap-x-2">
+                                  <span className="font-mono text-[var(--text-secondary)]">{d.documentNumber}</span>
+                                  {d.student?.rollNumber && <span>{d.student.rollNumber}</span>}
+                                  {d.student?.room && <span>Room {d.student.room.roomNumber}</span>}
+                                  <span>{timeAgo(d.createdAt)}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2 shrink-0">
+                              <button className="btn-brand h-9 px-3 text-[13px] flex-1 sm:flex-none" disabled={busyId === d.id} onClick={() => decideDocument(d, 'VERIFIED')}>
+                                <Check size={15} /> Verify
+                              </button>
+                              <button
+                                className="h-9 px-3 rounded-[var(--border-radius-btn)] bg-[var(--danger-bg)] text-[var(--danger)] text-[13px] font-semibold border-none cursor-pointer flex items-center justify-center gap-1.5 flex-1 sm:flex-none disabled:opacity-60"
+                                disabled={busyId === d.id}
+                                onClick={() => decideDocument(d, 'REJECTED')}
+                              >
+                                <X size={15} /> Reject
+                              </button>
+                            </div>
+                          </motion.li>
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+                  </div>
+                )}
+                <p className="text-[12px] text-[var(--text-tertiary)] m-0 flex items-center gap-1.5">
+                  <FileText size={13} /> Each student's documents can also be checked from her profile on the Students page.
+                </p>
+              </>
+            )}
+          </motion.div>
+        </AnimatePresence>
       )}
 
-      {/* PRINTABLE ADMISSION FORM MODAL */}
-      {printingStudent && (
-        <StudentAdmissionFormPrint
-          student={printingStudent}
-          onClose={() => setPrintingStudent(null)}
-        />
-      )}
+      <ApproveRegistrationModal
+        user={reviewing}
+        rooms={rooms}
+        onClose={() => setReviewing(null)}
+        onApprove={approveRegistration}
+        onPrint={(u, form) => setPrinting(printPayload(u, form, rooms))}
+        onPreview={setPreview}
+      />
+
+      <ConfirmDialog
+        open={Boolean(rejecting)}
+        title={`Reject ${rejecting?.name || 'this registration'}?`}
+        message="Their pending account will be deleted. They will need to register again."
+        confirmLabel="Reject registration"
+        onConfirm={rejectRegistration}
+        onClose={() => setRejecting(null)}
+      />
+
+      <ImageLightbox image={preview} onClose={() => setPreview(null)} />
+
+      {printing && <StudentAdmissionFormPrint student={printing} onClose={() => setPrinting(null)} />}
     </div>
   );
 };

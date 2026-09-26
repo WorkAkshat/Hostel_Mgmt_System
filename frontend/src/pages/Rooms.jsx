@@ -1,417 +1,383 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { rooms as roomsApi } from '../utils/api';
+import { motion } from 'framer-motion';
+import { BedDouble, Building2, Plus, RefreshCw, Search, Snowflake, TriangleAlert, Wrench, X } from 'lucide-react';
+import { rooms as roomsApi, floors as floorsApi, students as studentsApi } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Trash2, Home, ShieldAlert, ClipboardCheck, Users, HelpCircle } from 'lucide-react';
-import CustomModal from '../components/CustomModal';
-import SidePanel from '../components/SidePanel';
+import Avatar from '../components/ui/Avatar';
+import ImageLightbox from '../components/ui/ImageLightbox';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
+import FilterChips from '../components/ui/FilterChips';
+import AnimatedNumber from '../components/ui/AnimatedNumber';
+import { useToast } from '../components/ui/Toast';
+import RoomFormModal from './rooms/RoomFormModal';
+import RoomDrawer, { ROOM_STATUS } from './rooms/RoomDrawer';
+import { priceFor } from '../config/hostel';
+
+const capacityOf = (room) => room.sharingType || room.capacity || 0;
+
+const damagedCount = (room) => {
+  try {
+    const list = typeof room.assets === 'string' ? JSON.parse(room.assets || '[]') : room.assets || [];
+    return list.filter((a) => a.status === 'Broken' || a.status === 'Damaged').length;
+  } catch {
+    return 0;
+  }
+};
+
+const byRoomNumber = (a, b) => String(a.roomNumber).localeCompare(String(b.roomNumber), undefined, { numeric: true });
+
+const RoomCard = ({ room, index, onOpen }) => {
+  const capacity = capacityOf(room);
+  const occupants = room.students || [];
+  const free = Math.max(0, capacity - occupants.length);
+  const status = ROOM_STATUS[room.status] || ROOM_STATUS.AVAILABLE;
+  const maintenance = room.status === 'MAINTENANCE';
+  const damaged = damagedCount(room);
+
+  return (
+    <motion.button
+      type="button"
+      layout
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0, transition: { delay: Math.min(index, 12) * 0.025 } }}
+      whileHover={{ y: -3 }}
+      onClick={() => onOpen(room)}
+      className={`text-left w-full rounded-[var(--border-radius-card)] border p-4 cursor-pointer transition-[border-color,box-shadow] hover:shadow-[var(--shadow-hover)] ${
+        maintenance ? 'bg-peach-50 border-peach-100 hover:border-peach-200' : 'bg-white border-[var(--border-color)] hover:border-brand-200'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="text-[22px] font-bold leading-none tracking-tight">{room.roomNumber}</div>
+          <div className="text-[12px] text-[var(--text-tertiary)] mt-1 flex items-center gap-1">
+            {priceFor(room.sharingType).label}
+            {room.isAc && <><span>·</span><Snowflake size={12} className="text-brand-500" /> AC</>}
+          </div>
+        </div>
+        <span className={`badge ${status.badge}`}>{status.label}</span>
+      </div>
+
+      <div className="flex gap-1.5 mt-4" aria-label={`${occupants.length} of ${capacity} beds taken`}>
+        {Array.from({ length: capacity }).map((_, i) => {
+          const s = occupants[i];
+          return s ? (
+            <span key={s.id} title={s.user?.name} className="flex-1 h-11 rounded-xl bg-mint-100 flex items-center justify-center">
+              <Avatar name={s.user?.name} src={s.user?.avatar || s.profilePic} size={30} tone="white" />
+            </span>
+          ) : (
+            <span key={i} className={`flex-1 h-11 rounded-xl border border-dashed flex items-center justify-center ${maintenance ? 'border-peach-200 text-peach-500' : 'border-[var(--border-strong)] text-[var(--text-tertiary)]'}`}>
+              <BedDouble size={16} />
+            </span>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center justify-between mt-3 text-[12px]">
+        <span className={free && !maintenance ? 'font-semibold text-sun-800' : 'text-[var(--text-tertiary)]'}>
+          {maintenance ? 'Under repair' : free ? `${free} bed${free === 1 ? '' : 's'} free` : 'No free bed'}
+        </span>
+        {damaged > 0 ? (
+          <span className="flex items-center gap-1 text-[var(--danger)] font-semibold"><Wrench size={12} /> {damaged} damaged</span>
+        ) : (
+          <span className="text-[var(--text-tertiary)]">₹{priceFor(room.sharingType).total.toLocaleString('en-IN')}/bed</span>
+        )}
+      </div>
+    </motion.button>
+  );
+};
 
 const Rooms = () => {
   const { user } = useAuth();
-  const [rooms, setRooms] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const toast = useToast();
   const location = useLocation();
-  
-  // Modals state
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState(null);
-  const [selectedFloor, setSelectedFloor] = useState('All');
+  const [rooms, setRooms] = useState([]);
+  const [floors, setFloors] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
-  // Add Room Form state
-  const [addForm, setAddForm] = useState({
-    roomNumber: '', block: 'Block A', sharingType: 2, isAc: false
-  });
-  const [addError, setAddError] = useState(null);
+  const [floor, setFloor] = useState(user?.assignedFloor ? String(user.assignedFloor) : 'all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [acFilter, setAcFilter] = useState('all');
+  const [search, setSearch] = useState('');
 
-  // Asset Edit State (within details panel)
-  const [assetsList, setAssetsList] = useState([]);
-  const [isUpdatingAssets, setIsUpdatingAssets] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [openRoomId, setOpenRoomId] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+  const [preview, setPreview] = useState(null);
 
-  const fetchRooms = async () => {
+  const load = useCallback(async () => {
     try {
-      setLoading(true);
-      const data = await roomsApi.getAll();
-      setRooms(data);
-    } catch (error) {
-      console.error('Error fetching rooms:', error);
+      setLoadError(null);
+      const [roomList, floorList, studentList] = await Promise.all([
+        roomsApi.getAll(),
+        floorsApi.getAll().catch(() => []),
+        studentsApi.getAll().catch(() => []),
+      ]);
+      setRooms(roomList || []);
+      setFloors(floorList || []);
+      setStudents(studentList || []);
+    } catch (err) {
+      setLoadError(err.message || 'Could not load rooms.');
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchRooms();
   }, []);
 
   useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
     if (location.state?.action === 'add') {
-      setIsAddModalOpen(true);
+      setEditing(null);
+      setFormOpen(true);
       window.history.replaceState({}, document.title);
     }
   }, [location]);
 
-  const handleAddSubmit = async (e) => {
-    e.preventDefault();
-    setAddError(null);
+  // Floor list from the Floor table, plus any floor a room mentions
+  const floorList = useMemo(() => {
+    const nums = new Set([...floors.map((f) => f.floorNumber), ...rooms.map((r) => r.floorNumber).filter(Boolean)]);
+    return [...nums].sort((a, b) => a - b).map((n) => floors.find((f) => f.floorNumber === n) || { floorNumber: n });
+  }, [floors, rooms]);
+
+  const totals = useMemo(() => {
+    const beds = rooms.reduce((sum, r) => sum + capacityOf(r), 0);
+    const taken = rooms.reduce((sum, r) => sum + (r.students?.length || 0), 0);
+    const maintenance = rooms.filter((r) => r.status === 'MAINTENANCE');
+    const blocked = maintenance.reduce((sum, r) => sum + Math.max(0, capacityOf(r) - (r.students?.length || 0)), 0);
+    return { beds, taken, free: Math.max(0, beds - taken - blocked), maintenance: maintenance.length, rooms: rooms.length };
+  }, [rooms]);
+
+  const q = search.trim().toLowerCase();
+  const inScope = useMemo(
+    () => rooms.filter((r) => floor === 'all' || String(r.floorNumber) === floor),
+    [rooms, floor]
+  );
+
+  const counts = useMemo(() => ({
+    all: inScope.length,
+    AVAILABLE: inScope.filter((r) => r.status === 'AVAILABLE').length,
+    FULL: inScope.filter((r) => r.status === 'FULL').length,
+    MAINTENANCE: inScope.filter((r) => r.status === 'MAINTENANCE').length,
+  }), [inScope]);
+
+  const visible = useMemo(
+    () =>
+      inScope
+        .filter((r) => statusFilter === 'all' || r.status === statusFilter)
+        .filter((r) => acFilter === 'all' || (acFilter === 'ac') === Boolean(r.isAc))
+        .filter((r) => !q || String(r.roomNumber).toLowerCase().includes(q) || (r.students || []).some((s) => s.user?.name?.toLowerCase().includes(q)))
+        .sort(byRoomNumber),
+    [inScope, statusFilter, acFilter, q]
+  );
+
+  const grouped = useMemo(() => {
+    const map = new Map();
+    visible.forEach((r) => {
+      const key = r.floorNumber || 0;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    });
+    return [...map.entries()].sort((a, b) => a[0] - b[0]);
+  }, [visible]);
+
+  const unassigned = useMemo(() => students.filter((s) => !s.roomId), [students]);
+  const openRoom = rooms.find((r) => r.id === openRoomId) || null;
+  const hasFilters = statusFilter !== 'all' || acFilter !== 'all' || q;
+
+  const handleSubmit = async (payload) => {
+    if (editing) {
+      await roomsApi.update(editing.id, payload);
+      toast.success(`Room ${payload.roomNumber} updated`);
+    } else {
+      await roomsApi.create(payload);
+      toast.success(`Room ${payload.roomNumber} added`, `Floor ${payload.floorNumber} · ${priceFor(payload.sharingType).label}`);
+    }
+    setFormOpen(false);
+    await load();
+  };
+
+  const handleDelete = async () => {
     try {
-      await roomsApi.create(addForm);
-      setIsAddModalOpen(false);
-      setAddForm({ roomNumber: '', block: 'Block A', sharingType: 2, isAc: false });
-      fetchRooms();
+      await roomsApi.remove(deleting.id);
+      toast.success(`Room ${deleting.roomNumber} deleted`);
+      setOpenRoomId(null);
+      await load();
     } catch (err) {
-      setAddError(err.message || 'Failed to create room');
+      toast.error('Could not delete the room', err.message);
+      throw err;
     }
   };
 
-  const openDetailsPanel = (room) => {
-    setSelectedRoom(room);
-    try {
-      const parsedAssets = JSON.parse(room.assets);
-      setAssetsList(parsedAssets);
-    } catch (error) {
-      setAssetsList([]);
-    }
-    setIsDetailsModalOpen(true);
-  };
-
-  const handleUpdateAssetStatus = (index, newStatus) => {
-    const updated = [...assetsList];
-    updated[index].status = newStatus;
-    setAssetsList(updated);
-  };
-
-  const saveAssetsChanges = async () => {
-    try {
-      setIsUpdatingAssets(true);
-      await roomsApi.update(selectedRoom.id, {
-        assets: assetsList
-      });
-      setIsDetailsModalOpen(false);
-      fetchRooms();
-    } catch (error) {
-      alert(error.message || 'Failed to update asset checklists');
-    } finally {
-      setIsUpdatingAssets(false);
-    }
-  };
-
-  const handleDeleteRoom = async (id) => {
-    if (window.confirm('Are you sure you want to delete this room? This cannot be undone.')) {
-      try {
-        await roomsApi.remove(id);
-        fetchRooms();
-      } catch (error) {
-        alert(error.message || 'Failed to delete room');
-      }
-    }
-  };
+  const floorTabs = [
+    { value: 'all', label: 'All floors' },
+    ...floorList.map((f) => ({ value: String(f.floorNumber), label: `Floor ${f.floorNumber}` })),
+  ];
 
   return (
-    <div className="animate-fade-in flex flex-col gap-6 text-left">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="page-header mb-0 sm:mb-0">
-          <h1 className="page-title">Rooms & Inventory Assets</h1>
-          <p className="page-subtitle">Inspect rooms sharing status, occupancy blocks, and audit property assets condition.</p>
+    <div className="flex flex-col gap-5">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h1 className="page-title">Rooms & beds</h1>
+          <p className="page-subtitle">Tap a room to see who lives there, assign free beds or mark repairs.</p>
         </div>
-        {user.role === 'ADMIN' && (
-          <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
-            <Plus size={18} />
-            <span>Create New Room</span>
-          </button>
-        )}
+        <button className="btn-primary" onClick={() => { setEditing(null); setFormOpen(true); }}>
+          <Plus size={17} /> Add room
+        </button>
       </div>
 
-      {/* Floor selection and legend */}
-      <div className="glass-card p-5 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex flex-wrap items-center gap-2">
-          {['All', '1', '2', '3', '4', '5'].map((floor) => (
-            <button
-              key={floor}
-              onClick={() => setSelectedFloor(floor)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all ${
-                selectedFloor === floor 
-                  ? 'bg-[var(--primary)] text-white shadow-sm' 
-                  : 'bg-slate-50 text-slate-500 border border-slate-200/60 hover:bg-slate-100'
-              }`}
-            >
-              {floor === 'All' ? 'All Floors' : `Floor ${floor}`}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-5 text-xs font-bold text-slate-400 uppercase tracking-wider">
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>Available</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>Full / Occupied</span>
-          <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>Service</span>
-        </div>
+      {/* Totals */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Total beds', value: totals.beds, sub: `${totals.rooms} rooms`, tone: 'bg-white border-[var(--border-color)]' },
+          { label: 'Beds taken', value: totals.taken, sub: totals.beds ? `${Math.round((totals.taken / totals.beds) * 100)}% occupied` : '—', tone: 'bg-mint-100 border-mint-200' },
+          { label: 'Free beds', value: totals.free, sub: 'Ready for new residents', tone: 'bg-cream-100 border-cream-200' },
+          { label: 'Under maintenance', value: totals.maintenance, sub: totals.maintenance === 1 ? 'room blocked' : 'rooms blocked', tone: 'bg-peach-50 border-peach-100' },
+        ].map((t) => (
+          <div key={t.label} className={`rounded-[var(--border-radius-card)] border px-4 py-3.5 ${t.tone}`}>
+            <div className="text-[12px] text-[var(--text-secondary)]">{t.label}</div>
+            <div className="text-[24px] font-bold leading-tight"><AnimatedNumber value={t.value} /></div>
+            <div className="text-[12px] text-[var(--text-tertiary)]">{t.sub}</div>
+          </div>
+        ))}
       </div>
 
-      {/* Rooms Grid */}
-      {loading ? (
-        <div className="min-h-[40vh] flex flex-col items-center justify-center gap-4">
-          <div className="spinner"></div>
-          <p className="text-slate-400 font-medium text-sm">Loading rooms grid records...</p>
-        </div>
-      ) : rooms.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <p className="text-slate-400 font-medium">No rooms configured in the system.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {rooms
-            .filter((room) => {
-              if (selectedFloor === 'All') return true;
-              const fl = room.floorNumber ? String(room.floorNumber) : room.roomNumber.replace(/\D/g, '').charAt(0);
-              return fl === selectedFloor;
-            })
-            .sort((a, b) => {
-              const numA = parseInt(a.roomNumber.replace(/\D/g, ''), 10) || 0;
-              const numB = parseInt(b.roomNumber.replace(/\D/g, ''), 10) || 0;
-              if (numA !== numB) return numA - numB;
-              return a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true, sensitivity: 'base' });
-            })
-            .map((room) => {
-              const occupiedBeds = room.students?.length || 0;
-              const capacity = room.sharingType;
-              const progressPercentage = Math.min((occupiedBeds / capacity) * 100, 100);
-
-              let statusText = "Available";
-              let statusBadgeClass = "badge-success";
-
-              if (room.status === 'FULL') {
-                statusText = "Full";
-                statusBadgeClass = "badge-info";
-              } else if (room.status === 'MAINTENANCE' || room.status === 'SERVICE') {
-                statusText = "Service";
-                statusBadgeClass = "badge-danger";
-              }
-
+      {/* Filters */}
+      <div className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-4 flex flex-col gap-3">
+        <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+          <div role="radiogroup" aria-label="Floor" className="flex flex-wrap gap-1 p-1 rounded-xl bg-mint-50 border border-[var(--border-color)]">
+            {floorTabs.map((t) => {
+              const active = floor === t.value;
               return (
-                <div 
-                  key={room.id}
-                  className="glass-card p-5 shadow-sm hover:shadow-lg hover:scale-[1.02] transition-all duration-300 flex flex-col gap-4 relative group"
+                <button
+                  key={t.value}
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setFloor(t.value)}
+                  className={`relative h-9 px-3 rounded-lg border-none bg-transparent text-[13px] whitespace-nowrap cursor-pointer ${active ? 'text-sun-900 font-semibold' : 'text-[var(--text-secondary)] font-medium hover:text-[var(--text-primary)]'}`}
                 >
-                  {/* Card Header */}
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 overflow-hidden">
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-500 shadow-sm shrink-0">
-                        <Home size={16} />
-                      </div>
-                      <div className="flex flex-col overflow-hidden">
-                        <h4 className="text-sm font-extrabold text-slate-800 leading-tight truncate">Room {room.roomNumber}</h4>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">{room.block}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`badge ${statusBadgeClass}`}>{statusText}</span>
-                      {user.role === 'ADMIN' && occupiedBeds === 0 && (
-                        <button 
-                          onClick={() => handleDeleteRoom(room.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg border border-transparent hover:border-red-100 transition-all cursor-pointer shrink-0"
-                          title="Delete Room Record"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Occupancy Indicator */}
-                  <div className="flex flex-col gap-1.5 mt-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">Occupancy:</span>
-                      <span className="font-bold text-slate-700">{occupiedBeds} / {capacity} Beds</span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                      <div 
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          occupiedBeds === capacity ? 'bg-indigo-600' : 'bg-emerald-500'
-                        }`}
-                        style={{ width: `${progressPercentage}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Room Meta - AC equipped */}
-                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
-                      room.isAc ? 'bg-sky-50 text-sky-600 border border-sky-100' : 'bg-slate-50 text-slate-400 border border-slate-100'
-                    }`}>
-                      {room.isAc ? 'AC Premium' : 'Non-AC Standard'}
-                    </span>
-                  </div>
-
-                  {/* Room occupants list */}
-                  <div className="flex flex-col gap-2 mt-1">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Residents:</span>
-                    <div className="flex items-center gap-1.5 h-7">
-                      {room.students && room.students.length > 0 ? (
-                        <div className="flex items-center">
-                          {room.students.map((student, idx) => (
-                            <div 
-                              key={student.id} 
-                              className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 font-extrabold text-[10px] flex items-center justify-center border-2 border-white shadow-sm -mr-2 last:mr-0 cursor-help"
-                              title={student.user?.name}
-                            >
-                              {student.user?.name?.charAt(0).toUpperCase()}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-[11px] text-slate-400 italic">No residents assigned</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div className="h-[1px] bg-slate-100 mt-2" />
-
-                  {/* Action Button */}
-                  <button 
-                    onClick={() => openDetailsPanel(room)}
-                    className="w-full h-10 border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 rounded-xl font-bold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all bg-white"
-                  >
-                    <ClipboardCheck size={14} />
-                    <span>Audit Room Assets</span>
-                  </button>
-                </div>
+                  {active && <motion.span layoutId="rooms-floor" className="absolute inset-0 rounded-lg bg-sun-300" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />}
+                  <span className="relative">{t.label}</span>
+                </button>
               );
             })}
+          </div>
+          <div className="flex gap-2 flex-1">
+            <label className="relative flex-1">
+              <span className="sr-only">Search rooms</span>
+              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
+              <input className="form-input pl-10 pr-9" placeholder="Room or resident" value={search} onChange={(e) => setSearch(e.target.value)} />
+              {search && (
+                <button onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-tertiary)] bg-transparent border-none cursor-pointer hover:bg-mint-50">
+                  <X size={14} />
+                </button>
+              )}
+            </label>
+            <select className="form-input w-[160px] shrink-0 cursor-pointer" value={acFilter} onChange={(e) => setAcFilter(e.target.value)} aria-label="AC filter">
+              <option value="all">AC & non-AC</option>
+              <option value="ac">AC only</option>
+              <option value="nonac">Non-AC only</option>
+            </select>
+          </div>
+        </div>
+        <FilterChips
+          id="room-status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={[
+            { value: 'all', label: 'All rooms', count: counts.all },
+            { value: 'AVAILABLE', label: 'Has space', count: counts.AVAILABLE },
+            { value: 'FULL', label: 'Full', count: counts.FULL },
+            { value: 'MAINTENANCE', label: 'Maintenance', count: counts.MAINTENANCE },
+          ]}
+        />
+      </div>
+
+      {/* Rooms */}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4" aria-busy="true">
+          {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-[170px] rounded-[var(--border-radius-card)] skeleton-loading" />)}
+        </div>
+      ) : loadError ? (
+        <div className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-10 flex flex-col items-center gap-3 text-center">
+          <TriangleAlert size={26} className="text-[var(--danger)]" />
+          <p className="text-[14px] text-[var(--text-secondary)] m-0">{loadError}</p>
+          <button className="btn-secondary" onClick={() => { setLoading(true); load(); }}><RefreshCw size={15} /> Try again</button>
+        </div>
+      ) : grouped.length === 0 ? (
+        <div className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-12 flex flex-col items-center gap-3 text-center">
+          <span className="w-14 h-14 rounded-full bg-mint-100 text-brand-600 flex items-center justify-center"><BedDouble size={24} /></span>
+          <h3 className="text-[16px] font-bold m-0">{rooms.length ? 'No rooms match these filters' : 'No rooms yet'}</h3>
+          <p className="text-[14px] text-[var(--text-secondary)] m-0">{rooms.length ? 'Try another floor or clear the filters.' : 'Add the first room to start assigning beds.'}</p>
+          {hasFilters ? (
+            <button className="btn-secondary" onClick={() => { setStatusFilter('all'); setAcFilter('all'); setSearch(''); }}>Clear filters</button>
+          ) : !rooms.length && (
+            <button className="btn-primary" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus size={16} /> Add room</button>
+          )}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-7">
+          {grouped.map(([floorNum, list]) => {
+            const meta = floorList.find((f) => f.floorNumber === floorNum);
+            const beds = list.reduce((s, r) => s + capacityOf(r), 0);
+            const taken = list.reduce((s, r) => s + (r.students?.length || 0), 0);
+            return (
+              <section key={floorNum}>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3">
+                  <span className="w-9 h-9 rounded-xl bg-mint-200 text-brand-800 font-bold flex items-center justify-center"><Building2 size={17} /></span>
+                  <h2 className="text-[16px] font-bold m-0">Floor {floorNum || '—'}</h2>
+                  {meta?.companyName && <span className="text-[14px] text-[var(--text-secondary)]">{meta.companyName}</span>}
+                  <span className="text-[13px] text-[var(--text-tertiary)] sm:ml-auto">
+                    {list.length} rooms · {taken}/{beds} beds taken
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {list.map((room, i) => (
+                    <RoomCard key={room.id} room={room} index={i} onOpen={(r) => setOpenRoomId(r.id)} />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
 
-      {/* CREATE ROOM RECORD MODAL */}
-      <CustomModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Create Room Record">
-        {addError && (
-          <div className="flex items-center gap-2 p-4 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold mb-4 animate-fade-in">
-            <ShieldAlert size={16} className="shrink-0" />
-            <span>{addError}</span>
-          </div>
-        )}
-        <form onSubmit={handleAddSubmit} className="form-grid">
-          <div className="form-group full-width">
-            <label className="form-label">Room Number</label>
-            <input 
-              type="text" 
-              className="form-input" 
-              required
-              placeholder="e.g. A-103"
-              value={addForm.roomNumber}
-              onChange={(e) => setAddForm({...addForm, roomNumber: e.target.value})}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Hostel Block</label>
-            <select 
-              className="form-input"
-              value={addForm.block}
-              onChange={(e) => setAddForm({...addForm, block: e.target.value})}
-            >
-              <option value="Block A">Block A (AC Premium)</option>
-              <option value="Block B">Block B (Standard Non-AC)</option>
-              <option value="Block C">Block C (Girls Wing)</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Sharing Capacity</label>
-            <select 
-              className="form-input"
-              value={addForm.sharingType}
-              onChange={(e) => setAddForm({...addForm, sharingType: parseInt(e.target.value, 10)})}
-            >
-              <option value="1">1 (Single Occupancy)</option>
-              <option value="2">2 (Double Occupancy)</option>
-              <option value="3">3 (Triple Sharing)</option>
-            </select>
-          </div>
-          <div className="flex items-center gap-2.5 mt-2 text-sm text-slate-600 select-none">
-            <input 
-              type="checkbox" 
-              id="isAc"
-              checked={addForm.isAc}
-              onChange={(e) => setAddForm({...addForm, isAc: e.target.checked})}
-              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-            />
-            <label htmlFor="isAc" className="cursor-pointer font-medium text-xs text-slate-500 uppercase tracking-wider">Equipped with Air Conditioning (AC)</label>
-          </div>
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100 mt-2 full-width">
-            <button type="button" className="btn-secondary" onClick={() => setIsAddModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary">Create Room</button>
-          </div>
-        </form>
-      </CustomModal>
+      <RoomFormModal
+        open={formOpen}
+        room={editing}
+        floors={floorList}
+        defaultFloor={floor}
+        onClose={() => setFormOpen(false)}
+        onSubmit={handleSubmit}
+      />
 
-      {/* ROOM DETAILS & ASSET INSPECTION SIDE PANEL */}
-      <SidePanel 
-        isOpen={isDetailsModalOpen} 
-        onClose={() => setIsDetailsModalOpen(false)} 
-        title={`Audit Room ${selectedRoom?.roomNumber} Inventory`}
-      >
-        <div className="flex flex-col gap-5 text-left h-full">
-          <div className="flex items-center gap-2 border-b border-slate-50 pb-4">
-            <ClipboardCheck size={20} className="text-[var(--primary)]" />
-            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Property Inventory Ledger</h4>
-          </div>
-          
-          <p className="text-xs text-slate-400 font-medium">
-            Wardens can inspect room items (beds, tables, fans) and flag maintenance or physical damage issues.
-          </p>
+      <RoomDrawer
+        room={openRoom}
+        unassigned={unassigned}
+        onClose={() => setOpenRoomId(null)}
+        onEdit={(r) => { setEditing(r); setFormOpen(true); }}
+        onDelete={setDeleting}
+        onChanged={load}
+        onPreview={setPreview}
+      />
 
-          <div className="flex flex-col gap-3.5 bg-slate-50 border border-slate-100 rounded-2xl p-4 flex-grow overflow-y-auto">
-            {assetsList.map((asset, index) => (
-              <div key={index} className="flex justify-between items-center border-b border-slate-200/50 pb-3 last:border-0 last:pb-0">
-                <span className="text-xs font-bold text-slate-700">{asset.name}</span>
-                <div className="flex gap-1.5">
-                  <button 
-                    type="button"
-                    className={`h-8 px-3 text-[10px] font-bold rounded-lg border cursor-pointer transition-all ${
-                      asset.status === 'Good' || asset.status === 'Working' 
-                        ? 'bg-emerald-50 text-emerald-600 border-emerald-200' 
-                        : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100'
-                    }`}
-                    onClick={() => handleUpdateAssetStatus(index, 'Good')}
-                    disabled={user.role !== 'ADMIN'}
-                  >
-                    Working
-                  </button>
-                  <button 
-                    type="button"
-                    className={`h-8 px-3 text-[10px] font-bold rounded-lg border cursor-pointer transition-all ${
-                      asset.status === 'Damaged' || asset.status === 'Broken' 
-                        ? 'bg-rose-50 text-rose-600 border-rose-200 shadow-sm' 
-                        : 'bg-white text-slate-400 border-slate-200 hover:bg-slate-100'
-                    }`}
-                    onClick={() => handleUpdateAssetStatus(index, 'Broken')}
-                    disabled={user.role !== 'ADMIN'}
-                  >
-                    Damaged
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+      <ConfirmDialog
+        open={Boolean(deleting)}
+        title={`Delete room ${deleting?.roomNumber}?`}
+        message="The room and its checklist will be removed. This cannot be undone."
+        confirmLabel="Delete room"
+        onConfirm={handleDelete}
+        onClose={() => setDeleting(null)}
+      />
 
-          <div className="flex gap-3 justify-end pt-4 border-t border-slate-100">
-            <button type="button" className="btn-secondary h-11 px-5" onClick={() => setIsDetailsModalOpen(false)}>
-              {user.role === 'ADMIN' ? 'Cancel' : 'Close'}
-            </button>
-            {user.role === 'ADMIN' && (
-              <button 
-                type="button" 
-                className="btn-primary h-11 px-5" 
-                onClick={saveAssetsChanges}
-                disabled={isUpdatingAssets}
-              >
-                {isUpdatingAssets ? 'Saving...' : 'Save Audit Checklist'}
-              </button>
-            )}
-          </div>
-        </div>
-      </SidePanel>
+      <ImageLightbox image={preview} onClose={() => setPreview(null)} />
     </div>
   );
 };
 
 export default Rooms;
-

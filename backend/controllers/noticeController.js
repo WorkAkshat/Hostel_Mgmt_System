@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 // @route   POST /api/notices
 // @access  Private (Admin/Warden only)
 const createNotice = async (req, res) => {
-  const { title, content, priority } = req.body;
+  const { title, content, category, target } = req.body;
 
   if (!title || !content) {
     return res.status(400).json({ message: 'Title and content are required' });
@@ -17,7 +17,8 @@ const createNotice = async (req, res) => {
       data: {
         title,
         content,
-        priority: priority || 'INFO',
+        category: category ? String(category).toUpperCase() : 'GENERAL',
+        target: target || 'ALL',
         postedBy: req.user?.name || req.user?.email || 'Dr. Shalini Sharma'
       }
     });
@@ -42,7 +43,10 @@ const createNotice = async (req, res) => {
 // @access  Private
 const getAllNotices = async (req, res) => {
   try {
+    // Optional ?category=MESS filter
+    const where = req.query.category ? { category: String(req.query.category).toUpperCase() } : {};
     const notices = await prisma.notice.findMany({
+      where,
       orderBy: {
         createdAt: 'desc'
       }

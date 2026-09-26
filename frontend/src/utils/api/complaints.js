@@ -21,3 +21,6 @@ export const update = (id, data) => {
     body: data
   });
 };
+
+// Emails an "App / Web Issue" ticket to the developer support address
+export const forwardDeveloper = (id) => client(`/complaints/${id}/forward-developer`, { method: 'POST' });

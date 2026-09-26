@@ -1,5 +1,16 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { logActivity } = require('../utils/activityLogger');
+const { COMPANY_CONFIG, FEE_STRUCTURE } = require('../config/companyConfig');
+
+const PAYMENT_METHODS = ['CASH', 'UPI', 'BANK', 'CHEQUE'];
+
+// Floor + billing company for a student's room, stored on the invoice
+const billingEntity = (room) => {
+  const floorNumber = room?.floorNumber || null;
+  const company = floorNumber ? COMPANY_CONFIG[floorNumber] : null;
+  return { floorNumber, companyName: company?.companyName || null };
+};
 
 // @desc    Generate a fee invoice for a student (Warden only)
 // @route   POST /api/invoices
@@ -13,7 +24,8 @@ const createInvoice = async (req, res) => {
 
   try {
     const student = await prisma.student.findUnique({
-      where: { rollNumber: studentRollNumber }
+      where: { rollNumber: studentRollNumber },
+      include: { room: true }
     });
 
     if (!student) {
@@ -25,7 +37,8 @@ const createInvoice = async (req, res) => {
         studentId: student.id,
         amount: parseFloat(amount),
         dueDate: new Date(dueDate),
-        status: 'UNPAID'
+        status: 'UNPAID',
+        ...billingEntity(student.room)
       },
       include: {
         student: {
@@ -41,6 +54,8 @@ const createInvoice = async (req, res) => {
     });
 
     res.status(201).json(invoice);
+
+    logActivity({ req, action: 'CREATE', module: 'FEE', description: `Raised invoice of ₹${invoice.amount} for ${invoice.student.user.name} (${studentRollNumber})`, targetId: invoice.id, targetType: 'Invoice' });
   } catch (error) {
     console.error('Error generating invoice:', error);
     res.status(500).json({ message: 'Server error generating fee invoice' });
@@ -91,6 +106,7 @@ const getMyInvoices = async (req, res) => {
 
     const invoices = await prisma.invoice.findMany({
       where: { studentId: student.id },
+      include: { student: { include: { user: { select: { name: true } }, room: true } } },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -101,43 +117,56 @@ const getMyInvoices = async (req, res) => {
   }
 };
 
-// @desc    Simulate paying an invoice (Student only)
+// @desc    Record a payment received against an invoice (Warden only)
 // @route   PUT /api/invoices/:id/pay
-// @access  Private
+// @access  Private (Admin/Warden only)
 const payInvoice = async (req, res) => {
   const { id } = req.params;
+  const { method = 'CASH', reference = '', paidOn } = req.body || {};
+
+  if (!PAYMENT_METHODS.includes(method)) {
+    return res.status(400).json({ message: `Payment method must be one of ${PAYMENT_METHODS.join(', ')}` });
+  }
 
   try {
     const invoice = await prisma.invoice.findUnique({
       where: { id },
-      include: { student: true }
+      include: { student: { include: { user: { select: { name: true } } } } }
     });
 
     if (!invoice) {
       return res.status(404).json({ message: 'Invoice not found' });
     }
 
-    // Verify student is paying their own invoice (or Admin is paying it)
-    if (req.user.role !== 'ADMIN' && req.user.id !== invoice.student.userId) {
-      return res.status(403).json({ message: 'Not authorized to pay this invoice' });
-    }
-
     if (invoice.status === 'PAID') {
       return res.status(400).json({ message: 'Invoice has already been paid' });
     }
 
+    const paidAt = paidOn ? new Date(paidOn) : new Date();
+    if (Number.isNaN(paidAt.getTime()) || paidAt > new Date()) {
+      return res.status(400).json({ message: 'Payment date cannot be in the future' });
+    }
+
     const updatedInvoice = await prisma.invoice.update({
       where: { id },
-      data: {
-        status: 'PAID',
-        paidAt: new Date()
-      }
+      data: { status: 'PAID', paidAt }
     });
 
     res.json(updatedInvoice);
+
+    const ref = String(reference).trim();
+    logActivity({
+      req,
+      action: 'PAYMENT',
+      module: 'FEE',
+      description: `Recorded ₹${invoice.amount} from ${invoice.student.user.name} via ${method}${ref ? ` (ref ${ref})` : ''}`,
+      targetId: id,
+      targetType: 'Invoice',
+      metadata: { method, reference: ref, paidAt }
+    });
   } catch (error) {
-    console.error('Error paying invoice:', error);
-    res.status(500).json({ message: 'Server error during mock payment processing' });
+    console.error('Error recording invoice payment:', error);
+    res.status(500).json({ message: 'Server error recording the payment' });
   }
 };
 
@@ -187,14 +216,22 @@ const generateMonthlyBillingRun = async () => {
       continue;
     }
 
-    const billingAmount = student.room?.price ? parseFloat(student.room.price) : 15000;
+    if (!student.room) {
+      skippedCount++;
+      continue;
+    }
+
+    // Standard monthly fee: room rent for the sharing type + catering
+    const sharing = student.room.sharingType || student.room.capacity;
+    const billingAmount = (FEE_STRUCTURE.hostel[sharing] || FEE_STRUCTURE.hostel[2]) + FEE_STRUCTURE.mess;
 
     await prisma.invoice.create({
       data: {
         studentId: student.id,
         amount: billingAmount,
         dueDate,
-        status: 'UNPAID'
+        status: 'UNPAID',
+        ...billingEntity(student.room)
       }
     });
 
@@ -210,6 +247,7 @@ const generateMonthlyBillingRun = async () => {
 const triggerAutoMonthlyInvoices = async (req, res) => {
   try {
     const result = await generateMonthlyBillingRun();
+    logActivity({ req, action: 'CREATE', module: 'FEE', description: `Month-end billing for ${result.monthName}: ${result.generatedCount} invoices raised`, metadata: result });
     res.json({
       message: `Automated month-end billing complete for ${result.monthName}. Generated ${result.generatedCount} invoices (${result.skippedCount} students already billed).`,
       result

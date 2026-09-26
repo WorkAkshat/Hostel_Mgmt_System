@@ -208,6 +208,26 @@ const optOutMeal = async (req, res) => {
 // @desc    Cancel student meal opt-out (Re-enroll for meal)
 // @route   DELETE /api/mess/opt-out/:id
 // @access  Private (Student)
+// @desc    The logged-in student's opt-outs from today onwards
+// @route   GET /api/mess/my-opt-outs
+// @access  Private (Student)
+const getMyOptOuts = async (req, res) => {
+  try {
+    const student = await prisma.student.findUnique({ where: { userId: req.user.id } });
+    if (!student) return res.status(404).json({ message: 'Student profile not found' });
+
+    const today = new Date().toISOString().split('T')[0];
+    const optOuts = await prisma.mealOptOut.findMany({
+      where: { studentId: student.id, date: { gte: today } },
+      orderBy: [{ date: 'asc' }, { mealType: 'asc' }]
+    });
+    res.json(optOuts);
+  } catch (error) {
+    console.error('Error fetching my opt-outs:', error);
+    res.status(500).json({ message: 'Server error loading your skipped meals' });
+  }
+};
+
 const cancelOptOut = async (req, res) => {
   try {
     const { id } = req.params;
@@ -317,6 +337,7 @@ module.exports = {
   getMessStats,
   getMyMessAttendance,
   optOutMeal,
+  getMyOptOuts,
   cancelOptOut,
   getCookDashboard,
   getMessMenu,

@@ -21,6 +21,6 @@ router.route('/my-invoices')
   .get(protect, getMyInvoices);
 
 router.route('/:id/pay')
-  .put(protect, payInvoice);
+  .put(protect, authorize('ADMIN'), payInvoice);
 
 module.exports = router;

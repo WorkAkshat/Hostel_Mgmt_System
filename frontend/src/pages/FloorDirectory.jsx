@@ -1,566 +1,484 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { useAuth } from '../context/AuthContext';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Building2, Users, BedDouble, BarChart3, ArrowLeft,
-  Search, Phone, GraduationCap, IndianRupee, CheckCircle2,
-  AlertCircle, ChevronRight, X, Download, RefreshCw
+  ArrowLeft, Building2, ChartColumn, ChevronRight, Download, Layers, Phone, RefreshCw, Search, Snowflake, TriangleAlert, X,
 } from 'lucide-react';
+import { floors as floorsApi } from '../utils/api';
+import Avatar from '../components/ui/Avatar';
+import ProgressBar from '../components/ui/ProgressBar';
+import AnimatedNumber from '../components/ui/AnimatedNumber';
+import FilterChips from '../components/ui/FilterChips';
+import { ROOM_STATUS } from './rooms/RoomDrawer';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:9000/api/v1';
+const rupees = (n) => `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
+const thisMonth = () => new Date().toISOString().slice(0, 7);
 
-// ─── Floor themes ─────────────────────────────────────────────────────────────
-const FLOOR_THEMES = [
-  { gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', light: '#f0ebff', text: '#5b21b6', icon: '🏠' },
-  { gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', light: '#fff0f6', text: '#be185d', icon: '🏢' },
-  { gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', light: '#eff9ff', text: '#0369a1', icon: '🏙️' },
-  { gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)', light: '#ecfdf5', text: '#065f46', icon: '🌿' },
-  { gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', light: '#fffbeb', text: '#92400e', icon: '⭐' },
-];
-const COMBINED_THEME = { gradient: 'linear-gradient(135deg, #2563eb 0%, #4f46e5 100%)', light: '#eff6ff', text: '#1d4ed8', icon: '🌐' };
+const downloadCsv = (filename, header, rows) => {
+  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [header.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))].join('\n');
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
-const fmtCurrency = (n) => `₹${Number(n || 0).toLocaleString('en-IN')}`;
-const fmtPct = (n) => `${n}%`;
-
-// ─── Floor Card ───────────────────────────────────────────────────────────────
-const FloorCard = ({ floor, theme, onClick, idx }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 24 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay: idx * 0.07 }}
-    whileHover={{ y: -4, scale: 1.02 }}
-    onClick={onClick}
-    style={{ cursor: 'pointer' }}
-    className="glass-card rounded-[20px] overflow-hidden border border-white/60 shadow-md hover:shadow-xl transition-shadow"
-  >
-    {/* Gradient header */}
-    <div style={{ background: theme.gradient }} className="p-5 flex items-center justify-between">
-      <div className="text-white">
-        <span className="text-3xl">{theme.icon}</span>
-        <div className="mt-2 text-sm font-semibold opacity-80">{floor.floorLabel || `Floor ${floor.floorNumber}`}</div>
-        <div className="text-base font-bold leading-tight mt-0.5">{floor.companyName}</div>
-        <div className="text-xs opacity-70 mt-0.5">{floor.hostelName}</div>
-      </div>
-      <div className="text-white text-right">
-        <div className="text-3xl font-black">{floor.stats?.totalStudents ?? 0}</div>
-        <div className="text-xs opacity-80">Residents</div>
-      </div>
-    </div>
-
-    {/* Stats bar */}
-    <div className="p-4 grid grid-cols-3 gap-3">
-      {[
-        { label: 'Rooms', value: floor.stats?.totalRooms ?? 0, icon: <BedDouble size={14} /> },
-        { label: 'Available', value: floor.stats?.availableRooms ?? 0, icon: <CheckCircle2 size={14} /> },
-        { label: 'Occupancy', value: fmtPct(floor.stats?.occupancyPct ?? 0), icon: <BarChart3 size={14} /> },
-      ].map((s) => (
-        <div key={s.label} className="text-center">
-          <div className="flex items-center justify-center gap-1 text-[var(--text-tertiary)] mb-1">{s.icon}<span className="text-[10px]">{s.label}</span></div>
-          <div className="text-[15px] font-bold text-[var(--text-primary)]">{s.value}</div>
-        </div>
-      ))}
-    </div>
-
-    <div className="px-4 pb-4">
-      <button
-        style={{ background: theme.gradient }}
-        className="w-full py-2.5 rounded-[12px] text-white text-sm font-semibold flex items-center justify-center gap-2 border-none cursor-pointer"
-      >
-        View Directory <ChevronRight size={16} />
-      </button>
-    </div>
-  </motion.div>
+const Panel = ({ children, className = '' }) => (
+  <div className={`bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] ${className}`}>{children}</div>
 );
 
-// ─── Student Row ──────────────────────────────────────────────────────────────
-const StudentRow = ({ student, theme }) => (
-  <div className="flex items-center gap-4 p-4 rounded-[14px] bg-white border border-slate-100 hover:border-slate-200 transition-colors shadow-sm">
-    <div
-      className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0"
-      style={{ background: theme.gradient }}
+// ─── Overview ────────────────────────────────────────────────────────────────
+const FloorCard = ({ floor, index, onOpen }) => {
+  const s = floor.stats || {};
+  return (
+    <motion.button
+      type="button"
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 } }}
+      whileHover={{ y: -4 }}
+      onClick={onOpen}
+      className="group text-left w-full bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] overflow-hidden cursor-pointer hover:border-brand-200 hover:shadow-[var(--shadow-hover)] transition-[border-color,box-shadow]"
     >
-      {student.name.charAt(0).toUpperCase()}
-    </div>
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="font-semibold text-[var(--text-primary)] text-sm">{student.name}</span>
-        <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{student.rollNumber}</span>
-        {student.bedId && (
-          <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded-full font-semibold">
-            🛏️ Bed: {student.bedId}
-          </span>
-        )}
-        <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${student.status === 'CHECKED_IN' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-          {student.status}
+      <div className="bg-mint-100 px-5 pt-5 pb-4 flex items-start gap-3.5">
+        <span className="w-12 h-12 rounded-2xl bg-white text-brand-700 flex flex-col items-center justify-center shrink-0">
+          <span className="text-[10px] leading-none text-[var(--text-tertiary)]">Floor</span>
+          <span className="text-[20px] font-bold leading-tight">{floor.floorNumber}</span>
         </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[16px] font-bold truncate">{floor.companyName}</span>
+          <span className="block text-[13px] text-brand-700 truncate">{floor.hostelName}</span>
+        </span>
+        <ChevronRight size={18} className="text-brand-600 mt-1 transition-transform group-hover:translate-x-1" />
       </div>
-      <div className="flex items-center gap-3 mt-1 flex-wrap">
-        <span className="text-[11px] text-slate-400 flex items-center gap-1"><Phone size={10} />{student.phoneNumber}</span>
-        {student.coachingCollege && <span className="text-[11px] text-slate-400 flex items-center gap-1"><GraduationCap size={10} />{student.coachingCollege}</span>}
+      <div className="px-5 py-4">
+        <div className="flex items-baseline justify-between mb-2">
+          <span className="text-[13px] text-[var(--text-secondary)]">Occupancy</span>
+          <span className="text-[14px] font-bold">{s.occupancyPct ?? 0}%</span>
+        </div>
+        <ProgressBar value={s.occupancyPct ?? 0} max={100} height={7} delay={0.15 + index * 0.05} label={`Floor ${floor.floorNumber} occupancy`} />
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          {[
+            { label: 'Rooms', value: s.totalRooms ?? 0 },
+            { label: 'Residents', value: s.totalStudents ?? 0 },
+            { label: 'Free beds', value: s.freeBeds ?? 0, highlight: true },
+          ].map((stat) => (
+            <span key={stat.label} className={`rounded-xl px-3 py-2 ${stat.highlight ? 'bg-cream-100' : 'bg-mint-50'}`}>
+              <span className="block text-[11px] text-[var(--text-tertiary)]">{stat.label}</span>
+              <span className="block text-[17px] font-bold">{stat.value}</span>
+            </span>
+          ))}
+        </div>
       </div>
-    </div>
-    <div className="text-right flex-shrink-0">
-      {student.latestInvoice ? (
-        <>
-          <div className={`text-[11px] font-bold ${student.latestInvoice.status === 'PAID' ? 'text-emerald-600' : 'text-rose-500'}`}>
-            {student.latestInvoice.status}
-          </div>
-          <div className="text-[11px] text-slate-400">{fmtCurrency(student.latestInvoice.amount)}</div>
-        </>
-      ) : (
-        <span className="text-[11px] text-slate-300">No invoice</span>
-      )}
-    </div>
-  </div>
-);
+    </motion.button>
+  );
+};
 
-// ─── Room Block ───────────────────────────────────────────────────────────────
-const RoomBlock = ({ room, theme }) => {
-  let beds = [];
-  try {
-    beds = typeof room.bedMapping === 'string' ? JSON.parse(room.bedMapping || '[]') : (room.bedMapping || []);
-  } catch (e) {
-    beds = [];
-  }
+// ─── Residents tab ───────────────────────────────────────────────────────────
+const ResidentsTab = ({ detail }) => {
+  const [search, setSearch] = useState('');
+  const q = search.trim().toLowerCase();
+  const rooms = (detail?.rooms || [])
+    .map((room) => ({
+      ...room,
+      students: room.students.filter((s) => !q || [s.name, s.rollNumber, s.phoneNumber, s.coachingCollege].some((v) => v && v.toLowerCase().includes(q))),
+    }))
+    .filter((r) => !q || r.students.length || String(r.roomNumber).toLowerCase().includes(q));
 
   return (
-    <div className="mb-6 p-4 rounded-[18px] bg-slate-50/50 border border-slate-200/60 shadow-xs">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[12px] flex items-center justify-center text-white text-base font-black flex-shrink-0" style={{ background: theme.gradient }}>
-            {room.roomNumber}
-          </div>
-          <div>
-            <div className="text-base font-extrabold text-[var(--text-primary)] flex items-center gap-2">
-              <span>Room {room.roomNumber}</span>
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-600">
-                {room.sharingType === 1 ? 'Single Seater' : room.sharingType === 2 ? 'Double Seater' : 'Triple Seater'}
-              </span>
-            </div>
-            <div className="text-xs text-slate-400 mt-0.5">{room.sharingLabel || `${room.sharingType} Beds`} · {room.isAc ? '❄️ AC' : 'Non-AC'} · {fmtCurrency(room.monthlyFee)}/mo</div>
-          </div>
-        </div>
-        <span className={`text-xs font-bold px-3 py-1 rounded-full ${room.status === 'FULL' ? 'bg-rose-100 text-rose-700' : room.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-          {room.occupancy}/{room.capacity} Beds · {room.status}
-        </span>
-      </div>
+    <div className="flex flex-col gap-4">
+      <label className="relative">
+        <span className="sr-only">Search residents</span>
+        <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
+        <input className="form-input pl-10 pr-9 bg-white" placeholder="Search name, roll no., phone or college" value={search} onChange={(e) => setSearch(e.target.value)} />
+        {search && (
+          <button onClick={() => setSearch('')} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-tertiary)] bg-transparent border-none cursor-pointer">
+            <X size={14} />
+          </button>
+        )}
+      </label>
 
-      {/* Bed Mapping Badges */}
-      {beds.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3 pl-1 sticky">
-          {beds.map((bId) => {
-            const occupiedStudent = room.students?.find(s => s.bedId === bId);
+      {rooms.length === 0 ? (
+        <Panel className="p-10 text-center text-[14px] text-[var(--text-secondary)]">
+          {q ? 'No resident matches your search.' : 'No rooms on this floor yet.'}
+        </Panel>
+      ) : (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {rooms.map((room, i) => {
+            const status = ROOM_STATUS[room.status] || ROOM_STATUS.AVAILABLE;
             return (
-              <div
-                key={bId}
-                className={`text-xs px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 border shadow-2xs ${
-                  occupiedStudent
-                    ? 'bg-purple-100 text-purple-900 border-purple-300'
-                    : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-                }`}
-              >
-                <span>🛏️ {bId}</span>
-                <span className="text-[10px] font-normal opacity-80">
-                  {occupiedStudent ? `(${occupiedStudent.name})` : '• Vacant'}
-                </span>
-              </div>
+              <motion.div key={room.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0, transition: { delay: Math.min(i, 10) * 0.03 } }}>
+                <Panel className="p-4 h-full">
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className="w-11 h-11 rounded-xl bg-mint-100 text-brand-800 font-bold flex items-center justify-center shrink-0">{room.roomNumber}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[14px] font-semibold">
+                        {room.sharingLabel} sharing {room.isAc && <Snowflake size={12} className="inline text-brand-500 ml-0.5" />}
+                      </span>
+                      <span className="block text-[12px] text-[var(--text-tertiary)]">
+                        {room.occupancy}/{room.capacity} beds · {rupees(room.monthlyFee)}/bed
+                      </span>
+                    </span>
+                    <span className={`badge ${status.badge}`}>{status.label}</span>
+                  </div>
+                  {room.students.length === 0 ? (
+                    <p className="text-[13px] text-[var(--text-tertiary)] m-0 px-1 py-2">No residents in this room.</p>
+                  ) : (
+                    <ul className="list-none m-0 p-0 flex flex-col gap-1.5">
+                      {room.students.map((s) => (
+                        <li key={s.id} className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--bg-primary)]">
+                          <Avatar name={s.name} src={s.avatar} size={36} />
+                          <span className="flex-1 min-w-0">
+                            <span className="block text-[13px] font-semibold truncate">{s.name}</span>
+                            <span className="block text-[12px] text-[var(--text-tertiary)] truncate">
+                              {s.rollNumber}{s.coachingCollege ? ` · ${s.coachingCollege}` : ''}
+                            </span>
+                          </span>
+                          {s.latestInvoice && (
+                            <span className={`badge ${s.latestInvoice.status === 'PAID' ? 'badge-success' : 'badge-warning'} hidden sm:inline-flex`}>
+                              {s.latestInvoice.status === 'PAID' ? 'Paid' : `Due ${rupees(s.latestInvoice.amount)}`}
+                            </span>
+                          )}
+                          {s.phoneNumber && (
+                            <a href={`tel:${s.phoneNumber}`} className="w-8 h-8 rounded-lg bg-white text-brand-700 flex items-center justify-center shrink-0" aria-label={`Call ${s.name}`}>
+                              <Phone size={14} />
+                            </a>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </Panel>
+              </motion.div>
             );
           })}
         </div>
       )}
-
-      <div className="flex flex-col gap-2">
-        {room.students && room.students.length > 0
-          ? room.students.map((s) => <StudentRow key={s.id} student={s} theme={theme} />)
-          : <div className="text-xs text-slate-400 italic py-2 pl-2">No residents currently assigned</div>
-        }
-      </div>
     </div>
   );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-export default function FloorDirectory() {
-  const { user } = useAuth();
-  const token = user?.token || localStorage.getItem('token');
+// ─── Billing tab ─────────────────────────────────────────────────────────────
+const BillingTab = ({ floorKey, floorName }) => {
+  const [month, setMonth] = useState(thisMonth);
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [floors, setFloors]           = useState([]);
-  const [selectedFloor, setSelected]  = useState(null); // null = overview, 'combined' = all, or floor obj
-  const [floorDetail, setFloorDetail] = useState(null);
-  const [report, setReport]           = useState(null);
-  const [loading, setLoading]         = useState(true);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [search, setSearch]           = useState('');
-  const [activeTab, setActiveTab]     = useState('directory'); // 'directory' | 'report'
-  const [reportMonth, setReportMonth] = useState(new Date().toISOString().slice(0, 7));
-  const [reportLoading, setReportLoading] = useState(false);
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setReport(await floorsApi.getReport(floorKey, month));
+    } catch (err) {
+      setError(err.message || 'Could not load the report.');
+    } finally {
+      setLoading(false);
+    }
+  }, [floorKey, month]);
 
-  const floorsFetchedRef = useRef(false);
-
-  // Load all floors ONCE on mount
   useEffect(() => {
-    if (!token || floorsFetchedRef.current) return;
-    floorsFetchedRef.current = true;
-    const fetchFloors = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_BASE}/floors`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const data = await res.json();
-        setFloors(Array.isArray(data) ? data : []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
+    load();
+  }, [load]);
+
+  const combined = floorKey === 'combined';
+  const sum = combined
+    ? {
+        totalStudents: report?.grandTotal?.totalStudents,
+        grandTotal: report?.grandTotal?.total,
+        totalCollected: report?.grandTotal?.collected,
+        totalPending: report?.grandTotal?.pending,
       }
-    };
-    fetchFloors();
-  }, [token]);
+    : report?.summary || {};
+  const rate = sum.grandTotal ? Math.round(((sum.totalCollected || 0) / sum.grandTotal) * 100) : 0;
+  const monthLabel = new Date(`${month}-01`).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
 
-  // Load floor detail (students)
-  const loadFloorDetail = useCallback(async (floorNumber) => {
-    setDetailLoading(true);
-    setFloorDetail(null);
-    try {
-      const res = await fetch(`${API_BASE}/floors/${floorNumber}/students`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      setFloorDetail(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setDetailLoading(false);
-    }
-  }, [token]);
-
-  // Load report for selected floor
-  const loadReport = useCallback(async (floorNumber) => {
-    setReportLoading(true);
-    setReport(null);
-    try {
-      const endpoint = floorNumber === 'combined'
-        ? `${API_BASE}/floors/consolidated/report?month=${reportMonth}`
-        : `${API_BASE}/floors/${floorNumber}/report?month=${reportMonth}`;
-      const res = await fetch(endpoint, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      setReport(data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setReportLoading(false);
-    }
-  }, [token, reportMonth]);
-
-  const handleSelectFloor = (floor) => {
-    setSelected(floor);
-    setSearch('');
-    setActiveTab('directory');
-    if (floor === 'combined') {
-      loadReport('combined');
-      setActiveTab('report');
+  const exportReport = () => {
+    if (combined) {
+      downloadCsv(`floors-report-${month}.csv`,
+        ['Floor', 'Company', 'Students', 'Hostel fee', 'Mess fee', 'Electricity', 'Total', 'Collected', 'Pending'],
+        (report.floors || []).map((f) => [f.floor?.floorNumber, f.floor?.companyName, f.summary?.totalStudents, f.summary?.totalHostelFee, f.summary?.totalMessFee, f.summary?.totalElectricity, f.summary?.grandTotal, f.summary?.totalCollected, f.summary?.totalPending]));
     } else {
-      loadFloorDetail(floor.floorNumber);
+      downloadCsv(`floor-${floorKey}-report-${month}.csv`,
+        ['Resident', 'Room', 'Sharing', 'Hostel fee', 'Mess fee', 'Electricity', 'Total', 'Paid', 'Pending'],
+        (report.students || []).map((s) => [s.name, s.roomNumber, s.sharingType, s.hostelFee, s.messFee, s.electricity, s.total, s.paid, s.pending]));
     }
   };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2 text-[13px] font-semibold text-[var(--text-secondary)]">
+          Month
+          <input type="month" className="form-input h-10 w-[170px]" value={month} max={thisMonth()} onChange={(e) => e.target.value && setMonth(e.target.value)} />
+        </label>
+        <button className="btn-secondary h-10" onClick={load} disabled={loading}><RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh</button>
+        <button className="btn-secondary h-10 sm:ml-auto" onClick={exportReport} disabled={loading || !report}><Download size={15} /> Export CSV</button>
+      </div>
+
+      {error ? (
+        <div className="flex items-center gap-3 p-4 rounded-2xl bg-[var(--danger-bg)] text-[var(--danger)] text-[13px] font-medium">
+          <TriangleAlert size={17} /> {error}
+        </div>
+      ) : loading ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{[0, 1, 2, 3].map((i) => <div key={i} className="h-[92px] rounded-[var(--border-radius-card)] skeleton-loading" />)}</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { label: 'Residents billed', value: sum.totalStudents || 0, tone: 'bg-white border-[var(--border-color)]' },
+              { label: 'Total for the month', value: sum.grandTotal || 0, money: true, tone: 'bg-white border-[var(--border-color)]' },
+              { label: 'Collected', value: sum.totalCollected || 0, money: true, tone: 'bg-mint-100 border-mint-200' },
+              { label: 'Still pending', value: sum.totalPending || 0, money: true, tone: 'bg-cream-100 border-cream-200' },
+            ].map((t) => (
+              <div key={t.label} className={`rounded-[var(--border-radius-card)] border px-4 py-3.5 ${t.tone}`}>
+                <div className="text-[12px] text-[var(--text-secondary)]">{t.label}</div>
+                <div className="text-[22px] font-bold leading-tight"><AnimatedNumber value={t.value} format={t.money ? rupees : undefined} /></div>
+              </div>
+            ))}
+          </div>
+          <Panel className="px-4 py-3.5">
+            <div className="flex justify-between text-[13px] mb-2">
+              <span className="text-[var(--text-secondary)]">Collected for {monthLabel}</span>
+              <span className="font-bold">{rate}%</span>
+            </div>
+            <ProgressBar value={rate} max={100} height={8} label="Collection rate" />
+          </Panel>
+
+          <div className="custom-table-container">
+            {combined ? (
+              <table className="custom-table">
+                <thead>
+                  <tr>{['Floor', 'Company', 'Residents', 'Hostel fee', 'Mess fee', 'Electricity', 'Total', 'Collected', 'Pending'].map((h) => <th key={h}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {(report?.floors || []).map((f) => (
+                    <tr key={f.floor?.floorNumber}>
+                      <td className="font-semibold">{f.floor?.floorNumber}</td>
+                      <td>{f.floor?.companyName}</td>
+                      <td>{f.summary?.totalStudents}</td>
+                      <td>{rupees(f.summary?.totalHostelFee)}</td>
+                      <td>{rupees(f.summary?.totalMessFee)}</td>
+                      <td>{rupees(f.summary?.totalElectricity)}</td>
+                      <td className="font-semibold">{rupees(f.summary?.grandTotal)}</td>
+                      <td className="text-[var(--success)] font-semibold">{rupees(f.summary?.totalCollected)}</td>
+                      <td className="text-[var(--warning)] font-semibold">{rupees(f.summary?.totalPending)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-mint-50">
+                    <td colSpan={2} className="font-semibold">Meenakshi Enterprises (catering)</td>
+                    <td>{report?.grandTotal?.totalStudents}</td>
+                    <td colSpan={3} className="text-[13px] text-[var(--text-tertiary)]">₹3,000 × {report?.grandTotal?.totalStudents || 0} residents</td>
+                    <td className="font-semibold">{rupees(report?.grandTotal?.meenakshiCatering)}</td>
+                    <td colSpan={2} />
+                  </tr>
+                  <tr className="bg-cream-100 font-bold">
+                    <td colSpan={2}>Grand total</td>
+                    <td>{report?.grandTotal?.totalStudents}</td>
+                    <td>{rupees(report?.grandTotal?.hostelFee)}</td>
+                    <td>{rupees(report?.grandTotal?.messFee)}</td>
+                    <td>{rupees(report?.grandTotal?.electricity)}</td>
+                    <td>{rupees(report?.grandTotal?.total)}</td>
+                    <td className="text-[var(--success)]">{rupees(report?.grandTotal?.collected)}</td>
+                    <td className="text-[var(--warning)]">{rupees(report?.grandTotal?.pending)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            ) : (report?.students || []).length === 0 ? (
+              <p className="p-8 text-center text-[14px] text-[var(--text-secondary)] m-0">No residents were billed on {floorName} for {monthLabel}.</p>
+            ) : (
+              <table className="custom-table">
+                <thead>
+                  <tr>{['Resident', 'Room', 'Sharing', 'Hostel fee', 'Mess', 'Electricity', 'Total', 'Paid', 'Pending'].map((h) => <th key={h}>{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {report.students.map((s, i) => (
+                    <tr key={`${s.name}-${i}`}>
+                      <td className="font-semibold">{s.name}</td>
+                      <td>{s.roomNumber}</td>
+                      <td>{s.sharingType}</td>
+                      <td>{rupees(s.hostelFee)}</td>
+                      <td>{rupees(s.messFee)}</td>
+                      <td>{rupees(s.electricity)}</td>
+                      <td className="font-semibold">{rupees(s.total)}</td>
+                      <td className="text-[var(--success)] font-semibold">{rupees(s.paid)}</td>
+                      <td className={s.pending ? 'text-[var(--warning)] font-semibold' : 'text-[var(--text-tertiary)]'}>{rupees(s.pending)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// ─── Page ────────────────────────────────────────────────────────────────────
+export default function FloorDirectory() {
+  const [params, setParams] = useSearchParams();
+  const selected = params.get('floor'); // null = overview, 'combined', or a floor number
+  const tab = params.get('tab') || 'residents';
+
+  const [floors, setFloors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const loadFloors = useCallback(async () => {
+    try {
+      setError(null);
+      setFloors((await floorsApi.getAll()) || []);
+    } catch (err) {
+      setError(err.message || 'Could not load floors.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (activeTab === 'report' && selectedFloor) {
-      const fn = selectedFloor === 'combined' ? 'combined' : selectedFloor.floorNumber;
-      loadReport(fn);
-    }
-  }, [activeTab, reportMonth, selectedFloor, loadReport]);
+    loadFloors();
+  }, [loadFloors]);
 
-  const getTheme = (floor) => {
-    if (floor === 'combined') return COMBINED_THEME;
-    return FLOOR_THEMES[(floor.floorNumber - 1) % FLOOR_THEMES.length];
-  };
+  useEffect(() => {
+    if (!selected || selected === 'combined') return;
+    let cancelled = false;
+    setDetailLoading(true);
+    setDetail(null);
+    floorsApi.getStudents(selected)
+      .then((d) => !cancelled && setDetail(d))
+      .catch(() => !cancelled && setDetail(null))
+      .finally(() => !cancelled && setDetailLoading(false));
+    return () => { cancelled = true; };
+  }, [selected]);
 
-  // Filter students by search
-  const filteredRooms = (floorDetail?.rooms ?? []).map((room) => ({
-    ...room,
-    students: room.students.filter(
-      (s) =>
-        s.name.toLowerCase().includes(search.toLowerCase()) ||
-        s.rollNumber.toLowerCase().includes(search.toLowerCase()) ||
-        s.phoneNumber.includes(search)
-    ),
-  })).filter((r) => r.students.length > 0 || !search);
+  const open = (floorKey, nextTab) => setParams(floorKey ? { floor: String(floorKey), ...(nextTab ? { tab: nextTab } : {}) } : {});
+  const floor = floors.find((f) => String(f.floorNumber) === selected);
 
-  // ── Overview ────────────────────────────────────────────────────────────────
-  if (!selectedFloor) {
+  const totals = useMemo(() => floors.reduce((acc, f) => ({
+    rooms: acc.rooms + (f.stats?.totalRooms || 0),
+    residents: acc.residents + (f.stats?.totalStudents || 0),
+    free: acc.free + (f.stats?.freeBeds || 0),
+  }), { rooms: 0, residents: 0, free: 0 }), [floors]);
+
+  // Overview
+  if (!selected) {
     return (
-      <div>
-        <div className="mb-8">
-          <h1 className="text-2xl font-black text-[var(--text-primary)]">🏢 Floor Directory</h1>
-          <p className="text-sm text-[var(--text-secondary)] mt-1">
-            Select a floor to view room-wise residents, or choose <b>Consolidated View</b> for the combined financial report across all 5 floors and Meenakshi Enterprises Catering.
+      <div className="flex flex-col gap-5">
+        <div>
+          <h1 className="page-title">Floor directory</h1>
+          <p className="page-subtitle">
+            {loading ? 'Loading floors…' : `${floors.length} floors · ${totals.rooms} rooms · ${totals.residents} residents · ${totals.free} free beds`}
           </p>
         </div>
 
-        {loading ? (
-          <div className="flex items-center justify-center h-48"><div className="spinner" /></div>
+        {error ? (
+          <div className="flex items-center gap-3 p-4 rounded-2xl bg-[var(--danger-bg)] text-[var(--danger)] text-[13px] font-medium">
+            <TriangleAlert size={17} /> <span className="flex-1">{error}</span>
+            <button onClick={loadFloors} className="font-semibold underline bg-transparent border-none cursor-pointer text-[var(--danger)]">Retry</button>
+          </div>
+        ) : loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{[0, 1, 2, 3, 4, 5].map((i) => <div key={i} className="h-[230px] rounded-[var(--border-radius-card)] skeleton-loading" />)}</div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {/* 5 floor cards */}
-            {floors.map((floor, idx) => (
-              <FloorCard
-                key={floor.id}
-                floor={floor}
-                theme={FLOOR_THEMES[(floor.floorNumber - 1) % FLOOR_THEMES.length]}
-                onClick={() => handleSelectFloor(floor)}
-                idx={idx}
-              />
-            ))}
-
-            {/* Combined card */}
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: floors.length * 0.07 }}
-              whileHover={{ y: -4, scale: 1.02 }}
-              onClick={() => handleSelectFloor('combined')}
-              style={{ cursor: 'pointer' }}
-              className="glass-card rounded-[20px] overflow-hidden border-2 border-blue-200 shadow-md hover:shadow-xl transition-shadow"
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {floors.map((f, i) => <FloorCard key={f.id} floor={f} index={i} onOpen={() => open(f.floorNumber)} />)}
+            <motion.button
+              type="button"
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0, transition: { delay: floors.length * 0.05 } }}
+              whileHover={{ y: -4 }}
+              onClick={() => open('combined')}
+              className="group text-left w-full rounded-[var(--border-radius-card)] border border-cream-200 bg-cream-100 p-5 cursor-pointer flex flex-col justify-between gap-6 min-h-[230px] hover:shadow-[var(--shadow-hover)] transition-shadow"
             >
-              <div style={{ background: COMBINED_THEME.gradient }} className="p-5">
-                <span className="text-3xl">🌐</span>
-                <div className="text-white mt-2">
-                  <div className="text-sm font-semibold opacity-80">Consolidated View</div>
-                  <div className="text-base font-bold">All 5 Floors Combined</div>
-                  <div className="text-xs opacity-70 mt-0.5">Including Meenakshi Enterprises (Catering)</div>
-                </div>
-              </div>
-              <div className="p-4 text-center">
-                <div className="text-sm text-slate-500 mb-3">View combined financial report for all floors & food billing @ ₹3,000/student</div>
-                <button style={{ background: COMBINED_THEME.gradient }} className="w-full py-2.5 rounded-[12px] text-white text-sm font-semibold flex items-center justify-center gap-2 border-none cursor-pointer">
-                  View Consolidated <ChevronRight size={16} />
-                </button>
-              </div>
-            </motion.div>
+              <span className="flex items-start gap-3.5">
+                <span className="w-12 h-12 rounded-2xl bg-sun-300 text-sun-900 flex items-center justify-center shrink-0"><Layers size={22} /></span>
+                <span>
+                  <span className="block text-[16px] font-bold">All floors together</span>
+                  <span className="block text-[13px] text-[var(--text-secondary)] mt-0.5">Monthly billing for every floor, plus Meenakshi Enterprises catering</span>
+                </span>
+              </span>
+              <span className="flex items-center gap-1.5 text-[14px] font-semibold text-sun-900">
+                <ChartColumn size={16} /> Open combined report <ChevronRight size={16} className="transition-transform group-hover:translate-x-1" />
+              </span>
+            </motion.button>
           </div>
         )}
       </div>
     );
   }
 
-  // ── Floor Detail ────────────────────────────────────────────────────────────
-  const floorName = selectedFloor === 'combined' ? 'Consolidated – All 5 Floors' : selectedFloor.companyName;
+  const combined = selected === 'combined';
+  const floorName = combined ? 'All floors' : `Floor ${selected}`;
 
   return (
-    <div>
-      {/* Back + Title */}
-      <div className="flex items-center gap-4 mb-6">
+    <div className="flex flex-col gap-5">
+      {/* Floor header */}
+      <div className="flex items-start gap-3">
         <button
-          onClick={() => { setSelected(null); setFloorDetail(null); setReport(null); }}
-          className="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center cursor-pointer hover:bg-slate-50 transition-colors shadow-sm"
+          onClick={() => open(null)}
+          aria-label="Back to all floors"
+          className="w-10 h-10 shrink-0 rounded-xl bg-white border border-[var(--border-color)] flex items-center justify-center cursor-pointer text-[var(--text-secondary)] hover:bg-mint-50"
         >
-          <ArrowLeft size={18} className="text-slate-600" />
+          <ArrowLeft size={18} />
         </button>
-        <div>
-          <h1 className="text-xl font-black text-[var(--text-primary)] flex items-center gap-2">
-            <span>{getTheme(selectedFloor).icon}</span> {floorName}
+        <div className="min-w-0">
+          <p className="text-[13px] text-[var(--text-tertiary)] m-0">Floor directory</p>
+          <h1 className="page-title m-0">
+            {combined ? 'All floors' : <>Floor {selected}{floor?.companyName && <span className="text-brand-700"> · {floor.companyName}</span>}</>}
           </h1>
-          {selectedFloor !== 'combined' && (
-            <p className="text-xs text-slate-400 mt-0.5">{selectedFloor.hostelName} · {selectedFloor.floorLabel}</p>
+          {!combined && floor && (
+            <p className="page-subtitle m-0 mt-1">
+              {floor.hostelName} · {floor.stats?.totalRooms} rooms · {floor.stats?.totalStudents} residents · {floor.stats?.freeBeds} free beds
+            </p>
           )}
         </div>
       </div>
 
-      {/* Tab switcher */}
-      {selectedFloor !== 'combined' && (
-        <div className="flex gap-2 mb-5">
-          {['directory', 'report'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-5 py-2 rounded-[12px] text-sm font-semibold border cursor-pointer transition-colors capitalize ${activeTab === tab ? 'bg-[var(--primary)] text-white border-transparent' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-            >
-              {tab === 'directory' ? '📋 Directory' : '📊 Financial Report'}
-            </button>
-          ))}
+      {!combined && (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <FilterChips
+            id="floor-tab"
+            value={tab}
+            onChange={(t) => open(selected, t)}
+            options={[{ value: 'residents', label: 'Residents' }, { value: 'billing', label: 'Monthly billing' }]}
+          />
+          <div className="flex gap-1.5 overflow-x-auto">
+            {floors.map((f) => (
+              <button
+                key={f.floorNumber}
+                onClick={() => open(f.floorNumber, tab)}
+                className={`w-9 h-9 rounded-lg text-[13px] font-bold border cursor-pointer transition-colors ${
+                  String(f.floorNumber) === selected ? 'bg-sun-300 border-transparent text-sun-900' : 'bg-white border-[var(--border-color)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
+                }`}
+                aria-label={`Floor ${f.floorNumber}`}
+                title={f.companyName}
+              >
+                {f.floorNumber}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* ── DIRECTORY TAB ── */}
-      {activeTab === 'directory' && selectedFloor !== 'combined' && (
-        <>
-          {/* Search */}
-          <div className="relative mb-5">
-            <input
-              type="text"
-              placeholder="Search by name, roll number or phone…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-[12px] bg-white border border-slate-200 text-sm text-[var(--text-primary)] outline-none focus:border-[var(--primary)] transition-colors shadow-xs"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-slate-400"><X size={14} /></button>
-            )}
-          </div>
-
-          {/* Summary chips */}
-          {floorDetail && (
-            <div className="flex flex-wrap gap-2 mb-5">
-              {[
-                { label: 'Total Rooms', value: floorDetail.rooms?.length },
-                { label: 'Total Residents', value: floorDetail.summary?.totalStudents },
-                { label: 'Mess Total', value: fmtCurrency(floorDetail.summary?.messFeeTotal) },
-              ].map((c) => (
-                <div key={c.label} className="flex items-center gap-2 bg-white border border-slate-100 px-4 py-2 rounded-full shadow-sm">
-                  <span className="text-xs text-slate-400">{c.label}:</span>
-                  <span className="text-sm font-bold text-[var(--text-primary)]">{c.value}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Room list */}
-          {detailLoading ? (
-            <div className="flex items-center justify-center h-48"><div className="spinner" /></div>
-          ) : filteredRooms.length > 0 ? (
-            filteredRooms.map((room) => (
-              <RoomBlock key={room.id} room={room} theme={getTheme(selectedFloor)} />
-            ))
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div key={`${selected}-${combined ? 'billing' : tab}`} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+          {combined || tab === 'billing' ? (
+            <BillingTab floorKey={combined ? 'combined' : selected} floorName={floorName} />
+          ) : detailLoading ? (
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-[160px] rounded-[var(--border-radius-card)] skeleton-loading" />)}</div>
+          ) : detail ? (
+            <ResidentsTab detail={detail} />
           ) : (
-            <div className="text-center py-16 text-slate-400">
-              <Users size={40} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">{search ? 'No students match your search.' : 'No students on this floor.'}</p>
-            </div>
+            <Panel className="p-10 text-center text-[14px] text-[var(--text-secondary)]">
+              <Building2 size={26} className="mx-auto mb-2 text-brand-400" />
+              Could not load this floor.
+            </Panel>
           )}
-        </>
-      )}
-
-      {/* ── REPORT TAB ── */}
-      {(activeTab === 'report' || selectedFloor === 'combined') && (
-        <div>
-          {/* Month picker */}
-          <div className="flex items-center gap-3 mb-5">
-            <label className="text-sm font-semibold text-slate-600">Billing Month:</label>
-            <input
-              type="month"
-              value={reportMonth}
-              onChange={(e) => setReportMonth(e.target.value)}
-              className="px-3 py-2 rounded-[10px] border border-slate-200 text-sm bg-white outline-none focus:border-[var(--primary)]"
-            />
-            <button onClick={() => { const fn = selectedFloor === 'combined' ? 'combined' : selectedFloor.floorNumber; loadReport(fn); }} className="flex items-center gap-1.5 px-4 py-2 rounded-[10px] bg-[var(--primary)] text-white text-sm font-semibold border-none cursor-pointer">
-              <RefreshCw size={14} /> Refresh
-            </button>
-          </div>
-
-          {reportLoading ? (
-            <div className="flex items-center justify-center h-48"><div className="spinner" /></div>
-          ) : report ? (
-            <>
-              {/* Summary cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                {[
-                  { label: 'Total Students',  value: report.summary?.totalStudents ?? report.grandTotal?.totalStudents, icon: <Users size={18} /> },
-                  { label: 'Grand Total Due', value: fmtCurrency(report.summary?.grandTotal ?? report.grandTotal?.total), icon: <IndianRupee size={18} /> },
-                  { label: 'Collected',       value: fmtCurrency(report.summary?.totalCollected ?? report.grandTotal?.collected), icon: <CheckCircle2 size={18} /> },
-                  { label: 'Pending',         value: fmtCurrency(report.summary?.totalPending ?? report.grandTotal?.pending), icon: <AlertCircle size={18} /> },
-                ].map((c, i) => (
-                  <div key={i} className="glass-card p-4 rounded-[16px] border border-white/60">
-                    <div className="flex items-center gap-2 text-slate-400 mb-2">{c.icon}<span className="text-xs">{c.label}</span></div>
-                    <div className="text-lg font-black text-[var(--text-primary)]">{c.value}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Consolidated floor-wise table */}
-              {report.floors && (
-                <div className="mb-6">
-                  <h3 className="text-sm font-bold text-slate-600 mb-3">Company & Floor-wise Breakdown</h3>
-                  <div className="overflow-x-auto rounded-[16px] border border-slate-100">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50">
-                        <tr>
-                          {['Floor', 'Company', 'Students', 'Hostel Fee', 'Mess Fee', 'Electricity', 'Grand Total', 'Collected', 'Pending'].map((h) => (
-                            <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {report.floors.map((f, i) => (
-                          <tr key={i} className="border-t border-slate-100 hover:bg-slate-50 transition-colors">
-                            <td className="px-4 py-3 font-semibold">{f.floor?.floorNumber}</td>
-                            <td className="px-4 py-3 text-xs font-medium">{f.floor?.companyName}</td>
-                            <td className="px-4 py-3">{f.summary?.totalStudents}</td>
-                            <td className="px-4 py-3">{fmtCurrency(f.summary?.totalHostelFee)}</td>
-                            <td className="px-4 py-3">{fmtCurrency(f.summary?.totalMessFee)}</td>
-                            <td className="px-4 py-3">{fmtCurrency(f.summary?.totalElectricity)}</td>
-                            <td className="px-4 py-3 font-bold">{fmtCurrency(f.summary?.grandTotal)}</td>
-                            <td className="px-4 py-3 text-emerald-600 font-semibold">{fmtCurrency(f.summary?.totalCollected)}</td>
-                            <td className="px-4 py-3 text-rose-500 font-semibold">{fmtCurrency(f.summary?.totalPending)}</td>
-                          </tr>
-                        ))}
-                        {/* Meenakshi Catering row */}
-                        <tr className="border-t-2 border-blue-200 bg-blue-50">
-                          <td className="px-4 py-3 font-bold" colSpan={2}>Meenakshi Enterprises (Catering)</td>
-                          <td className="px-4 py-3 font-bold">{report.grandTotal?.totalStudents}</td>
-                          <td className="px-4 py-3 text-slate-400 text-xs" colSpan={2}>₹3,000 × {report.grandTotal?.totalStudents} students</td>
-                          <td className="px-4 py-3" />
-                          <td className="px-4 py-3 font-bold text-blue-700">{fmtCurrency(report.grandTotal?.meenakshiCatering)}</td>
-                          <td colSpan={2} />
-                        </tr>
-                        {/* Grand Total row */}
-                        <tr className="border-t-2 border-slate-300 bg-slate-100 font-black">
-                          <td className="px-4 py-3" colSpan={2}>GRAND TOTAL</td>
-                          <td className="px-4 py-3">{report.grandTotal?.totalStudents}</td>
-                          <td className="px-4 py-3">{fmtCurrency(report.grandTotal?.hostelFee)}</td>
-                          <td className="px-4 py-3">{fmtCurrency(report.grandTotal?.messFee)}</td>
-                          <td className="px-4 py-3">{fmtCurrency(report.grandTotal?.electricity)}</td>
-                          <td className="px-4 py-3 text-[var(--primary)]">{fmtCurrency(report.grandTotal?.total)}</td>
-                          <td className="px-4 py-3 text-emerald-700">{fmtCurrency(report.grandTotal?.collected)}</td>
-                          <td className="px-4 py-3 text-rose-600">{fmtCurrency(report.grandTotal?.pending)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Per-student table (single floor report) */}
-              {report.students && (
-                <div className="overflow-x-auto rounded-[16px] border border-slate-100">
-                  <table className="w-full text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        {['Resident', 'Room', 'Sharing', 'Hostel Fee', 'Mess', 'Electricity', 'Total', 'Paid', 'Pending'].map((h) => (
-                          <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {report.students.map((s, i) => (
-                        <tr key={i} className="border-t border-slate-100 hover:bg-slate-50">
-                          <td className="px-4 py-3 font-medium">{s.name}</td>
-                          <td className="px-4 py-3">{s.roomNumber}</td>
-                          <td className="px-4 py-3">{s.sharingType}</td>
-                          <td className="px-4 py-3">{fmtCurrency(s.hostelFee)}</td>
-                          <td className="px-4 py-3">{fmtCurrency(s.messFee)}</td>
-                          <td className="px-4 py-3">{fmtCurrency(s.electricity)}</td>
-                          <td className="px-4 py-3 font-bold">{fmtCurrency(s.total)}</td>
-                          <td className="px-4 py-3 text-emerald-600">{fmtCurrency(s.paid)}</td>
-                          <td className="px-4 py-3 text-rose-500">{fmtCurrency(s.pending)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="text-center py-16 text-slate-400">
-              <BarChart3 size={40} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Select a month and click Refresh to load the report.</p>
-            </div>
-          )}
-        </div>
-      )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

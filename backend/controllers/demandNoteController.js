@@ -3,12 +3,31 @@ const prisma = new PrismaClient();
 const { logActivity } = require('../utils/activityLogger');
 const { COMPANY_CONFIG, FEE_STRUCTURE, generateDemandNoteNumber, numberToWords } = require('../config/companyConfig');
 
+const PAYMENT_METHODS = ['CASH', 'UPI', 'BANK', 'CHEQUE'];
+
+// Current billing month as YYYY-MM
+const currentMonth = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+};
+
+// A billing cycle runs from the 10th of the month to the 9th of the next month
+const billingCycle = (billingMonth) => {
+  const [y, m] = billingMonth.split('-').map(Number);
+  return { cycleStart: new Date(y, m - 1, 10), cycleEnd: new Date(y, m, 9, 23, 59, 59) };
+};
+
 // @desc    Generate 10-to-10 Demand Notes for a billing month
 // @route   POST /api/v1/demand-notes/generate
 // @access  Private (Admin / Warden)
 const generateDemandNotes = async (req, res) => {
   try {
-    const { billingMonth = '2026-08', floorNumber } = req.body;
+    const { billingMonth = currentMonth(), floorNumber } = req.body;
+
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(billingMonth)) {
+      return res.status(400).json({ message: 'Billing month must look like YYYY-MM.' });
+    }
+    const { cycleStart, cycleEnd } = billingCycle(billingMonth);
 
     // Get active checked-in students
     const whereStudent = { status: 'CHECKED_IN' };
@@ -25,7 +44,8 @@ const generateDemandNotes = async (req, res) => {
             electricityReadings: {
               where: { readingMonth: billingMonth },
               take: 1
-            }
+            },
+            _count: { select: { students: { where: { status: 'CHECKED_IN' } } } }
           }
         },
         user: { select: { name: true, email: true } }
@@ -47,9 +67,11 @@ const generateDemandNotes = async (req, res) => {
       const sharingFee = FEE_STRUCTURE.hostel[student.room.sharingType] || FEE_STRUCTURE.hostel[2];
 
       const reading = student.room.electricityReadings?.[0];
-      const elecUnits = reading ? reading.unitsConsumed : 0;
+      // The room meter is shared, so its bill is split equally between the residents
+      const sharers = Math.max(1, student.room._count?.students || 1);
+      const elecUnits = reading ? Math.round((reading.unitsConsumed / sharers) * 100) / 100 : 0;
       const elecRate = reading ? reading.ratePerUnit : FEE_STRUCTURE.electricityRate;
-      const elecAmt = reading ? reading.totalAmount : 0;
+      const elecAmt = reading ? Math.round(reading.totalAmount / sharers) : 0;
       const prevReading = reading ? reading.previousReading : 0;
       const currReading = reading ? reading.currentReading : 0;
 
@@ -69,8 +91,8 @@ const generateDemandNotes = async (req, res) => {
           }
         },
         update: {
-          cycleStart: new Date(`${billingMonth}-10`),
-          cycleEnd: new Date(`${billingMonth.slice(0, 4)}-09-09`),
+          cycleStart,
+          cycleEnd,
           floorNumber: fNum,
           companyName: companyInfo.companyName,
           hostelFee: sharingFee,
@@ -83,8 +105,8 @@ const generateDemandNotes = async (req, res) => {
         create: {
           studentId: student.id,
           billingMonth,
-          cycleStart: new Date(`${billingMonth}-10`),
-          cycleEnd: new Date(`${billingMonth.slice(0, 4)}-09-09`),
+          cycleStart,
+          cycleEnd,
           floorNumber: fNum,
           companyName: companyInfo.companyName,
           hostelFee: sharingFee,
@@ -202,19 +224,37 @@ const getCompanyConfig = async (req, res) => {
   });
 };
 
-// @desc    Mark Demand Note as Paid (Warden / Manual)
-// @route   PATCH /api/v1/demand-notes/:id/mark-paid
+// @desc    Record a payment received against a Demand Note (Warden only)
+// @route   PATCH /api/v1/demand-notes/:id/mark-paid  (also POST /:id/pay for older clients)
 // @access  Private (Admin / Warden)
 const markPaid = async (req, res) => {
   try {
     const { id } = req.params;
+    const { method = 'CASH', reference = '', paidOn } = req.body || {};
+
+    if (!PAYMENT_METHODS.includes(method)) {
+      return res.status(400).json({ message: `Payment method must be one of ${PAYMENT_METHODS.join(', ')}` });
+    }
+
+    const note = await prisma.demandNote.findUnique({
+      where: { id },
+      include: { student: { include: { user: { select: { name: true } } } } }
+    });
+    if (!note) {
+      return res.status(404).json({ message: 'Demand Note not found' });
+    }
+    if (note.status === 'PAID') {
+      return res.status(400).json({ message: 'This demand note is already paid' });
+    }
+
+    const paidAt = paidOn ? new Date(paidOn) : new Date();
+    if (Number.isNaN(paidAt.getTime()) || paidAt > new Date()) {
+      return res.status(400).json({ message: 'Payment date cannot be in the future' });
+    }
 
     const updated = await prisma.demandNote.update({
       where: { id },
-      data: {
-        status: 'PAID',
-        paidAt: new Date()
-      }
+      data: { status: 'PAID', paidAt }
     });
 
     res.json({
@@ -222,49 +262,19 @@ const markPaid = async (req, res) => {
       demandNote: updated
     });
 
-    logActivity({ req, action: 'UPDATE', module: 'FEE', description: `Marked demand note (${updated.billingMonth}) as PAID (₹${updated.totalAmount})`, targetId: id, targetType: 'DemandNote' });
+    const ref = String(reference).trim();
+    logActivity({
+      req,
+      action: 'PAYMENT',
+      module: 'FEE',
+      description: `Recorded ₹${note.totalAmount} from ${note.student.user.name} for ${note.billingMonth} via ${method}${ref ? ` (ref ${ref})` : ''}`,
+      targetId: id,
+      targetType: 'DemandNote',
+      metadata: { method, reference: ref, paidAt }
+    });
   } catch (error) {
     console.error('Error marking demand note paid:', error);
     res.status(500).json({ message: 'Server error updating demand note' });
-  }
-};
-
-// @desc    Process Online Payment Gateway (UPI / Razorpay / NetBanking)
-// @route   POST /api/v1/demand-notes/:id/pay
-// @access  Private
-const payOnline = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { paymentMethod = 'UPI', transactionId, gateway = 'Razorpay' } = req.body;
-
-    const note = await prisma.demandNote.findUnique({ where: { id } });
-    if (!note) {
-      return res.status(404).json({ message: 'Demand Note not found' });
-    }
-
-    const txnRef = transactionId || `TXN-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    const updated = await prisma.demandNote.update({
-      where: { id },
-      data: {
-        status: 'PAID',
-        paidAt: new Date()
-      }
-    });
-
-    res.json({
-      message: `Payment of ₹${note.totalAmount.toLocaleString()} processed successfully via ${gateway} (${paymentMethod})`,
-      transactionId: txnRef,
-      paymentMethod,
-      gateway,
-      paidAt: updated.paidAt,
-      demandNote: updated
-    });
-
-    logActivity({ req, action: 'PAYMENT', module: 'FEE', description: `Paid ₹${note.totalAmount} for ${note.billingMonth} via ${paymentMethod} (${txnRef})`, targetId: id, targetType: 'DemandNote' });
-  } catch (error) {
-    console.error('Error processing payment:', error);
-    res.status(500).json({ message: 'Server error processing online payment' });
   }
 };
 
@@ -272,6 +282,5 @@ module.exports = {
   generateDemandNotes,
   getDemandNotes,
   getCompanyConfig,
-  markPaid,
-  payOnline
+  markPaid
 };

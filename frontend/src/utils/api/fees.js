@@ -1,28 +1,13 @@
 import client from './client';
 
-export const getAll = () => {
-  return client('/invoices');
-};
+export const getAll = () => client('/invoices');
 
-export const getMyInvoices = () => {
-  return client('/invoices/my-invoices');
-};
+export const getMyInvoices = () => client('/invoices/my-invoices');
 
-export const create = (data) => {
-  return client('/invoices', {
-    method: 'POST',
-    body: data
-  });
-};
+// data: { studentRollNumber, amount, dueDate }
+export const create = (data) => client('/invoices', { method: 'POST', body: data });
 
-export const pay = (id) => {
-  return client(`/invoices/${id}/pay`, {
-    method: 'PUT'
-  });
-};
+// Warden records a payment received. data: { method: 'CASH'|'UPI'|'BANK'|'CHEQUE', reference, paidOn }
+export const pay = (id, data = {}) => client(`/invoices/${id}/pay`, { method: 'PUT', body: data });
 
-export const autoGenerateMonthly = () => {
-  return client('/invoices/auto-generate-monthly', {
-    method: 'POST'
-  });
-};
+export const autoGenerateMonthly = () => client('/invoices/auto-generate-monthly', { method: 'POST' });

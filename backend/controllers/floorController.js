@@ -17,20 +17,20 @@ const sharingLabel = (n) => ({ 1: 'Single', 2: 'Twin', 3: 'Triple' }[n] || `${n}
 // @access  Private (Admin)
 const getAllFloors = async (req, res) => {
   try {
-    const floors = await prisma.floor.findMany({
-      orderBy: { floorNumber: 'asc' },
-      include: {
-        rooms: {
-          include: { students: true },
-        },
-      },
+    const floors = await prisma.floor.findMany({ orderBy: { floorNumber: 'asc' } });
+    // Match rooms by floorNumber so rooms missing a floorId are still counted
+    const allRooms = await prisma.room.findMany({
+      select: { floorNumber: true, status: true, sharingType: true, capacity: true, _count: { select: { students: true } } },
     });
 
     const result = floors.map((floor) => {
-      const totalRooms    = floor.rooms.length;
-      const totalStudents = floor.rooms.reduce((sum, r) => sum + r.students.length, 0);
-      const fullRooms     = floor.rooms.filter((r) => r.status === 'FULL').length;
-      const availableRooms= floor.rooms.filter((r) => r.status === 'AVAILABLE').length;
+      const rooms         = allRooms.filter((r) => r.floorNumber === floor.floorNumber);
+      const totalRooms    = rooms.length;
+      const totalStudents = rooms.reduce((sum, r) => sum + r._count.students, 0);
+      const totalBeds     = rooms.reduce((sum, r) => sum + (r.sharingType || r.capacity || 0), 0);
+      const fullRooms     = rooms.filter((r) => r.status === 'FULL').length;
+      const availableRooms= rooms.filter((r) => r.status === 'AVAILABLE').length;
+      const maintenanceRooms = rooms.filter((r) => r.status === 'MAINTENANCE').length;
 
       return {
         id:           floor.id,
@@ -42,9 +42,12 @@ const getAllFloors = async (req, res) => {
         stats: {
           totalRooms,
           totalStudents,
+          totalBeds,
+          freeBeds: Math.max(0, totalBeds - totalStudents),
           fullRooms,
           availableRooms,
-          occupancyPct: totalRooms > 0 ? Math.round((totalStudents / (totalRooms * 3)) * 100) : 0,
+          maintenanceRooms,
+          occupancyPct: totalBeds > 0 ? Math.round((totalStudents / totalBeds) * 100) : 0,
         },
       };
     });
@@ -97,13 +100,15 @@ const getFloorStudents = async (req, res) => {
       isAc:        room.isAc,
       status:      room.status,
       occupancy:   room.students.length,
-      capacity:    room.sharingType,
+      capacity:    room.sharingType || room.capacity,
       monthlyFee:  FEE[room.sharingType] ?? FEE[2],
       students: room.students.map((s) => ({
         id:              s.id,
         name:            s.user.name,
         email:           s.user.email,
         rollNumber:      s.rollNumber,
+        bedId:           s.bedId,
+        avatar:          s.profilePic,
         phoneNumber:     s.phoneNumber,
         parentContact:   s.parentContact,
         status:          s.status,
@@ -221,7 +226,7 @@ const getFloorReport = async (req, res) => {
         grandTotal:        Math.round(totalHostelFee + totalMessFee + totalElectricity),
         totalCollected:    Math.round(totalCollected),
         totalPending:      Math.round(totalPending),
-        collectionRate:    totalStudents > 0 ? Math.round((totalCollected / (totalHostelFee + totalMessFee)) * 100) : 0,
+        collectionRate:    totalStudents > 0 ? Math.round((totalCollected / (totalHostelFee + totalMessFee + totalElectricity)) * 100) : 0,
       },
       students: studentRows,
     });

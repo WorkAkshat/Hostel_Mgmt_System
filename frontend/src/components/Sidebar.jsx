@@ -1,220 +1,156 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  LayoutDashboard,
-  Users,
-  Home,
-  FileCheck,
-  Wrench,
-  UserCheck,
-  Receipt,
-  Sparkles,
-  Contact,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  X,
-  PlusCircle,
-  AlertCircle,
-  ShieldCheck,
-  Building2,
-  Activity
-} from 'lucide-react';
+import { House, LogOut, PanelLeftClose, PanelLeftOpen, X } from 'lucide-react';
+import { getNavGroups, isItemActive, itemPath, ROLE_LABELS } from '../config/navigation';
+
+// Must match the widths used for the content offset in App.jsx and Header.jsx
+export const SIDEBAR_EXPANDED = 264;
+export const SIDEBAR_COLLAPSED = 84;
 
 const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-
-  const handleQuickAction = (path) => {
-    navigate(path, { state: { action: 'add' } });
-    if (isMobileOpen) onClose();
-  };
+  const { pathname } = useLocation();
 
   if (!user) return null;
 
-  const getNavLinks = () => {
-    switch (user.role) {
-      case 'ADMIN':
-        return [
-          { path: '/admin/dashboard', name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-          { path: '/admin/tally', name: 'Tally ERP Ledger', icon: <Receipt size={18} /> },
-          { path: '/admin/floors', name: 'Floor Directory', icon: <Building2 size={18} /> },
-          { path: '/admin/reports', name: 'Financial Reports', icon: <FileCheck size={18} /> },
-          { path: '/admin/demand-notes', name: 'Demand Notes & Sub-meters', icon: <Receipt size={18} /> },
-          { path: '/admin/cook-dashboard', name: 'Cook Dashboard', icon: <Sparkles size={18} /> },
-          { path: '/admin/suggestions', name: 'Suggestion Box', icon: <Wrench size={18} /> },
-          { path: '/admin/night-attendance', name: 'Night Attendance', icon: <ShieldCheck size={18} /> },
-          { path: '/admin/approvals', name: 'User Approvals', icon: <ShieldCheck size={18} /> },
-          { path: '/admin/students', name: 'Students Directory', icon: <Users size={18} /> },
-          { path: '/admin/rooms', name: 'Rooms & Assets', icon: <Home size={18} /> },
-          { path: '/admin/leaves', name: 'Leave Approvals', icon: <FileCheck size={18} /> },
-          { path: '/admin/mess', name: 'Mess Menu', icon: <Sparkles size={18} /> },
-          { path: '/admin/fees', name: 'Fees & Invoices', icon: <Receipt size={18} /> },
-          { path: '/admin/complaints', name: 'Complaints Logs', icon: <Wrench size={18} /> },
-          { path: '/admin/visitors', name: 'Visitor Log', icon: <UserCheck size={18} /> },
-          { path: '/admin/staff', name: 'Staff Roster', icon: <Contact size={18} /> },
-          { path: '/admin/activity-log', name: 'Activity Log', icon: <Activity size={18} /> },
-        ];
-      case 'STUDENT':
-        return [
-          { path: '/student/dashboard', name: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-          { path: '/student/leaves', name: 'Apply Leave', icon: <FileCheck size={18} /> },
-          { path: '/student/mess', name: 'Mess Rating & Opt-Out', icon: <Sparkles size={18} /> },
-          { path: '/student/suggestions', name: 'Suggestion Box', icon: <Wrench size={18} /> },
-          { path: '/student/fees', name: 'My Invoices', icon: <Receipt size={18} /> },
-          { path: '/student/complaints', name: 'My Complaints', icon: <Wrench size={18} /> },
-        ];
-      case 'STAFF':
-        return [
-          { path: '/staff/visitors', name: 'Visitor Registry', icon: <UserCheck size={18} /> },
-          { path: '/staff/gatepass', name: 'Gate Operations', icon: <FileCheck size={18} /> },
-        ];
-      default:
-        return [];
-    }
+  const groups = getNavGroups(user.role);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
-  const navLinks = getNavLinks();
-
-  const sidebarContent = (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Sidebar Header Logo */}
-      <div className="flex items-center justify-between mb-8 min-h-[40px] px-2 pt-2">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-10 h-10 min-w-[40px] rounded-[14px] bg-[var(--primary)] flex items-center justify-center shadow-[0_4px_12px_rgba(37,99,235,0.3)] flex-shrink-0">
-            <Home size={20} className="text-white" />
-          </div>
-          {!isCollapsed && (
-            <div className="flex flex-col transition-all duration-300 overflow-hidden">
-              <h2 className="text-[1.05rem] text-[var(--text-primary)] font-bold leading-none whitespace-nowrap">Hari Pushp Tower</h2>
-              <span className="text-[0.65rem] text-[var(--text-secondary)] mt-1 whitespace-nowrap">Girls Hostel</span>
-            </div>
-          )}
+  // `variant` keeps the desktop and drawer highlight animations independent
+  const renderContent = (collapsed, variant) => (
+    <div className="flex flex-col h-full">
+      {/* Brand */}
+      <div className={`flex items-center gap-3 pt-6 pb-5 ${collapsed ? 'justify-center' : 'px-5'}`}>
+        <div className="w-10 h-10 min-w-[40px] rounded-xl bg-white flex items-center justify-center text-brand-600 shadow-[var(--shadow-sm)]">
+          <House size={20} strokeWidth={2.2} />
         </div>
-
-      </div>
-
-      {/* Navigation List */}
-      <nav className="flex flex-col gap-1.5 flex-grow overflow-y-auto px-2 custom-scrollbar">
-        {navLinks.map((link) => (
-          <NavLink
-            key={link.path}
-            to={link.path}
-            onClick={isMobileOpen ? onClose : undefined}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3.5 py-3 rounded-[16px] font-medium text-[14px] transition-all duration-200 cursor-pointer group relative ${isCollapsed ? 'justify-center px-0 mx-auto w-[48px]' : ''
-              } ${isActive
-                ? 'bg-gradient-to-r from-[#2563eb] to-[#4f46e5] text-white shadow-[0_4px_14px_rgba(37,99,235,0.3)] border border-white/10'
-                : 'text-slate-600 hover:bg-slate-100/50 hover:text-slate-900 border border-transparent'
-              }`
-            }
-            style={({ isActive }) => (isActive ? { color: '#ffffff' } : {})}
-            title={isCollapsed ? link.name : ''}
-          >
-            {({ isActive }) => (
-              <>
-                <div className={`flex items-center justify-center w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-500 group-hover:text-[var(--primary)]'}`} style={isActive ? { color: '#ffffff' } : {}}>
-                  {link.icon}
-                </div>
-                {!isCollapsed && (
-                  <span className="truncate transition-all duration-200" style={isActive ? { color: '#ffffff' } : {}}>{link.name}</span>
-                )}
-              </>
-            )}
-          </NavLink>
-        ))}
-
-        {/* Profile Card Summary */}
-      </nav>
-
-      <div className="mt-auto pt-4 px-2">
-        <div className={`flex items-center gap-3 p-3 rounded-[18px] bg-white border border-slate-200 shadow-sm mb-4 overflow-hidden ${isCollapsed ? 'justify-center p-2 mx-auto w-12 h-12' : ''}`}>
-          <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=4f46e5&color=fff`} alt="Profile" className="w-10 h-10 min-w-[40px] rounded-full object-cover flex-shrink-0" />
-          {!isCollapsed && (
-            <div className="flex flex-col overflow-hidden transition-all duration-300 w-full">
-              <div className="flex justify-between items-center w-full">
-                <p className="text-[13px] font-bold text-[var(--text-primary)] truncate">{user.name}</p>
-                <ChevronDown size={14} className="text-slate-400" />
-              </div>
-              <span className="text-[11px] text-slate-500 font-medium truncate">
-                {user.role === 'ADMIN' ? 'Chief Warden' : user.role === 'STAFF' ? 'Staff' : 'Student'}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Quick Actions (only visible on desktop when expanded) */}
-        {!isCollapsed && user.role === 'ADMIN' && (
-          <div className="mb-6 px-1 animate-fade-in">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-3 block">Quick Actions</span>
-            <div className="flex flex-col gap-2">
-              <button onClick={() => handleQuickAction('/admin/students')} className="flex items-center gap-3 text-[13px] font-medium text-slate-600 hover:text-[var(--primary)] py-1.5 cursor-pointer bg-transparent border-none w-full text-left transition-colors">
-                <PlusCircle size={16} className="text-slate-400" />
-                Add New Student
-              </button>
-              <button onClick={() => handleQuickAction('/admin/rooms')} className="flex items-center gap-3 text-[13px] font-medium text-slate-600 hover:text-[var(--primary)] py-1.5 cursor-pointer bg-transparent border-none w-full text-left transition-colors">
-                <Home size={16} className="text-slate-400" />
-                Add Room / Asset
-              </button>
-              <button onClick={() => handleQuickAction('/admin/visitors')} className="flex items-center gap-3 text-[13px] font-medium text-slate-600 hover:text-[var(--primary)] py-1.5 cursor-pointer bg-transparent border-none w-full text-left transition-colors">
-                <UserCheck size={16} className="text-slate-400" />
-                Register Visitor
-              </button>
-              <button onClick={() => { navigate('/admin/complaints'); if (isMobileOpen) onClose(); }} className="flex items-center gap-3 text-[13px] font-medium text-slate-600 hover:text-rose-600 py-1.5 cursor-pointer bg-transparent border-none w-full text-left transition-colors">
-                <AlertCircle size={16} className="text-slate-400" />
-                Raise Complaint
-              </button>
-            </div>
+        {!collapsed && (
+          <div className="flex flex-col min-w-0">
+            <span className="text-[15px] font-bold text-[var(--text-primary)] leading-tight truncate">Hari Pushp PG</span>
+            <span className="text-[12px] text-brand-700 leading-tight truncate">{ROLE_LABELS[user.role]} portal</span>
           </div>
         )}
+      </div>
 
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-4" aria-label="Main navigation">
+        {groups.map((group, index) => (
+          <div key={group.label} className={index > 0 ? 'mt-5' : ''}>
+            {collapsed ? (
+              index > 0 && <div className="mx-auto mb-3 h-px w-8 bg-mint-300" />
+            ) : (
+              groups.length > 1 && (
+                <p className="px-3 mb-1.5 text-[11px] font-semibold text-brand-700/70 tracking-wide">
+                  {group.label}
+                </p>
+              )
+            )}
+            <ul className="flex flex-col gap-1 list-none m-0 p-0">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const active = isItemActive(item, pathname);
+                return (
+                  <li key={item.name}>
+                    <Link
+                      to={itemPath(item)}
+                      onClick={isMobileOpen ? onClose : undefined}
+                      title={collapsed ? item.name : undefined}
+                      aria-current={active ? 'page' : undefined}
+                      className={`relative flex items-center gap-3 h-11 rounded-xl text-[14px] transition-colors ${
+                        collapsed ? 'justify-center w-11 mx-auto' : 'px-3'
+                      } ${
+                        active
+                          ? 'text-sun-900 font-semibold'
+                          : 'text-[var(--text-secondary)] font-medium hover:bg-mint-300/50 hover:text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId={`sidebar-active-${variant}`}
+                          className="absolute inset-0 rounded-xl bg-sun-300"
+                          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                        />
+                      )}
+                      <Icon size={18} className="relative shrink-0" />
+                      {!collapsed && <span className="relative truncate">{item.name}</span>}
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer actions */}
+      <div className={`border-t border-mint-300 p-3 flex gap-1 ${collapsed ? 'flex-col items-center' : 'items-center'}`}>
+        <button
+          onClick={handleLogout}
+          title="Sign out"
+          className={`flex items-center gap-3 h-10 rounded-xl text-[14px] font-medium text-[var(--text-secondary)] hover:bg-white hover:text-[var(--danger)] transition-colors cursor-pointer border-none bg-transparent ${
+            collapsed ? 'justify-center w-11' : 'flex-1 px-3'
+          }`}
+        >
+          <LogOut size={18} className="shrink-0" />
+          {!collapsed && <span>Sign out</span>}
+        </button>
+        {variant === 'desktop' && (
+          <button
+            onClick={() => setIsCollapsed(!collapsed)}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-[var(--text-secondary)] hover:bg-white hover:text-[var(--text-primary)] transition-colors cursor-pointer border-none bg-transparent"
+          >
+            {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        )}
       </div>
     </div>
   );
 
   return (
     <>
-      {/* Desktop Sidebar - fixed, always visible on lg+ */}
+      {/* Desktop sidebar */}
       <aside
-        className="h-screen fixed left-0 top-0 z-40 lg:flex flex-col p-4 transition-all duration-300 ease-in-out hidden"
-        style={{ width: isCollapsed ? '100px' : '280px' }}
+        className="hidden lg:block fixed left-0 top-0 h-screen z-40 bg-[var(--sidebar-bg)] transition-[width] duration-300 ease-in-out"
+        style={{ width: isCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED }}
       >
-        <div className="glass-panel w-full h-full rounded-[24px] shadow-[0_10px_35px_rgba(15,23,42,0.04)] py-4 flex flex-col">
-          {sidebarContent}
-        </div>
+        {renderContent(isCollapsed, 'desktop')}
       </aside>
 
-      {/* Mobile Drawer Sidebar Overlay */}
+      {/* Mobile drawer */}
       <AnimatePresence>
         {isMobileOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 lg:hidden flex"
+            className="fixed inset-0 bg-[#1b2a29]/40 z-50 lg:hidden"
             onClick={onClose}
           >
-            <motion.div
+            <motion.aside
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="w-[85vw] max-w-[280px] h-screen bg-white/90 backdrop-blur-xl p-4 flex flex-col shadow-2xl relative"
+              transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+              className="relative w-[82vw] max-w-[288px] h-full bg-[var(--sidebar-bg)]"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Close button */}
               <button
                 onClick={onClose}
-                className="absolute top-6 right-6 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 border-none flex items-center justify-center cursor-pointer text-slate-500"
+                aria-label="Close menu"
+                className="absolute top-6 right-4 w-8 h-8 rounded-lg bg-white/70 hover:bg-white border-none flex items-center justify-center cursor-pointer text-[var(--text-secondary)]"
               >
                 <X size={16} />
               </button>
-              <div className="h-full pt-4">
-                {sidebarContent}
-              </div>
-            </motion.div>
+              {renderContent(false, 'drawer')}
+            </motion.aside>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,12 +1,9 @@
 import client from './client';
 
-export const submitReading = async (data) => {
-  return client('/electricity/readings', {
-    method: 'POST',
-    body: JSON.stringify(data)
-  });
-};
+// data: { roomId, readingMonth: 'YYYY-MM', previousReading, currentReading, ratePerUnit }
+export const submitReading = async (data) => client('/electricity/readings', { method: 'POST', body: data });
 
+// params: { month, floorNumber, roomId }
 export const getReadings = async (params = {}) => {
   const query = new URLSearchParams(params).toString();
   return client(`/electricity/readings${query ? `?${query}` : ''}`);

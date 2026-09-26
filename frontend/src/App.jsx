@@ -3,7 +3,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
+import SectionTabs from './components/SectionTabs';
+import { ToastProvider } from './components/ui/Toast';
 
 // Pages
 import Login from './pages/Login';
@@ -22,11 +24,24 @@ import FloorDirectory from './pages/FloorDirectory';
 import ModulesView from './pages/ModulesView';
 import TallyAccounting from './pages/TallyAccounting';
 import ActivityLog from './pages/ActivityLog';
+import NightRollCall from './pages/NightRollCall';
+import CookDashboard from './pages/CookDashboard';
+import Suggestions from './pages/Suggestions';
 
 import { useState, useEffect } from 'react';
 
-import { Home as HomeIcon, FileText, Sparkles, Wrench, User, LogOut, LayoutGrid, CalendarDays } from 'lucide-react';
+import { User, LogOut } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { getMobileNavItems, getInitials, isItemActive, itemPath, ROLE_LABELS } from './config/navigation';
+import { SIDEBAR_COLLAPSED, SIDEBAR_EXPANDED } from './components/Sidebar';
+
+const readCollapsed = () => {
+  try {
+    return localStorage.getItem('hms_sidebar_collapsed') === '1';
+  } catch (e) {
+    return false;
+  }
+};
 
 // Dashboard Layout Wrapper
 const DashboardLayout = () => {
@@ -34,35 +49,7 @@ const DashboardLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [showProfileModal, setShowProfileModal] = useState(false);
-  
-  if (!user) return <Navigate to="/login" replace />;
-
-  const getNavTabs = () => {
-    if (user.role === 'ADMIN') {
-      return [
-        { label: 'Home', path: '/admin/dashboard', icon: <HomeIcon size={20} /> },
-        { label: 'Rooms', path: '/admin/rooms', icon: <LayoutGrid size={20} /> },
-        { label: 'Leaves', path: '/admin/leaves', icon: <CalendarDays size={20} /> },
-        { label: 'Issues', path: '/admin/complaints', icon: <Wrench size={20} /> },
-      ];
-    } else if (user.role === 'STUDENT') {
-      return [
-        { label: 'Home', path: '/student/dashboard', icon: <HomeIcon size={20} /> },
-        { label: 'Apply Leave', path: '/student/leaves', icon: <CalendarDays size={20} /> },
-        { label: 'Mess', path: '/student/mess', icon: <Sparkles size={20} /> },
-        { label: 'Complaints', path: '/student/complaints', icon: <Wrench size={20} /> },
-      ];
-    } else {
-      return [
-        { label: 'Visitors', path: '/staff/visitors', icon: <User size={20} /> },
-        { label: 'Gatepass', path: '/staff/gatepass', icon: <CalendarDays size={20} /> },
-      ];
-    }
-  };
-
-  const tabs = getNavTabs();
-
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(readCollapsed);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
 
@@ -73,89 +60,109 @@ const DashboardLayout = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Must match the width values in Sidebar.jsx
-  const SIDEBAR_EXPANDED = '280px';
-  const SIDEBAR_COLLAPSED = '100px';
+  useEffect(() => {
+    try {
+      localStorage.setItem('hms_sidebar_collapsed', isCollapsed ? '1' : '0');
+    } catch (e) {}
+  }, [isCollapsed]);
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  const tabs = getMobileNavItems(user.role);
   const sidebarWidth = isCollapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED;
 
   return (
     <div className="app-container">
-      <Sidebar 
-        isCollapsed={isCollapsed} 
-        setIsCollapsed={setIsCollapsed} 
-        isMobileOpen={isMobileOpen} 
-        onClose={() => setIsMobileOpen(false)} 
+      <Sidebar
+        isCollapsed={isCollapsed}
+        setIsCollapsed={setIsCollapsed}
+        isMobileOpen={isMobileOpen}
+        onClose={() => setIsMobileOpen(false)}
       />
 
-      <div 
-        className={`main-content transition-all duration-300 ease-in-out ${isDesktop ? 'pl-8 pr-8' : 'pl-4 pr-4 pb-[112px]'} pt-[calc(var(--header-height)+32px)] lg:pt-[calc(var(--header-height)+32px)]`}
-        style={{ 
-          marginLeft: isDesktop ? sidebarWidth : '0px',
+      <div
+        className={`main-content transition-[margin] duration-300 ease-in-out ${isDesktop ? 'px-8 pb-10' : 'px-4 pb-[104px]'} pt-[calc(var(--header-height)+24px)] lg:pt-[calc(var(--header-height)+32px)]`}
+        style={{
+          marginLeft: isDesktop ? sidebarWidth : 0,
         }}
       >
         <Header 
           isCollapsed={isCollapsed}
           onMenuToggle={() => setIsMobileOpen(true)} 
         />
+        <SectionTabs />
         <AnimatePresence mode="wait">
           <motion.main 
             key={location.pathname}
-            initial={{ opacity: 0, y: 15 }}
+            initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -15 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
           >
             <Outlet />
           </motion.main>
         </AnimatePresence>
       </div>
 
-      {/* Sticky Floating Bottom Navigation Bar for Mobile */}
-      <div className="fixed bottom-4 left-4 right-4 h-[64px] bg-white/90 backdrop-blur-md border border-[var(--border-color)] flex items-center justify-around z-40 lg:hidden shadow-lg rounded-2xl">
-        {tabs.map((tab) => {
-          const isActive = location.pathname === tab.path;
+      {/* Bottom navigation bar for mobile */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 h-[72px] pb-[env(safe-area-inset-bottom)] bg-white border-t border-[var(--border-color)] flex items-stretch justify-around z-40 lg:hidden"
+        aria-label="Quick navigation"
+      >
+        {tabs.map((item) => {
+          const { mobile: label, icon: Icon } = item;
+          const isActive = isItemActive(item, location.pathname);
           return (
             <button
-              key={tab.path}
-              onClick={() => navigate(tab.path)}
-              className={`flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer w-16 h-full transition-all ${
-                isActive ? 'text-[var(--secondary)] font-semibold scale-105' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              key={item.name}
+              onClick={() => navigate(itemPath(item))}
+              className={`flex-1 flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer transition-colors ${
+                isActive ? 'text-sun-900' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              {tab.icon}
-              <span className="text-[10px]">{tab.label}</span>
+              <span className="relative w-12 h-7 rounded-full flex items-center justify-center">
+                {isActive && (
+                  <motion.span
+                    layoutId="bottom-nav-active"
+                    className="absolute inset-0 rounded-full bg-sun-300"
+                    transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                  />
+                )}
+                <Icon size={20} className="relative" />
+              </span>
+              <span className={`text-[11px] ${isActive ? 'font-semibold' : 'font-medium'}`}>{label}</span>
             </button>
           );
         })}
         <button
           onClick={() => setShowProfileModal(true)}
-          className="flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer w-16 h-full text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          className="flex-1 flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
         >
-          <User size={20} />
-          <span className="text-[10px]">Account</span>
+          <span className="w-12 h-7 rounded-full flex items-center justify-center">
+            <User size={20} />
+          </span>
+          <span className="text-[11px] font-medium">Account</span>
         </button>
-      </div>
+      </nav>
 
       {/* Profile/Account Modal */}
       {showProfileModal && (
-        <div 
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center z-[99999] p-4"
+        <div
+          className="fixed inset-0 bg-[#1b2a29]/40 flex items-end sm:items-center justify-center z-[99999] p-4"
           onClick={() => setShowProfileModal(false)}
         >
-          <div 
-            className="glass-card w-full max-w-[360px] p-6 flex flex-col items-center gap-4 text-center animate-fade-in rounded-[24px]"
+          <div
+            className="glass-card w-full max-w-[360px] p-6 flex flex-col items-center gap-4 text-center animate-fade-in rounded-[var(--border-radius-modal)]"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Avatar with indigo gradient — matches primary brand color */}
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#4f46e5] to-[#2563eb] text-white flex items-center justify-center font-bold text-3xl shadow-[0_8px_24px_rgba(79,70,229,0.35)]">
-              {user.name.charAt(0).toUpperCase()}
+            <div className="w-20 h-20 rounded-full bg-sun-300 text-sun-900 flex items-center justify-center font-bold text-2xl">
+              {getInitials(user.name)}
             </div>
             <div className="flex flex-col items-center gap-1.5">
-              <h3 className="text-lg font-bold text-[var(--text-primary)] leading-tight">{user.name}</h3>
+              <h3 className="text-lg font-bold leading-tight">{user.name}</h3>
               <p className="text-xs text-[var(--text-tertiary)] font-medium">{user.email}</p>
-              {/* Role badge — indigo to match brand, not green */}
-              <span className="inline-flex items-center mt-1 bg-indigo-50 text-indigo-700 border border-indigo-100 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider">
-                {user.role === 'ADMIN' ? 'Chief Warden' : user.role === 'STAFF' ? 'Staff' : 'Student'}
+              <span className="inline-flex items-center mt-1 bg-mint-100 text-brand-700 px-3 py-1 rounded-full text-[12px] font-semibold">
+                {ROLE_LABELS[user.role]}
               </span>
             </div>
             <div className="w-full h-px bg-[var(--border-color)]"></div>
@@ -165,14 +172,14 @@ const DashboardLayout = () => {
                 logout();
                 navigate('/login');
               }}
-              className="flex items-center justify-center gap-2 w-full py-3 bg-red-50 text-red-600 border border-red-100 rounded-[14px] font-semibold cursor-pointer transition-colors hover:bg-red-100"
+              className="flex items-center justify-center gap-2 w-full h-11 bg-[var(--danger-bg)] text-[var(--danger)] border-none rounded-[var(--border-radius-btn)] font-semibold cursor-pointer transition-colors hover:brightness-95"
             >
               <LogOut size={18} />
-              <span>Sign Out</span>
+              <span>Sign out</span>
             </button>
             <button
               onClick={() => setShowProfileModal(false)}
-              className="w-full py-2.5 bg-transparent text-[var(--text-secondary)] border border-[var(--border-color)] rounded-[14px] font-medium cursor-pointer hover:bg-slate-50 transition-colors"
+              className="btn-secondary w-full"
             >
               Close
             </button>
@@ -210,6 +217,8 @@ const HomeRedirect = () => {
 
 const App = () => {
   return (
+    <MotionConfig reducedMotion="user">
+    <ToastProvider>
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -274,15 +283,15 @@ const App = () => {
             />
             <Route 
               path="/admin/cook-dashboard" 
-              element={<PrivateRoute allowedRoles={['ADMIN']}><ModulesView defaultTab="cook-dashboard" /></PrivateRoute>} 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><CookDashboard /></PrivateRoute>} 
             />
             <Route 
               path="/admin/suggestions" 
-              element={<PrivateRoute allowedRoles={['ADMIN']}><ModulesView defaultTab="suggestions" /></PrivateRoute>} 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><Suggestions /></PrivateRoute>} 
             />
             <Route 
               path="/admin/night-attendance" 
-              element={<PrivateRoute allowedRoles={['ADMIN']}><ModulesView defaultTab="night-attendance" /></PrivateRoute>} 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><NightRollCall /></PrivateRoute>} 
             />
             <Route 
               path="/admin/staff" 
@@ -316,7 +325,7 @@ const App = () => {
             />
             <Route 
               path="/student/suggestions" 
-              element={<PrivateRoute allowedRoles={['STUDENT']}><ModulesView defaultTab="suggestions" /></PrivateRoute>} 
+              element={<PrivateRoute allowedRoles={['STUDENT']}><Suggestions /></PrivateRoute>} 
             />
 
             {/* Security Staff Routes */}
@@ -336,6 +345,8 @@ const App = () => {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ToastProvider>
+    </MotionConfig>
   );
 };
 

@@ -1,9 +1,28 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LogIn, Key, Mail, ShieldAlert, Home, Building2, Users, Shield, Eye, EyeOff, CheckCircle2, Lock, ArrowRight, RefreshCw } from 'lucide-react';
+import { LogIn, Key, Mail, ShieldAlert, House, Eye, EyeOff, CheckCircle2, Lock, ArrowRight, RefreshCw, ShieldCheck, BedDouble, BellRing } from 'lucide-react';
 import { auth as authApi } from '../utils/api';
 import CustomModal from '../components/CustomModal';
+import HostelIllustration from '../components/ui/HostelIllustration';
+
+const inputClass =
+  'w-full h-12 rounded-xl border border-[var(--border-color)] bg-white text-[var(--text-primary)] outline-none text-[15px] transition-[border-color,box-shadow] focus:border-brand-400 focus:shadow-[0_0_0_3px_var(--color-brand-100)] placeholder:text-[var(--text-tertiary)] disabled:bg-[var(--bg-primary)]';
+
+const labelClass = 'text-[13px] font-semibold text-[var(--text-secondary)]';
+
+const Leaf = ({ className, rotate = 0 }) => (
+  <svg viewBox="0 0 60 100" className={className} style={{ transform: `rotate(${rotate}deg)` }} aria-hidden="true">
+    <path d="M30 98C30 70 6 58 6 32 6 14 18 2 30 2s24 12 24 30c0 26-24 38-24 66Z" fill="currentColor" />
+    <path d="M30 96V14" stroke="#ffffff" strokeOpacity=".55" strokeWidth="2" fill="none" />
+  </svg>
+);
+
+const HIGHLIGHTS = [
+  { icon: ShieldCheck, label: 'Safe & secure stay' },
+  { icon: BedDouble, label: 'Rooms, mess & fees in one place' },
+  { icon: BellRing, label: 'Instant leave & parent alerts' },
+];
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -122,241 +141,197 @@ const Login = () => {
   };
 
   return (
-    <div
-      className="min-h-screen w-screen flex items-center justify-center relative overflow-hidden px-4 py-8"
-      style={{
-        background: 'radial-gradient(circle at top left, rgba(59,130,246,0.1), transparent 40%), radial-gradient(circle at bottom right, rgba(139,92,246,0.1), transparent 35%), linear-gradient(135deg, #F8FAFF 0%, #EEF4FF 30%, #FDFBFF 60%, #F5F8FF 100%)',
-      }}
-    >
-      {/* Decorative floating orbs */}
-      <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.07), transparent)', filter: 'blur(60px)' }} />
-      <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.07), transparent)', filter: 'blur(60px)' }} />
+    <div className="min-h-screen w-full flex bg-[var(--bg-primary)]">
+      {/* Left — brand panel (desktop) */}
+      <aside className="hidden lg:flex relative w-[46%] max-w-[640px] bg-[var(--sidebar-bg)] overflow-hidden flex-col justify-between p-12 xl:p-14">
+        <Leaf className="absolute -top-6 left-10 w-16 text-brand-200" rotate={-30} />
+        <Leaf className="absolute top-10 left-2 w-10 text-brand-300/70" rotate={-70} />
+        <Leaf className="absolute -top-4 right-16 w-12 text-brand-200" rotate={25} />
+        <Leaf className="absolute bottom-24 -right-4 w-20 text-mint-300" rotate={-20} />
 
-      <div className="relative z-10 w-full flex flex-col lg:flex-row items-center justify-center gap-12 px-2 sm:px-6 max-w-[1100px] mx-auto">
-
-        {/* Left Side - Branding */}
-        <div className="hidden lg:flex flex-col gap-8 flex-1 max-w-[420px]">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-[18px] flex items-center justify-center shadow-lg" style={{ background: 'linear-gradient(135deg, #2563eb, #4f46e5)' }}>
-              <Home size={22} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-[17px] font-bold text-slate-800 tracking-tight leading-none">Hari Pushp PG</h2>
-              <p className="text-[12px] text-slate-500 font-medium mt-0.5 font-sans">Hostel Management Portal</p>
-            </div>
+        <div className="relative flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-brand-600 shadow-[var(--shadow-sm)]">
+            <House size={24} strokeWidth={2.2} />
           </div>
-
-          {/* Headline */}
           <div>
-            <h1 className="text-[38px] font-bold text-slate-800 tracking-tight leading-tight">
-              Manage your hostel<br />
-              <span style={{ background: 'linear-gradient(135deg, #2563eb, #8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>like an enterprise.</span>
-            </h1>
-            <p className="text-[16px] text-slate-500 font-medium mt-4 leading-relaxed">
-              A comprehensive platform for students, wardens, and staff — built for modern hostel living.
-            </p>
-          </div>
-
-          {/* Feature badges */}
-          <div className="flex flex-col gap-3">
-            {[
-              { icon: <Building2 size={16} />, label: 'Real-time Room & Inventory Directory', color: '#2563eb' },
-              { icon: <Users size={16} />, label: 'Student Enrollment & Digital Attendance', color: '#10b981' },
-              { icon: <Shield size={16} />, label: 'Automated Leave & WhatsApp Parent Alerts', color: '#8b5cf6' },
-            ].map((f, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 bg-white/70 backdrop-blur-md border border-white/60 rounded-2xl shadow-sm">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white flex-shrink-0" style={{ background: f.color }}>
-                  {f.icon}
-                </div>
-                <span className="text-[13px] font-semibold text-slate-700">{f.label}</span>
-              </div>
-            ))}
+            <p className="text-[18px] font-bold text-[var(--text-primary)] leading-tight m-0">Hari Pushp PG</p>
+            <p className="text-[13px] text-brand-700 m-0">Girls hostel management system</p>
           </div>
         </div>
 
-        {/* Right Side - Login Card */}
-        <div className="w-full max-w-[440px] flex flex-col gap-6">
-          {/* Mobile Logo */}
-          <div className="flex lg:hidden items-center gap-3 justify-center mb-2">
-            <div className="w-10 h-10 rounded-[14px] flex items-center justify-center shadow-md" style={{ background: 'linear-gradient(135deg, #2563eb, #4f46e5)' }}>
-              <Home size={18} className="text-white" />
+        <div className="relative">
+          <h1 className="text-[34px] xl:text-[38px] font-bold leading-[1.15] tracking-tight text-[var(--text-primary)] m-0">
+            A safe, comfortable <br />& home away from home.
+          </h1>
+          <p className="text-[16px] text-[var(--text-secondary)] mt-3 mb-0">Better care. Better living. Together.</p>
+
+          <ul className="list-none p-0 mt-8 mb-0 flex flex-col gap-3">
+            {HIGHLIGHTS.map(({ icon: Icon, label }) => (
+              <li key={label} className="flex items-center gap-3 text-[14px] font-medium text-[var(--text-primary)]">
+                <span className="w-8 h-8 rounded-lg bg-white/70 flex items-center justify-center text-brand-600">
+                  <Icon size={16} />
+                </span>
+                {label}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="relative flex justify-center">
+          <HostelIllustration />
+        </div>
+      </aside>
+
+      {/* Right — sign-in form */}
+      <main className="flex-1 flex flex-col items-center justify-center px-5 py-10 sm:px-10">
+        <div className="w-full max-w-[420px]">
+          {/* Mobile brand */}
+          <div className="lg:hidden flex flex-col items-center text-center mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--sidebar-bg)] flex items-center justify-center text-brand-600 mb-3">
+              <House size={26} strokeWidth={2.2} />
             </div>
-            <h2 className="text-[18px] font-bold text-slate-800 tracking-tight">Hari Pushp PG</h2>
+            <p className="text-[20px] font-bold text-[var(--text-primary)] m-0">Hari Pushp PG</p>
+            <p className="text-[13px] text-brand-700 m-0">Girls hostel management system</p>
           </div>
 
-          {/* Card */}
-          <div
-            className="w-full p-6 sm:p-8 md:p-10 rounded-[28px] flex flex-col"
-            style={{
-              background: 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-              border: '1px solid rgba(255,255,255,0.7)',
-              boxShadow: '0 20px 60px rgba(15,23,42,0.08)',
-            }}
-          >
-            {/* Header */}
-            <div className="flex flex-col mb-6 sm:mb-8 text-center sm:text-left">
-              <h2 className="text-[22px] sm:text-[24px] font-bold text-slate-800 tracking-tight">Welcome back</h2>
-              <p className="text-[13px] sm:text-[14px] text-slate-500 font-medium mt-1">Sign in to your account to continue</p>
-            </div>
+          <div className="bg-white rounded-[var(--border-radius-modal)] border border-[var(--border-color)] shadow-[var(--shadow-md)] p-6 sm:p-9">
+            <h2 className="text-[24px] font-bold tracking-tight m-0">Welcome back</h2>
+            <p className="text-[14px] text-[var(--text-secondary)] mt-1 mb-7">Sign in with your registered email to continue.</p>
 
-            {/* Error */}
             {(error || localError) && (
-              <div className="flex items-center gap-3 p-4 rounded-[14px] border border-red-200 bg-red-50 text-red-600 text-[13px] font-semibold mb-6 animate-fade-in">
+              <div role="alert" className="flex items-center gap-3 p-3.5 rounded-xl bg-[var(--danger-bg)] text-[var(--danger)] text-[13px] font-medium mb-5 animate-fade-in">
                 <ShieldAlert size={18} className="shrink-0" />
                 <span>{localError || error}</span>
               </div>
             )}
 
-            {/* Form */}
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5 text-left">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5" noValidate>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="login-email" className={labelClass}>Email address</label>
                 <div className="relative flex items-center">
-                  <Mail size={16} className="absolute left-4 text-slate-400 pointer-events-none" />
+                  <Mail size={17} className="absolute left-4 text-[var(--text-tertiary)] pointer-events-none" />
                   <input
+                    id="login-email"
                     type="email"
-                    placeholder="Enter registered email"
+                    autoComplete="email"
+                    placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={loading}
-                    className="w-full h-12 pl-11 pr-4 rounded-[14px] border border-slate-200 bg-white/90 text-slate-800 outline-none text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all font-medium"
+                    className={`${inputClass} pl-11 pr-4`}
                   />
                 </div>
               </div>
 
-              <div className="flex flex-col gap-1.5 text-left">
+              <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
+                  <label htmlFor="login-password" className={labelClass}>Password</label>
                   <button
                     type="button"
                     onClick={handleOpenForgotModal}
-                    className="text-[12px] font-bold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer border-none bg-transparent"
+                    className="text-[13px] font-semibold text-brand-700 hover:text-brand-900 hover:underline cursor-pointer border-none bg-transparent p-0"
                   >
-                    Forgot Password?
+                    Forgot password?
                   </button>
                 </div>
                 <div className="relative flex items-center">
-                  <Key size={16} className="absolute left-4 text-slate-400 pointer-events-none" />
+                  <Key size={17} className="absolute left-4 text-[var(--text-tertiary)] pointer-events-none" />
                   <input
+                    id="login-password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Enter password"
+                    autoComplete="current-password"
+                    placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={loading}
-                    className="w-full h-12 pl-11 pr-11 rounded-[14px] border border-slate-200 bg-white/90 text-slate-800 outline-none text-[14px] focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all font-medium"
+                    className={`${inputClass} pl-11 pr-12`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 focus:outline-none p-1 rounded-full cursor-pointer"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    className="absolute right-3 w-8 h-8 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] rounded-lg cursor-pointer border-none bg-transparent"
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full h-12 text-white rounded-[14px] font-bold flex items-center justify-center gap-2 transition-all text-[14px] cursor-pointer mt-3"
-                style={{
-                  background: loading ? '#94a3b8' : 'linear-gradient(135deg, #2563eb, #4f46e5)',
-                  boxShadow: loading ? 'none' : '0 4px 14px rgba(37,99,235,0.3)',
-                  color: '#ffffff',
-                }}
-              >
-                {loading ? (
-                  <span>Signing In...</span>
-                ) : (
+              <button type="submit" disabled={loading} className="btn-primary w-full h-12 text-[15px] mt-1">
+                {loading ? 'Signing in…' : (
                   <>
-                    <span>Sign In</span>
-                    <LogIn size={16} />
+                    Sign in
+                    <LogIn size={17} />
                   </>
                 )}
               </button>
             </form>
 
-            <div className="flex items-center justify-center gap-1.5 mt-6 text-[13px] font-medium text-slate-500">
-              <span>Don't have an account?</span>
-              <Link
-                to="/register"
-                className="text-blue-600 hover:text-blue-700 font-semibold underline cursor-pointer"
-              >
-                Register / Sign Up
+            <p className="text-center mt-6 mb-0 text-[14px] text-[var(--text-secondary)]">
+              New to Hari Pushp?{' '}
+              <Link to="/register" className="text-brand-700 hover:text-brand-900 font-semibold hover:underline">
+                Register here
               </Link>
-            </div>
+            </p>
           </div>
 
-          {/* Footer */}
-          <p className="text-center text-[12px] text-slate-400 font-medium">
-            Hari Pushp PG &mdash; Official Hostel Management Portal
+          <p className="text-center text-[12px] text-[var(--text-tertiary)] mt-6 mb-0">
+            © {new Date().getFullYear()} Hari Pushp PG. All rights reserved.
           </p>
         </div>
-      </div>
+      </main>
 
       {/* FORGOT PASSWORD MODAL */}
       <CustomModal
         isOpen={showForgotModal}
         onClose={() => setShowForgotModal(false)}
-        title={resetStep === 1 ? "Reset Your Password" : "Enter Verification Code & Reset"}
+        title={resetStep === 1 ? 'Reset your password' : 'Enter code & new password'}
         size="md"
       >
         {resetError && (
-          <div className="flex items-center gap-3 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold mb-4">
+          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[var(--danger-bg)] text-[var(--danger)] text-[13px] font-medium mb-4">
             <ShieldAlert size={18} className="shrink-0" />
             <span>{resetError}</span>
           </div>
         )}
 
         {resetMessage && (
-          <div className="flex items-center gap-3 p-4 rounded-2xl border border-emerald-200 bg-emerald-50 text-emerald-700 text-xs font-semibold mb-4">
-            <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
+          <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[var(--success-bg)] text-[var(--success)] text-[13px] font-medium mb-4">
+            <CheckCircle2 size={18} className="shrink-0" />
             <span>{resetMessage}</span>
           </div>
         )}
 
         {resetStep === 1 ? (
           <form onSubmit={handleRequestCode} className="flex flex-col gap-4 text-left">
-            <p className="text-xs text-slate-500 font-medium leading-relaxed">
-              Enter your registered email address below. We will send a 6-digit verification code to your email so you can safely reset your password.
+            <p className="text-[14px] text-[var(--text-secondary)] leading-relaxed m-0">
+              Enter your registered email address. We will send a 6-digit verification code so you can reset your password.
             </p>
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Registered Email Address *</label>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="reset-email" className={labelClass}>Registered email address</label>
               <div className="relative flex items-center">
-                <Mail size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <Mail size={16} className="absolute left-3.5 text-[var(--text-tertiary)] pointer-events-none" />
                 <input
+                  id="reset-email"
                   type="email"
-                  placeholder="name@example.com"
+                  placeholder="you@example.com"
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
-                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-[14px] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 font-medium"
+                  className={`${inputClass} h-11 pl-10 pr-3.5`}
                   required
                 />
               </div>
             </div>
 
-            <div className="flex gap-3 justify-end pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowForgotModal(false)}
-                className="h-10 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
-              >
+            <div className="flex gap-3 justify-end pt-4 border-t border-[var(--border-color)]">
+              <button type="button" onClick={() => setShowForgotModal(false)} className="btn-secondary">
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={resetLoading}
-                className="h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
-              >
-                {resetLoading ? (
-                  <span>Sending Code...</span>
-                ) : (
+              <button type="submit" disabled={resetLoading} className="btn-primary">
+                {resetLoading ? 'Sending code…' : (
                   <>
-                    <span>Send Verification Code</span>
-                    <ArrowRight size={14} />
+                    Send code
+                    <ArrowRight size={16} />
                   </>
                 )}
               </button>
@@ -364,92 +339,87 @@ const Login = () => {
           </form>
         ) : (
           <form onSubmit={handleResetSubmit} className="flex flex-col gap-4 text-left">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-xs text-slate-600">
-              <span>Code sent to: <strong>{resetEmail}</strong></span>
+            <div className="p-3.5 rounded-xl bg-mint-50 border border-[var(--border-color)] flex items-center justify-between gap-3 text-[13px] text-[var(--text-secondary)]">
+              <span className="truncate">Code sent to <strong className="text-[var(--text-primary)]">{resetEmail}</strong></span>
               <button
                 type="button"
                 onClick={() => setResetStep(1)}
-                className="text-indigo-600 font-bold hover:underline cursor-pointer border-none bg-transparent flex items-center gap-1"
+                className="text-brand-700 font-semibold hover:underline cursor-pointer border-none bg-transparent flex items-center gap-1 shrink-0"
               >
                 <RefreshCw size={12} />
-                <span>Change Email</span>
+                Change
               </button>
             </div>
 
-            {/* 6-Digit Code */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">6-Digit Verification Code *</label>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="reset-code" className={labelClass}>6-digit verification code</label>
               <div className="relative flex items-center">
-                <Lock size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <Lock size={16} className="absolute left-3.5 text-[var(--text-tertiary)] pointer-events-none" />
                 <input
+                  id="reset-code"
                   type="text"
-                  placeholder="Enter 6-digit code (e.g. 849201)"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="e.g. 849201"
                   value={resetToken}
                   onChange={(e) => setResetToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-[14px] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 font-mono tracking-wider font-bold"
+                  className={`${inputClass} h-11 pl-10 pr-3.5 font-mono tracking-widest`}
                   required
                 />
               </div>
             </div>
 
-            {/* New Password */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">New Password *</label>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="reset-new" className={labelClass}>New password</label>
               <div className="relative flex items-center">
-                <Key size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <Key size={16} className="absolute left-3.5 text-[var(--text-tertiary)] pointer-events-none" />
                 <input
+                  id="reset-new"
                   type={showNewPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   placeholder="At least 6 characters"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full h-11 pl-10 pr-10 rounded-xl border border-slate-200 bg-white text-slate-800 text-[14px] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 font-medium"
+                  className={`${inputClass} h-11 pl-10 pr-11`}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 text-slate-400 hover:text-slate-600 cursor-pointer border-none bg-transparent"
+                  aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                  className="absolute right-2.5 w-8 h-8 flex items-center justify-center text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer border-none bg-transparent"
                 >
                   {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
             </div>
 
-            {/* Confirm New Password */}
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Confirm New Password *</label>
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="reset-confirm" className={labelClass}>Confirm new password</label>
               <div className="relative flex items-center">
-                <Key size={16} className="absolute left-3.5 text-slate-400 pointer-events-none" />
+                <Key size={16} className="absolute left-3.5 text-[var(--text-tertiary)] pointer-events-none" />
                 <input
+                  id="reset-confirm"
                   type={showNewPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
                   placeholder="Re-enter new password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full h-11 pl-10 pr-3.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-[14px] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-50/50 font-medium"
+                  className={`${inputClass} h-11 pl-10 pr-3.5`}
                   required
                 />
               </div>
             </div>
 
-            <div className="flex gap-3 justify-end pt-3 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowForgotModal(false)}
-                className="h-10 px-4 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 cursor-pointer"
-              >
+            <div className="flex gap-3 justify-end pt-4 border-t border-[var(--border-color)]">
+              <button type="button" onClick={() => setShowForgotModal(false)} className="btn-secondary">
                 Cancel
               </button>
-              <button
-                type="submit"
-                disabled={resetLoading}
-                className="h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-sm transition-all"
-              >
-                {resetLoading ? (
-                  <span>Updating Password...</span>
-                ) : (
+              <button type="submit" disabled={resetLoading} className="btn-primary">
+                {resetLoading ? 'Updating…' : (
                   <>
-                    <CheckCircle2 size={15} />
-                    <span>Update Password & Log In</span>
+                    <CheckCircle2 size={16} />
+                    Update password
                   </>
                 )}
               </button>
@@ -462,5 +432,3 @@ const Login = () => {
 };
 
 export default Login;
-
-
