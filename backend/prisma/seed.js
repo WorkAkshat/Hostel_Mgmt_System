@@ -170,6 +170,42 @@ async function main() {
 
   console.log('✓ Created 30 room records across 5 floors (60 total beds, ALL AVAILABLE).');
 
+  // Create Dummy Student User & Record for Testing
+  const firstRoom = await prisma.room.findFirst({ where: { roomNumber: '101' } });
+  const studentUser = await prisma.user.create({
+    data: {
+      email: 'student@haripushppg.com',
+      password: hashedPassword,
+      name: 'Ria Dhanwani',
+      role: 'STUDENT',
+    }
+  });
+
+  await prisma.student.create({
+    data: {
+      userId: studentUser.id,
+      rollNumber: 'HARIPUSHP_HP_001',
+      phoneNumber: '9548857141',
+      parentContact: '8449066072',
+      motherName: 'Sunita Dhanwani',
+      motherContact: '9876543210',
+      siblingContact: '9123456789',
+      emergencyContact: '8449066072',
+      fatherName: 'Mr. Dhanwani',
+      coachingCollege: 'Deloitte USI',
+      bloodGroup: 'O+',
+      dateOfJoining: new Date('2026-06-14'),
+      dob: new Date('2004-01-25'),
+      permanentAddress: 'Padam Pride, Agra',
+      state: 'Uttar Pradesh',
+      pincode: '282007',
+      maritalStatus: 'Unmarried',
+      roomId: firstRoom ? firstRoom.id : null,
+      bedId: 'Bed A'
+    }
+  });
+  console.log('✓ Created active dummy student account: student@haripushppg.com');
+
   // ── 6. Tally ERP Account Heads ──────────────────────────────────────────
   const headsData = [
     { code: 'REV-HOSTEL',        name: 'Hostel Accommodation Income',        group: 'INCOME',    category: 'DIRECT' },

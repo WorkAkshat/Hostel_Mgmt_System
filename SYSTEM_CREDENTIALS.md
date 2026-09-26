@@ -36,12 +36,20 @@ Each Floor Warden login has exclusive rights for room allocation, electric meter
 
 ---
 
-## 🎓 Student Accounts (Registration & Approval Flow)
+## 🎓 Active Student Accounts
 
-- New students register via the **Registration Page** (`/register`).
+| Student Name | Assigned Room / Roll No | Login Email (User ID) | Default Password | Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **Ria Dhanwani** | Room 101 (`HARIPUSHP_HP_001`) | `student@haripushppg.com` | `password123` | `STUDENT` |
+
+---
+
+## 📝 Student Self-Registration Flow
+
+- New students can also register via the **Registration Page** (`/register`).
 - Initial registration state is set to `PENDING_STUDENT`.
 - Admin reviews, assigns Hostel Room & Roll Number (`HARIPUSHP_XXX`), and approves the student in **User Approvals** (`/approvals`).
-- Once approved, the student logs in with their registered Email & Password to view:
+- Once approved, the student logs in with their registered Email & Password to access:
   - Monthly Invoices & Online Fee Payments
   - Leave Requests & Complaints
   - Night Attendance & Mess Menu
