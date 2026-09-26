@@ -57,23 +57,40 @@ const Approvals = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState(null); // { url, name }
-  const [printingStudent, setPrintingStudent] = useState(null);
-  const [approveForm, setApproveForm] = useState({
-    role: '',
-    roomId: '',
-    phoneNumber: '',
-    parentContact: '',
-    department: '',
-    designation: '',
-    dateOfJoining: '',
-    maritalStatus: 'Unmarried',
-    fatherName: '',
-    dob: '',
-    permanentAddress: '',
-    state: '',
-    pincode: '',
-    coachingCollege: ''
-  });
+  // Room fee structure mapping (Shared source of truth)
+  const ROOM_PRICING = {
+    1: { sharingLabel: 'Single Sharing', roomRent: 13000, messFee: 3000, total: 16000 },
+    2: { sharingLabel: 'Twin Sharing', roomRent: 11000, messFee: 3000, total: 14000 },
+    3: { sharingLabel: 'Triple Sharing', roomRent: 9000, messFee: 3000, total: 12000 },
+  };
+
+  const getPrintingStudentPayload = (user, formState = null) => {
+    if (!user) return null;
+    const targetRoomId = formState?.roomId || user.student?.roomId;
+    const allocatedRoom = targetRoomId ? rooms.find(r => r.id === targetRoomId) : user.student?.room;
+
+    return {
+      ...user.student,
+      fatherName: formState?.fatherName ?? user.student?.fatherName,
+      parentContact: formState?.parentContact ?? user.student?.parentContact,
+      motherName: formState?.motherName ?? user.student?.motherName,
+      motherContact: formState?.motherContact ?? user.student?.motherContact,
+      siblingContact: formState?.siblingContact ?? user.student?.siblingContact,
+      emergencyContact: formState?.emergencyContact ?? user.student?.emergencyContact,
+      phoneNumber: formState?.phoneNumber ?? user.student?.phoneNumber,
+      permanentAddress: formState?.permanentAddress ?? user.student?.permanentAddress,
+      state: formState?.state ?? user.student?.state,
+      pincode: formState?.pincode ?? user.student?.pincode,
+      coachingCollege: formState?.coachingCollege ?? user.student?.coachingCollege,
+      dob: formState?.dob ?? user.student?.dob,
+      dateOfJoining: formState?.dateOfJoining ?? user.student?.dateOfJoining,
+      name: user.name,
+      email: user.email,
+      user: { name: user.name, email: user.email, avatar: user.avatar || user.student?.profilePic },
+      rollNumber: user.student?.rollNumber || (allocatedRoom ? `HARIPUSHP_${(allocatedRoom.block || 'HP').replace(/\s+/g, '').slice(0, 4).toUpperCase()}_001` : 'HARIPUSHP_PENDING'),
+      room: allocatedRoom || user.student?.room || null,
+    };
+  };
   const [approveError, setApproveError] = useState(null);
   const [approving, setApproving] = useState(false);
 
@@ -110,6 +127,10 @@ const Approvals = () => {
       roomId: '',
       phoneNumber: user.student?.phoneNumber || user.staff?.phoneNumber || '',
       parentContact: user.student?.parentContact || '',
+      motherName: user.student?.motherName || '',
+      motherContact: user.student?.motherContact || '',
+      siblingContact: user.student?.siblingContact || '',
+      emergencyContact: user.student?.emergencyContact || '',
       department: user.staff?.department || 'Warden',
       designation: user.staff?.designation || '',
       dateOfJoining: user.student?.dateOfJoining ? new Date(user.student.dateOfJoining).toISOString().split('T')[0] : '',
@@ -295,14 +316,7 @@ const Approvals = () => {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => {
-                              setPrintingStudent({
-                                ...pUser.student,
-                                name: pUser.name,
-                                email: pUser.email,
-                                user: { name: pUser.name, email: pUser.email, avatar: pUser.avatar || pUser.student?.profilePic },
-                                rollNumber: pUser.student?.rollNumber || 'PENDING_APPROVAL',
-                                room: pUser.student?.room || null,
-                              });
+                              setPrintingStudent(getPrintingStudentPayload(pUser));
                             }}
                             className="h-9 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/60 text-blue-700 flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-all"
                             title="Print Admission Form"
@@ -394,14 +408,7 @@ const Approvals = () => {
                   <div className="grid grid-cols-3 gap-2 mt-1">
                     <button
                       onClick={() => {
-                        setPrintingStudent({
-                          ...pUser.student,
-                          name: pUser.name,
-                          email: pUser.email,
-                          user: { name: pUser.name, email: pUser.email, avatar: pUser.avatar || pUser.student?.profilePic },
-                          rollNumber: pUser.student?.rollNumber || 'PENDING_APPROVAL',
-                          room: pUser.student?.room || null,
-                        });
+                        setPrintingStudent(getPrintingStudentPayload(pUser));
                       }}
                       className="h-10 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all"
                     >
@@ -494,14 +501,7 @@ const Approvals = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setPrintingStudent({
-                    ...selectedUser.student,
-                    name: selectedUser.name,
-                    email: selectedUser.email,
-                    user: { name: selectedUser.name, email: selectedUser.email, avatar: selectedUser.avatar || selectedUser.student?.profilePic },
-                    rollNumber: selectedUser.student?.rollNumber || 'PENDING_APPROVAL',
-                    room: selectedUser.student?.room || null,
-                  });
+                  setPrintingStudent(getPrintingStudentPayload(selectedUser, approveForm));
                 }}
                 className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all cursor-pointer border border-blue-400/30 flex items-center gap-2 shrink-0 self-start sm:self-center"
               >
@@ -645,19 +645,46 @@ const Approvals = () => {
                       <option value="">No Allocation (Keep Unallocated for now)</option>
                       {rooms.map((room) => {
                         const bedsAvailable = room.sharingType - room.students.length;
+                        const priceInfo = ROOM_PRICING[room.sharingType] || ROOM_PRICING[2];
                         return (
                           <option
                             key={room.id}
                             value={room.id}
                             disabled={room.status === 'FULL' || room.status === 'MAINTENANCE' || bedsAvailable <= 0}
                           >
-                            Room {room.roomNumber} ({room.block}) - {room.isAc ? 'AC' : 'Non-AC'} &bull; {bedsAvailable > 0 ? `${bedsAvailable} bed(s) available` : 'FULL'}
+                            Room {room.roomNumber} ({room.block}) - {room.isAc ? 'AC' : 'Non-AC'} | {priceInfo.sharingLabel} (₹{priceInfo.total.toLocaleString('en-IN')}/mo) &bull; {bedsAvailable > 0 ? `${bedsAvailable} bed(s) free` : 'FULL'}
                           </option>
                         );
                       })}
                     </select>
                     <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-slate-400 w-0 h-0" />
                   </div>
+
+                  {/* Room Pricing Live Preview Badge */}
+                  {approveForm.roomId && (() => {
+                    const selRoom = rooms.find(r => r.id === approveForm.roomId);
+                    if (!selRoom) return null;
+                    const priceInfo = ROOM_PRICING[selRoom.sharingType] || ROOM_PRICING[2];
+                    return (
+                      <div className="mt-2 p-3 bg-indigo-50/90 border border-indigo-200 rounded-xl flex items-center justify-between text-xs animate-fade-in">
+                        <div className="flex items-center gap-2 text-indigo-950 font-bold">
+                          <Sparkles size={16} className="text-indigo-600 shrink-0" />
+                          <div>
+                            <span className="block text-[10px] text-indigo-600 uppercase tracking-wider font-extrabold">Monthly Fee For Selected Room</span>
+                            <span className="text-sm font-black text-indigo-900">
+                              ₹{priceInfo.total.toLocaleString('en-IN')} / month
+                            </span>
+                            <span className="text-[11px] text-slate-600 font-medium ml-1.5">
+                              ({priceInfo.sharingLabel}: Room ₹{priceInfo.roomRent.toLocaleString('en-IN')} + Mess ₹{priceInfo.messFee.toLocaleString('en-IN')})
+                            </span>
+                          </div>
+                        </div>
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase ${selRoom.isAc ? 'bg-sky-100 text-sky-800 border border-sky-200' : 'bg-slate-200 text-slate-700'}`}>
+                          {selRoom.isAc ? 'AC Room' : 'Non-AC'}
+                        </span>
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Father's Name */}

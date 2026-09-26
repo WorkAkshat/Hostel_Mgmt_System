@@ -12,8 +12,14 @@ const StudentAdmissionFormPrint = ({ student, onClose }) => {
 
   const studentName = student.user?.name || 'N/A';
   const studentEmail = student.user?.email || 'N/A';
-  const rollNo = student.rollNumber || 'HARIPUSHP_001';
-  const roomNo = student.room ? `Room ${student.room.roomNumber} (${student.room.block || 'Main Block'})` : 'Unallocated';
+  const ROOM_PRICING = {
+    1: { label: 'Single Sharing', roomFee: 13000, messFee: 3000, total: 16000 },
+    2: { label: 'Twin Sharing', roomFee: 11000, messFee: 3000, total: 14000 },
+    3: { label: 'Triple Sharing', roomFee: 9000, messFee: 3000, total: 12000 },
+  };
+
+  const roomSharingType = student.room?.sharingType || 2;
+  const feeDetails = ROOM_PRICING[roomSharingType] || ROOM_PRICING[2];
   const bedNo = student.bedId || 'Bed A';
   const joiningDate = student.dateOfJoining ? new Date(student.dateOfJoining).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN');
   const dobDate = student.dob ? new Date(student.dob).toLocaleDateString('en-IN') : 'N/A';
@@ -184,8 +190,17 @@ const StudentAdmissionFormPrint = ({ student, onClose }) => {
               </div>
 
               <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Assigned Hostel Room</span>
-                <span className="font-extrabold text-blue-900">{roomNo} (Bed: {bedNo})</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Assigned Room & Monthly Fee</span>
+                <span className="font-extrabold text-blue-900 text-xs block">
+                  {student.room ? `Room ${student.room.roomNumber} (${student.room.block || 'Main Block'})` : 'Unallocated'}
+                </span>
+                {student.room ? (
+                  <span className="text-[11px] font-bold text-emerald-700 block mt-0.5">
+                    ₹{feeDetails.total.toLocaleString('en-IN')}/mo ({feeDetails.label}: Room ₹{feeDetails.roomFee.toLocaleString('en-IN')} + Mess ₹3,000)
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-bold text-amber-600 block mt-0.5">Pending Room Assignment</span>
+                )}
               </div>
             </div>
           </div>
@@ -299,20 +314,35 @@ const StudentAdmissionFormPrint = ({ student, onClose }) => {
       {/* Global CSS for Clean A4 Printing */}
       <style>{`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 8mm;
+          }
+          body {
+            background: #ffffff !important;
+            color: #000000 !important;
+          }
           body * {
-            visibility: hidden;
+            visibility: hidden !important;
+          }
+          .print\:hidden {
+            display: none !important;
           }
           #printable-admission-form, #printable-admission-form * {
-            visibility: visible;
+            visibility: visible !important;
           }
           #printable-admission-form {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-            margin: 0;
-            padding: 20px !important;
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 10px !important;
             box-shadow: none !important;
+            border: none !important;
+            background: #ffffff !important;
+            overflow: visible !important;
           }
         }
       `}</style>
