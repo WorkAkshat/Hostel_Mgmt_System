@@ -41,6 +41,7 @@ Each Floor Warden login has exclusive rights for room allocation, electric meter
 | Student Name | Assigned Room / Roll No | Login Email (User ID) | Default Password | Role |
 | :--- | :--- | :--- | :--- | :--- |
 | **Ria Dhanwani** | Room 101 (`HARIPUSHP_HP_001`) | `student@haripushppg.com` | `password123` | `STUDENT` |
+| **Ria Dhanwani** | Room 101 (`HARIPUSHP_HP_002`) | `student@garipushppg.com` | `password123` | `STUDENT` |
 
 ---
 
