@@ -3,9 +3,10 @@ import { auth as authApi, rooms as roomsApi } from '../utils/api';
 import {
   Check, X, ShieldAlert, Users, Calendar, Mail, Phone, Home, FileText,
   CheckSquare, XSquare, Plus, User, Heart, Map, MapPin, GraduationCap,
-  Briefcase, ShieldCheck, Sparkles, Building, Layers, ZoomIn, Eye, Camera, Maximize2
+  Briefcase, ShieldCheck, Sparkles, Building, Layers, ZoomIn, Eye, Camera, Maximize2, Printer
 } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
+import StudentAdmissionFormPrint from '../components/StudentAdmissionFormPrint';
 
 const INDIAN_STATES_AND_UTS = [
   'Andaman and Nicobar Islands',
@@ -56,6 +57,7 @@ const Approvals = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState(null); // { url, name }
+  const [printingStudent, setPrintingStudent] = useState(null);
   const [approveForm, setApproveForm] = useState({
     role: '',
     roomId: '',
@@ -292,6 +294,23 @@ const Approvals = () => {
                       <td>
                         <div className="flex items-center justify-end gap-2">
                           <button
+                            onClick={() => {
+                              setPrintingStudent({
+                                ...pUser.student,
+                                name: pUser.name,
+                                email: pUser.email,
+                                user: { name: pUser.name, email: pUser.email, avatar: pUser.avatar || pUser.student?.profilePic },
+                                rollNumber: pUser.student?.rollNumber || 'PENDING_APPROVAL',
+                                room: pUser.student?.room || null,
+                              });
+                            }}
+                            className="h-9 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 border border-blue-200/60 text-blue-700 flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-all"
+                            title="Print Admission Form"
+                          >
+                            <Printer size={14} />
+                            <span>Form</span>
+                          </button>
+                          <button
                             onClick={() => openApproveModal(pUser)}
                             className="h-9 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-all shadow-sm"
                           >
@@ -372,19 +391,35 @@ const Approvals = () => {
 
                   <div className="h-[1px] bg-slate-100" />
 
-                  <div className="grid grid-cols-2 gap-3 mt-1">
+                  <div className="grid grid-cols-3 gap-2 mt-1">
+                    <button
+                      onClick={() => {
+                        setPrintingStudent({
+                          ...pUser.student,
+                          name: pUser.name,
+                          email: pUser.email,
+                          user: { name: pUser.name, email: pUser.email, avatar: pUser.avatar || pUser.student?.profilePic },
+                          rollNumber: pUser.student?.rollNumber || 'PENDING_APPROVAL',
+                          room: pUser.student?.room || null,
+                        });
+                      }}
+                      className="h-10 bg-blue-50 border border-blue-200 text-blue-700 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all"
+                    >
+                      <Printer size={14} />
+                      <span>Form</span>
+                    </button>
                     <button
                       onClick={() => openApproveModal(pUser)}
-                      className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all shadow-sm"
+                      className="h-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all shadow-sm"
                     >
-                      <Check size={15} />
-                      <span>Review & Approve</span>
+                      <Check size={14} />
+                      <span>Approve</span>
                     </button>
                     <button
                       onClick={() => handleReject(pUser.id, pUser.name)}
-                      className="h-10 bg-rose-50 hover:bg-rose-100 border border-rose-200/60 rounded-xl text-rose-600 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                      className="h-10 bg-rose-50 hover:bg-rose-100 border border-rose-200/60 rounded-xl text-rose-600 text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-all"
                     >
-                      <X size={15} />
+                      <X size={14} />
                       <span>Reject</span>
                     </button>
                   </div>
@@ -452,6 +487,23 @@ const Approvals = () => {
                     <span>{selectedUser.student?.phoneNumber || selectedUser.staff?.phoneNumber}</span>
                   </span>
 
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPrintingStudent({
+                        ...selectedUser.student,
+                        name: selectedUser.name,
+                        email: selectedUser.email,
+                        user: { name: selectedUser.name, email: selectedUser.email, avatar: selectedUser.avatar || selectedUser.student?.profilePic },
+                        rollNumber: selectedUser.student?.rollNumber || 'PENDING_APPROVAL',
+                        room: selectedUser.student?.room || null,
+                      });
+                    }}
+                    className="mt-1 inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600/90 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer border border-blue-400/30 w-fit"
+                  >
+                    <Printer size={14} />
+                    <span>Print Hostel Admission Form</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -861,6 +913,14 @@ const Approvals = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* PRINTABLE ADMISSION FORM MODAL */}
+      {printingStudent && (
+        <StudentAdmissionFormPrint
+          student={printingStudent}
+          onClose={() => setPrintingStudent(null)}
+        />
       )}
     </div>
   );
