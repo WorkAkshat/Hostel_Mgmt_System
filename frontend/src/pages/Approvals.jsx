@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  ArrowRight, Briefcase, Check, CircleCheck, FileText, GraduationCap, IdCard, Phone, Printer, RefreshCw, ShieldCheck, TriangleAlert, UserPen, X,
+  ArrowRight, Briefcase, Check, CircleCheck, FileDown, FileText, GraduationCap, IdCard, Phone, Printer, RefreshCw, ShieldCheck, TriangleAlert, UserPen, X, Download
 } from 'lucide-react';
 import { auth as authApi, rooms as roomsApi, students as studentsApi } from '../utils/api';
 import StudentAdmissionFormPrint from '../components/StudentAdmissionFormPrint';
+import PendingStudentsPrintModal from '../components/PendingStudentsPrintModal';
+import { downloadPendingStudentsPDF } from '../utils/pendingApprovalsPDF';
 import Avatar from '../components/ui/Avatar';
 import ImageLightbox from '../components/ui/ImageLightbox';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
@@ -85,6 +87,7 @@ const Approvals = () => {
   const [reviewing, setReviewing] = useState(null);
   const [rejecting, setRejecting] = useState(null);
   const [printing, setPrinting] = useState(null);
+  const [showPendingDossier, setShowPendingDossier] = useState(false);
   const [preview, setPreview] = useState(null);
   const [busyId, setBusyId] = useState(null);
 
@@ -182,9 +185,34 @@ const Approvals = () => {
             {loading ? 'Checking for requests…' : total ? `${total} request${total === 1 ? '' : 's'} waiting for you` : 'Nothing waiting — all requests are handled'}
           </p>
         </div>
-        <button className="btn-secondary h-10 self-start sm:self-auto" onClick={() => { setLoading(true); load(); }}>
-          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          {pendingUsers.some((u) => requestedRole(u) === 'STUDENT') && (
+            <div className="flex items-center gap-2">
+              <button
+                className="btn-secondary h-10 flex items-center gap-2"
+                onClick={() => setShowPendingDossier(true)}
+                title="View printable dossier of pending student applications"
+              >
+                <Printer size={15} />
+                <span>View & Print Dossier</span>
+              </button>
+              <button
+                className="btn-primary h-10 flex items-center gap-2"
+                onClick={() => {
+                  downloadPendingStudentsPDF(pendingUsers);
+                  toast.success('PDF Downloaded', 'Pending students approval master report downloaded.');
+                }}
+                title="Download formatted master PDF of all pending students"
+              >
+                <FileDown size={16} />
+                <span>Download PDF Report</span>
+              </button>
+            </div>
+          )}
+          <button className="btn-secondary h-10" onClick={() => { setLoading(true); load(); }}>
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
       </div>
 
       <FilterChips id="approvals-tabs" options={tabs} value={tab} onChange={setTab} />
@@ -210,7 +238,43 @@ const Approvals = () => {
                 {pendingUsers.length === 0 && !errors.registrations ? (
                   <Empty icon={ShieldCheck} title="No new registrations" text="When someone signs up on the website or app, they will wait here for your approval." />
                 ) : (
-                  <ul className="list-none m-0 p-0 grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  <>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-mint-50/80 border border-mint-200/80 rounded-[var(--border-radius-card)] p-4">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-brand-600 text-white flex items-center justify-center shrink-0">
+                          <GraduationCap size={16} />
+                        </div>
+                        <div>
+                          <h4 className="text-[14px] font-bold text-brand-900 m-0">
+                            {pendingUsers.length} Pending Registration{pendingUsers.length === 1 ? '' : 's'}
+                          </h4>
+                          <p className="text-[12px] text-brand-700 m-0">
+                            Review candidate profiles, allocate floor & room, or export the complete PDF list.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                        <button
+                          onClick={() => setShowPendingDossier(true)}
+                          className="btn-secondary h-9 text-[13px] font-bold px-3 flex items-center gap-1.5 bg-white hover:bg-mint-100/50"
+                        >
+                          <Printer size={14} className="text-brand-700" />
+                          <span>Print View</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            downloadPendingStudentsPDF(pendingUsers);
+                            toast.success('PDF Generated', 'Downloaded pending student registrations report.');
+                          }}
+                          className="btn-primary h-9 text-[13px] font-bold px-3.5 flex items-center gap-1.5"
+                        >
+                          <FileDown size={15} />
+                          <span>Download PDF</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <ul className="list-none m-0 p-0 grid grid-cols-1 xl:grid-cols-2 gap-4">
                     <AnimatePresence initial={false}>
                       {pendingUsers.map((u) => {
                         const role = requestedRole(u);
@@ -266,6 +330,7 @@ const Approvals = () => {
                       })}
                     </AnimatePresence>
                   </ul>
+                  </>
                 )}
               </>
             )}
@@ -407,6 +472,13 @@ const Approvals = () => {
       <ImageLightbox image={preview} onClose={() => setPreview(null)} />
 
       {printing && <StudentAdmissionFormPrint student={printing} onClose={() => setPrinting(null)} />}
+
+      {showPendingDossier && (
+        <PendingStudentsPrintModal
+          pendingUsers={pendingUsers}
+          onClose={() => setShowPendingDossier(false)}
+        />
+      )}
     </div>
   );
 };
