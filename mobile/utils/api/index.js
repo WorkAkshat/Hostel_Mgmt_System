@@ -15,6 +15,7 @@ import demandNotes from './demandNotes';
 import electricity from './electricity';
 import suggestions from './suggestions';
 import nightAttendance from './nightAttendance';
+import accounting from './accounting';
 
 export {
   auth,
@@ -34,4 +35,6 @@ export {
   electricity,
   suggestions,
   nightAttendance,
+  accounting,
 };
+

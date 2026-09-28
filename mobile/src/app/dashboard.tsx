@@ -21,7 +21,7 @@ import {
   notices as noticesApi, dashboard as dashboardApi, polls as pollsApi,
   floors as floorsApi, nightAttendance as nightAttendanceApi,
   demandNotes as demandNotesApi, electricity as electricityApi,
-  suggestions as suggestionsApi,
+  suggestions as suggestionsApi, staff as staffApi, accounting as accountingApi,
 } from '../../utils/api';
 import {
   LogOut, Home, Users, FileText, Settings, Bell,
@@ -33,6 +33,10 @@ import {
   Receipt, ArrowRight, Sparkles, AlertTriangle, Eye,
   Calendar, Moon, Sun, Check, X, ShieldCheck, Zap,
   PhoneCall, RefreshCw, BarChart3, PieChart, Layers,
+  Wallet, Send, Bot, Sliders, Droplets, Flame,
+  ShoppingBag, Share2, Trash2, Edit3, Download,
+  HelpCircle, CheckSquare, Square, CornerDownRight,
+  ArrowUpRight, ArrowDownRight,
 } from 'lucide-react-native';
 import { getDailyQuote, getGreeting } from '../../utils/quotes';
 
@@ -681,6 +685,245 @@ export default function DashboardScreen() {
   const [uploadedDocsList, setUploadedDocsList] = useState<any[]>([]);
   const [profileRequestsList, setProfileRequestsList] = useState<any[]>([]);
 
+  // ─── NEW FEATURES STATE: Expenses, AI Buddy, Team, Analytics, Room Beds, Dossier, Essentials ───
+  // 1. Expenses Tracker State
+  const [expensesModalVisible, setExpensesModalVisible] = useState(false);
+  const [expensesList, setExpensesList] = useState<any[]>([
+    { id: 'exp-1', category: 'Vegetables', amount: 2000, date: '06 Jun 2026', mode: 'CASH', notes: 'Weekly fresh vegetables from Meenakshi market' },
+    { id: 'exp-2', category: 'Cleaning', amount: 5000, date: '03 May 2026', mode: 'CASH', notes: 'Monthly housekeeping & phenyl bulk order' },
+    { id: 'exp-3', category: 'Repair', amount: 10000, date: '03 May 2026', mode: 'CASH', notes: 'Plumbing & washroom fixture replacements' },
+    { id: 'exp-4', category: 'Bill', amount: 8000, date: '03 May 2026', mode: 'CASH', notes: 'High-speed commercial WiFi & electricity advance' },
+    { id: 'exp-5', category: 'Gas', amount: 3200, date: '18 Apr 2026', mode: 'UPI', notes: '2 Commercial 19kg LPG cylinders' },
+    { id: 'exp-6', category: 'Water', amount: 2500, date: '12 Apr 2026', mode: 'CASH', notes: 'Emergency water tanker delivery' },
+    { id: 'exp-7', category: 'Salary', amount: 45000, date: '01 May 2026', mode: 'BANK_TRANSFER', notes: 'Warden & security guard monthly remuneration' },
+  ]);
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('All');
+  const [expenseMonth, setExpenseMonth] = useState('July 2026');
+  const [expenseSearch, setExpenseSearch] = useState('');
+  const [addExpenseModalVisible, setAddExpenseModalVisible] = useState(false);
+  const [newExpenseCategory, setNewExpenseCategory] = useState('Vegetables');
+  const [newExpenseAmount, setNewExpenseAmount] = useState('');
+  const [newExpenseMode, setNewExpenseMode] = useState<'CASH' | 'UPI' | 'BANK_TRANSFER'>('CASH');
+  const [newExpenseNotes, setNewExpenseNotes] = useState('');
+
+  // 2. PG Buddy AI Assistant State
+  const [aiBuddyModalVisible, setAiBuddyModalVisible] = useState(false);
+  const [aiBuddyInput, setAiBuddyInput] = useState('');
+  const [aiBuddyMessages, setAiBuddyMessages] = useState<any[]>([
+    {
+      id: 'ai-0',
+      sender: 'ai',
+      text: "Hi! I'm PG Buddy, your AI assistant for PG management.\n\nI have real-time access to your portfolio — occupancy, rent, finances, mess, and more. Ask me anything!",
+      time: '12:08 pm'
+    }
+  ]);
+
+  // 3. Team Management & Granular Access State
+  const [teamModalVisible, setTeamModalVisible] = useState(false);
+  const [staffMembersList, setStaffMembersList] = useState<any[]>([
+    {
+      id: 'staff-1',
+      name: 'Prasanth',
+      email: 'pgmanaging01@gmail.com',
+      phone: '9160183642',
+      role: 'WARDEN',
+      status: 'ACTIVE',
+      modules: {
+        dashboard: true,
+        properties: 'VIEW_ONLY',
+        tenants: 'MOVE_OUT',
+        finance: 'VIEW_ONLY',
+        reports: true,
+        pgAccess: '1 property'
+      }
+    },
+    {
+      id: 'staff-2',
+      name: 'Ramesh Guard',
+      email: 'ramesh.guard@hms.com',
+      phone: '9848022338',
+      role: 'GUARD',
+      status: 'ACTIVE',
+      modules: {
+        dashboard: false,
+        properties: 'VIEW_ONLY',
+        tenants: 'VIEW_ONLY',
+        finance: 'OFF',
+        reports: false,
+        pgAccess: 'Ground Floor Gate'
+      }
+    }
+  ]);
+  const [addStaffModalVisible, setAddStaffModalVisible] = useState(false);
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newStaffEmail, setNewStaffEmail] = useState('');
+  const [newStaffPhone, setNewStaffPhone] = useState('');
+  const [newStaffDept, setNewStaffDept] = useState('Hostel Warden');
+  const [newStaffDesignation, setNewStaffDesignation] = useState('Floor Warden');
+
+  // 4. Analytics & Business Performance State
+  const [analyticsModalVisible, setAnalyticsModalVisible] = useState(false);
+  const [analyticsSubTab, setAnalyticsSubTab] = useState<'Overview' | 'Payments' | 'Occupancy'>('Overview');
+  const [analyticsProperty, setAnalyticsProperty] = useState('All Properties');
+  const [analyticsYear, setAnalyticsYear] = useState('2026');
+  const [analyticsMonth, setAnalyticsMonth] = useState('Jul');
+
+  // 5. Tenant Payment Dossier Modal State
+  const [selectedStudentPaymentModal, setSelectedStudentPaymentModal] = useState<any>(null);
+
+  // 6. Room & Beds Deep Dive Management Drawer State
+  const [selectedRoomDetailModal, setSelectedRoomDetailModal] = useState<any>(null);
+  const [addBedCountModalVisible, setAddBedCountModalVisible] = useState(false);
+
+  // 7. Essentials Tracker Modal State
+  const [essentialsModalVisible, setEssentialsModalVisible] = useState(false);
+  const [essentialsLogs, setEssentialsLogs] = useState<any[]>([
+    { id: 'ess-1', type: 'Water', title: '5,000L Water Tanker Delivered', date: 'Today, 10:30 AM', cost: '₹1,200', status: 'Delivered', vendor: 'Sri Sai Water' },
+    { id: 'ess-2', type: 'Gas', title: '2 Commercial 19kg HP Gas Cylinders', date: 'Yesterday', cost: '₹3,400', status: 'Connected', vendor: 'HP Gas Agency' },
+    { id: 'ess-3', type: 'Veggies', title: 'Meenakshi Fresh Veggies Batch #44', date: '26 Sep 2026', cost: '₹2,800', status: 'Received', vendor: 'Meenakshi Farm' },
+  ]);
+
+  // Handlers for New Features
+  const handleAddExpense = () => {
+    if (!newExpenseAmount || isNaN(Number(newExpenseAmount))) {
+      showAlert('Required', 'Please enter a valid expense amount.', 'ERROR');
+      return;
+    }
+    const newExp = {
+      id: `exp-${Date.now()}`,
+      category: newExpenseCategory,
+      amount: Number(newExpenseAmount),
+      date: new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+      mode: newExpenseMode,
+      notes: newExpenseNotes || `${newExpenseCategory} payment`
+    };
+    setExpensesList([newExp, ...expensesList]);
+    setAddExpenseModalVisible(false);
+    setNewExpenseAmount('');
+    setNewExpenseNotes('');
+    showAlert('Expense Recorded', `₹${newExp.amount} added under ${newExp.category}.`, 'SUCCESS');
+  };
+
+  const handleSendAiMessage = (overrideText?: string) => {
+    const query = (overrideText || aiBuddyInput).trim();
+    if (!query) return;
+
+    const userMsg = {
+      id: `user-${Date.now()}`,
+      sender: 'user',
+      text: query,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setAiBuddyMessages(prev => [...prev, userMsg]);
+    if (!overrideText) setAiBuddyInput('');
+
+    setTimeout(() => {
+      const qLower = query.toLowerCase();
+      let aiReply = '';
+
+      if (qLower.includes('pending') || qLower.includes("who hasn't paid") || qLower.includes('unpaid') || qLower.includes('rent')) {
+        const unpaidStudents = allStudents.filter(s => {
+          const studentInvs = invoicesList.filter(i => i.studentId === s.id && i.status !== 'PAID');
+          return studentInvs.length > 0;
+        });
+        const totalPending = invoicesList.filter(i => i.status !== 'PAID').reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+        
+        if (unpaidStudents.length > 0) {
+          aiReply = `📊 **Rent Pending Analysis:**\n\nThere are **${unpaidStudents.length} residents** with outstanding rent totaling **₹${totalPending.toLocaleString()}**.\n\nTop Pending Residents:\n` +
+            unpaidStudents.slice(0, 5).map(s => `• **${s.user?.name || s.name}** (Room ${s.room?.roomNumber || 'N/A'}): ₹${s.invoices?.find((i: any) => i.status !== 'PAID')?.amount || '7,000'}`).join('\n') +
+            `\n\n💡 *Tip: Tap 'WhatsApp' on any student card to dispatch 1-tap payment reminder.*`;
+        } else {
+          aiReply = `🎉 Great news! All current resident dues are **100% collected**. Total revenue collected: ₹${invoicesList.filter(i => i.status === 'PAID').reduce((a, b) => a + Number(b.amount || 0), 0).toLocaleString()}.`;
+        }
+      } else if (qLower.includes('vacant') || qLower.includes('vacancy') || qLower.includes('bed')) {
+        const totalBeds = allRooms.reduce((acc, r) => acc + (r.capacity || r.sharingType || 2), 0);
+        const occupiedBeds = allRooms.reduce((acc, r) => acc + (r.students?.length || (r.status === 'OCCUPIED' ? 2 : 0)), 0);
+        const vacantBeds = Math.max(0, totalBeds - occupiedBeds);
+        const vacantRooms = allRooms.filter(r => (r.students?.length || 0) < (r.capacity || 2));
+
+        aiReply = `🛏️ **Live Bed Inventory:**\n\n• Total Beds: **${totalBeds}**\n• Occupied: **${occupiedBeds}** (${totalBeds > 0 ? Math.round((occupiedBeds/totalBeds)*100) : 0}%)\n• Available Vacancies: **${vacantBeds} Beds**\n\nRooms with open beds:\n` +
+          vacantRooms.slice(0, 4).map(r => `• Room **${r.roomNumber}** (Floor ${r.floorNumber || 1}): ${(r.capacity || 2) - (r.students?.length || 0)} bed(s) free`).join('\n');
+      } else if (qLower.includes('expense')) {
+        const totalExp = expensesList.reduce((acc, e) => acc + (Number(e.amount) || 0), 0);
+        aiReply = `💰 **Expenses Overview (${expenseMonth}):**\n\n• Total Recorded Expenses: **₹${totalExp.toLocaleString()}** (${expensesList.length} transactions)\n• Breakdown:\n  - Vegetables & Catering: ₹${expensesList.filter(e => e.category === 'Vegetables').reduce((a,b) => a + b.amount, 0).toLocaleString()}\n  - Repairs & Maint.: ₹${expensesList.filter(e => e.category === 'Repair').reduce((a,b) => a + b.amount, 0).toLocaleString()}\n  - Cleaning: ₹${expensesList.filter(e => e.category === 'Cleaning').reduce((a,b) => a + b.amount, 0).toLocaleString()}\n  - Salaries: ₹${expensesList.filter(e => e.category === 'Salary').reduce((a,b) => a + b.amount, 0).toLocaleString()}`;
+      } else if (qLower.includes('leave') || qLower.includes('outside')) {
+        const pendingLeaves = leavesList.filter(l => l.status === 'PENDING').length;
+        const outNow = leavesList.filter(l => l.status === 'CHECKED_OUT').length;
+        aiReply = `🚪 **Resident Movement Status:**\n\n• Currently Outside: **${outNow} residents**\n• Pending Leave Requests: **${pendingLeaves} requests** awaiting your approval.\n\nCheck the Requests tab to review and approve.`;
+      } else {
+        aiReply = `🤖 **Hari Pushp PG Summary for ${user?.name}:**\n\n• Active Residents: **${allStudents.length}**\n• Active Rooms: **${allRooms.length}**\n• Open Maintenance Tickets: **${complaintsList.filter(c => c.status !== 'RESOLVED').length}**\n• Night Roll Call: Ready for Floor ${selectedWorkspaceFloor === 'combined' ? '1' : selectedWorkspaceFloor}.\n\nHow else can I assist with your hostel management?`;
+      }
+
+      const aiMsg = {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: aiReply,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      setAiBuddyMessages(prev => [...prev, aiMsg]);
+    }, 450);
+  };
+
+  const handleToggleStaffModule = (staffId: string, moduleKey: string) => {
+    setStaffMembersList(prev => prev.map(s => {
+      if (s.id !== staffId) return s;
+      return {
+        ...s,
+        modules: {
+          ...s.modules,
+          [moduleKey]: !s.modules[moduleKey]
+        }
+      };
+    }));
+    showAlert('Permissions Updated', 'Staff module access updated.', 'SUCCESS');
+  };
+
+  const handleAddNewStaff = () => {
+    if (!newStaffName || !newStaffEmail) {
+      showAlert('Required', 'Name and Email are required for team members.', 'ERROR');
+      return;
+    }
+    const newMember = {
+      id: `staff-${Date.now()}`,
+      name: newStaffName,
+      email: newStaffEmail,
+      phone: newStaffPhone || '9876543210',
+      role: 'WARDEN',
+      status: 'ACTIVE',
+      modules: {
+        dashboard: true,
+        properties: 'FULL',
+        tenants: 'MOVE_OUT',
+        finance: 'VIEW_ONLY',
+        reports: true,
+        pgAccess: '1 property'
+      }
+    };
+    setStaffMembersList([...staffMembersList, newMember]);
+    setAddStaffModalVisible(false);
+    setNewStaffName('');
+    setNewStaffEmail('');
+    setNewStaffPhone('');
+    showAlert('Team Member Added', `${newMember.name} has been granted access.`, 'SUCCESS');
+  };
+
+  const handleDirectWhatsAppAction = (phone: string, studentName: string, amount: number = 7000) => {
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const msg = `Dear ${studentName},\nThis is a friendly reminder regarding your pending hostel dues of ₹${amount.toLocaleString()} for Hari Pushp PG. Kindly clear the dues at your earliest convenience.\nThank you!`;
+    Linking.openURL(`https://wa.me/91${cleanPhone}?text=${encodeURIComponent(msg)}`).catch(() => {
+      showAlert('WhatsApp Error', 'Could not open WhatsApp on this device.', 'ERROR');
+    });
+  };
+
+  const handleDirectSMSAction = (phone: string, studentName: string, amount: number = 7000) => {
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const msg = `Dear ${studentName}, please pay your pending PG dues of Rs.${amount}. Hari Pushp PG Warden.`;
+    Linking.openURL(`sms:${cleanPhone}?body=${encodeURIComponent(msg)}`).catch(() => {
+      showAlert('SMS Error', 'Could not open SMS messenger.', 'ERROR');
+    });
+  };
+
   // Zod & React Hook Form validation for ID documents
   const getDocValidationSchema = (docType: string) => {
     return z.object({
@@ -1294,199 +1537,400 @@ export default function DashboardScreen() {
 
     return (
       <View>
-        {/* ── 1. Executive Master Dashboard Hero ── */}
+        {/* ── Top Property Title & Location Bar ── */}
         <AnimatedCard delay={0}>
           <View style={{
-            backgroundColor: BRAND_TEAL,
-            borderRadius: 22,
-            padding: 18,
-            marginBottom: 16,
+            backgroundColor: '#FFFFFF',
+            borderRadius: 20,
+            padding: 16,
+            marginBottom: 14,
+            borderWidth: 1,
+            borderColor: BRAND_BORDER,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             shadowColor: BRAND_TEAL_DARK,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.25,
-            shadowRadius: 14,
-            elevation: 6,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 6,
+            elevation: 2,
           }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+              <TouchableOpacity onPress={() => setWorkspaceModalVisible(true)} style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: BRAND_MINT_BG, justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: BRAND_BORDER }}>
+                <Building2 size={22} color={BRAND_TEAL} />
+              </TouchableOpacity>
               <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#34D399' }} />
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: BRAND_GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    Hari Pushp PG Network
-                  </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: TEXT_DARK }} numberOfLines={1}>Mens luxury pg</Text>
+                  <View style={{ backgroundColor: '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                    <Text style={{ fontSize: 9, fontWeight: '900', color: '#FFFFFF' }}>NEW</Text>
+                  </View>
                 </View>
-                <Text style={{ fontSize: 20, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.3 }}>
-                  Executive Overview
-                </Text>
-                <Text style={{ fontSize: 12, color: '#DCEFEC', marginTop: 2, fontWeight: '500' }}>
-                  {workspaceLabel}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                onPress={() => setWorkspaceModalVisible(true)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  backgroundColor: 'rgba(255,255,255,0.18)',
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.25)',
-                }}
-                activeOpacity={0.7}
-              >
-                <Building2 size={14} color="#FFFFFF" />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Switch</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Occupancy Mini Progress Gauge */}
-            <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)' }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#DCEFEC' }}>Hostel Capacity & Occupancy</Text>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: BRAND_GOLD }}>{occupancy}% Full ({occupiedBeds}/{totalBeds} Beds)</Text>
-              </View>
-              <View style={{ height: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4, overflow: 'hidden' }}>
-                <View style={{ height: '100%', width: `${occupancy}%`, backgroundColor: BRAND_GOLD, borderRadius: 4 }} />
-              </View>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
-                <Text style={{ fontSize: 10, color: '#BCE0DB', fontWeight: '600' }}>🛏️ {vacantBeds} Vacant Bed{vacantBeds === 1 ? '' : 's'}</Text>
-                <Text style={{ fontSize: 10, color: '#BCE0DB', fontWeight: '600' }}>👥 {activeStudents.length} Residents Active</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                  <Text style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: '600' }} numberOfLines={1}>📍 Vijayawada, Andhra Pradesh</Text>
+                </View>
               </View>
             </View>
-
-            {/* Quick Action Shortcuts inside Hero */}
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
-              <TouchableOpacity
-                onPress={() => setAddStudentModalVisible(true)}
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 4,
-                  backgroundColor: BRAND_GOLD,
-                  paddingVertical: 9,
-                  borderRadius: 10,
-                }}
-                activeOpacity={0.8}
-              >
-                <Plus size={14} color={BRAND_GOLD_DARK} />
-                <Text style={{ fontSize: 11, fontWeight: '900', color: BRAND_GOLD_DARK }}>+ Student</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <TouchableOpacity onPress={() => setAnalyticsModalVisible(true)} style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: BRAND_MINT_CARD, justifyContent: 'center', alignItems: 'center' }}>
+                <BarChart3 size={18} color={BRAND_TEAL} />
               </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => openNightRoundModal()}
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 4,
-                  backgroundColor: 'rgba(255,255,255,0.18)',
-                  paddingVertical: 9,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.25)',
-                }}
-                activeOpacity={0.8}
-              >
-                <Moon size={14} color="#FFFFFF" />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Roll Call</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={() => openFloorModal(selectedWorkspaceFloor)}
-                style={{
-                  flex: 1,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 4,
-                  backgroundColor: 'rgba(255,255,255,0.18)',
-                  paddingVertical: 9,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: 'rgba(255,255,255,0.25)',
-                }}
-                activeOpacity={0.8}
-              >
-                <BarChart3 size={14} color="#FFFFFF" />
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>PDF Dues</Text>
+              <TouchableOpacity onPress={() => setAddStudentModalVisible(true)} style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: BRAND_TEAL, justifyContent: 'center', alignItems: 'center' }}>
+                <Plus size={18} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
         </AnimatedCard>
 
-        {/* ── 2. 6-KPI Metric Matrix Grid ── */}
-        <View style={styles.heroGrid}>
-          <StatHero
-            icon={Users}
-            count={activeStudents.length}
-            label="Residents"
-            color={BRAND_TEAL}
-            delay={0}
-            onPress={() => setActiveTab('Students')}
-            sub={`${activeStudents.filter(s => s.roomId).length} Assigned`}
-            showArrow={true}
-          />
-          <StatHero
-            icon={Bed}
-            count={activeRooms.length}
-            label="Rooms"
-            color="#10B981"
-            delay={60}
-            onPress={() => setActiveTab('Rooms')}
-            sub={`${vacantBeds} Available`}
-            showArrow={true}
-          />
-          <StatHero
-            icon={UserCheck}
-            count={pendingApprovals.length}
-            label="Approvals"
-            color={pendingApprovals.length > 0 ? '#D97706' : '#6B7280'}
-            delay={120}
-            onPress={() => { setActiveTab('Requests'); setRequestSection('Approvals'); }}
-            sub={pendingApprovals.length > 0 ? 'Action Req.' : 'All Clear'}
-            showArrow={true}
-          />
-          <StatHero
-            icon={Navigation}
-            count={pendingLeaves}
-            label="Leaves"
-            color="#0284C7"
-            delay={180}
-            onPress={() => { setActiveTab('Requests'); setRequestSection('Leaves'); }}
-            sub={outNowCount > 0 ? `${outNowCount} Outside` : pendingLeaves > 0 ? `${pendingLeaves} Pending` : 'None'}
-            showArrow={true}
-          />
-          <StatHero
-            icon={AlertCircle}
-            count={openComplaints}
-            label="Open Issues"
-            color={openComplaints > 0 ? '#EF4444' : '#10B981'}
-            delay={240}
-            onPress={() => { setActiveTab('Requests'); setRequestSection('Complaints'); }}
-            sub={openComplaints > 0 ? `${openComplaints} Pending` : 'Resolved'}
-            showArrow={true}
-          />
-          <StatHero
-            icon={DollarSign}
-            count={totalDuesAmount > 0 ? `₹${(totalDuesAmount / 1000).toFixed(0)}k` : '₹0'}
-            label="Fee Dues"
-            color="#E11D48"
-            delay={300}
-            onPress={openDemandNotesModal}
-            sub={unpaidInvoices.length > 0 ? `${unpaidInvoices.length} Unpaid` : 'All Paid'}
-            showArrow={true}
-          />
-        </View>
+        {/* ── 1. Top 4-Metric Bar (Total, Occupied, Vacant, 86%) ── */}
+        <AnimatedCard delay={40}>
+          <View style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: 18,
+            padding: 14,
+            marginBottom: 14,
+            borderWidth: 1,
+            borderColor: BRAND_BORDER,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            shadowColor: BRAND_TEAL_DARK,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.04,
+            shadowRadius: 6,
+            elevation: 2,
+          }}>
+            <View style={{ alignItems: 'center', flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: TEXT_DARK }}>{totalBeds}</Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: TEXT_LIGHT, textTransform: 'uppercase', marginTop: 2 }}>Total</Text>
+            </View>
+            <View style={{ width: 1, height: 24, backgroundColor: BRAND_BORDER }} />
+            <View style={{ alignItems: 'center', flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#10B981' }}>{occupiedBeds}</Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: TEXT_LIGHT, textTransform: 'uppercase', marginTop: 2 }}>Occupied</Text>
+            </View>
+            <View style={{ width: 1, height: 24, backgroundColor: BRAND_BORDER }} />
+            <View style={{ alignItems: 'center', flex: 1 }}>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#F59E0B' }}>{vacantBeds}</Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: TEXT_LIGHT, textTransform: 'uppercase', marginTop: 2 }}>Vacant</Text>
+            </View>
+            <View style={{ width: 1, height: 24, backgroundColor: BRAND_BORDER }} />
+            <View style={{ alignItems: 'center', flex: 1 }}>
+              <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: '#A7F3D0' }}>
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#059669' }}>{occupancy}%</Text>
+              </View>
+            </View>
+          </View>
+        </AnimatedCard>
 
-        {/* ── 3. Monthly Financials & Revenue Snapshot (Matches Web FeesMonthCard) ── */}
+        {/* ── 2. 6 Circular Quick Actions (Tenants, Complaints, Approvals, Expenses, Charges, Transactions) ── */}
+        <AnimatedCard delay={80}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingHorizontal: 4, marginBottom: 14 }}>
+            {[
+              { id: 'tenants', label: 'Tenants', icon: Users, color: '#10B981', badge: activeStudents.length, onPress: () => setActiveTab('Students') },
+              { id: 'complaints', label: 'Complaints', icon: Wrench, color: '#EF4444', badge: openComplaints, onPress: () => { setActiveTab('Requests'); setRequestSection('Complaints'); } },
+              { id: 'approvals', label: 'Approvals', icon: UserCheck, color: '#F59E0B', badge: pendingApprovals.length, onPress: () => { setActiveTab('Requests'); setRequestSection('Approvals'); } },
+              { id: 'expenses', label: 'Expenses', icon: DollarSign, color: '#F97316', badge: expensesList.length, onPress: () => setExpensesModalVisible(true) },
+              { id: 'charges', label: 'Charges', icon: Zap, color: '#06B6D4', badge: null, onPress: () => setSubMeterModalVisible(true) },
+              { id: 'transactions', label: 'Transaction', icon: Receipt, color: '#8B5CF6', badge: null, onPress: () => setGateLogsModalVisible(true) },
+            ].map((btn) => {
+              const IconComp = btn.icon;
+              return (
+                <TouchableOpacity key={btn.id} onPress={btn.onPress} style={{ alignItems: 'center', width: 62 }} activeOpacity={0.75}>
+                  <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: btn.color + '15', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: btn.color + '40', position: 'relative' }}>
+                    <IconComp size={22} color={btn.color} />
+                    {btn.badge !== null && btn.badge > 0 && (
+                      <View style={{ position: 'absolute', top: -3, right: -3, backgroundColor: btn.color, minWidth: 18, height: 18, borderRadius: 9, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 4 }}>
+                        <Text style={{ fontSize: 9, fontWeight: '900', color: '#FFFFFF' }}>{btn.badge}</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: TEXT_DARK, marginTop: 6, textAlign: 'center' }} numberOfLines={1}>{btn.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </AnimatedCard>
+
+        {/* ── 3. Alert Banner: Pending Dues ── */}
+        <AnimatedCard delay={100}>
+          <TouchableOpacity
+            onPress={openDemandNotesModal}
+            style={{
+              backgroundColor: '#FEF3C7',
+              borderRadius: 14,
+              paddingVertical: 10,
+              paddingHorizontal: 14,
+              marginBottom: 14,
+              borderWidth: 1,
+              borderColor: '#FDE68A',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+            activeOpacity={0.8}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <AlertCircle size={16} color="#D97706" />
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E' }}>
+                ₹{(totalDuesAmount / 1000).toFixed(1)}K pending · {unpaidInvoices.length} dues
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#B45309' }}>View</Text>
+              <ChevronRight size={14} color="#B45309" />
+            </View>
+          </TouchableOpacity>
+        </AnimatedCard>
+
+        {/* ── 4. Feature Action Banners (Essentials, Manage Team, PG Buddy AI) ── */}
         <AnimatedCard delay={120}>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+            {/* Essentials */}
+            <TouchableOpacity
+              onPress={() => setEssentialsModalVisible(true)}
+              style={{
+                flex: 1,
+                backgroundColor: '#134E48',
+                borderRadius: 16,
+                padding: 14,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={{ position: 'absolute', top: 10, right: 10, backgroundColor: '#34D399', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                <Text style={{ fontSize: 8, fontWeight: '900', color: '#064E3B' }}>NEW</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Droplets size={16} color="#5EEAD4" />
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#FFFFFF' }}>Essentials</Text>
+              </View>
+              <Text style={{ fontSize: 10, color: '#CCFBF1', fontWeight: '500' }}>Water · Gas · Veggies</Text>
+            </TouchableOpacity>
+
+            {/* Manage Team */}
+            <TouchableOpacity
+              onPress={() => setTeamModalVisible(true)}
+              style={{
+                flex: 1,
+                backgroundColor: '#4338CA',
+                borderRadius: 16,
+                padding: 14,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <Users size={16} color="#C7D2FE" />
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#FFFFFF' }}>Manage Team</Text>
+              </View>
+              <Text style={{ fontSize: 10, color: '#E0E7FF', fontWeight: '500' }}>Staff · Roles · Access</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* PG Buddy AI Prompt Bar */}
+          <TouchableOpacity
+            onPress={() => setAiBuddyModalVisible(true)}
+            style={{
+              backgroundColor: '#581C87',
+              borderRadius: 16,
+              padding: 14,
+              marginBottom: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+            activeOpacity={0.85}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginRight: 8 }}>
+              <View style={{ width: 36, height: 36, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
+                <Sparkles size={18} color="#FDE047" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#FFFFFF' }}>PG Buddy AI</Text>
+                <Text style={{ fontSize: 10, color: '#E9D5FF', fontWeight: '500' }} numberOfLines={1}>
+                  Who hasn't paid? · Vacancies? · Monthly report
+                </Text>
+              </View>
+            </View>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Ask</Text>
+              <ChevronRight size={14} color="#FFFFFF" />
+            </View>
+          </TouchableOpacity>
+        </AnimatedCard>
+
+        {/* ── 5. Floor-Wise Rooms & Beds Matrix Section ── */}
+        <AnimatedCard delay={140}>
+          <View style={{ marginBottom: 18 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <View>
+                <Text style={{ fontSize: 18, fontWeight: '900', color: TEXT_DARK }}>Rooms</Text>
+                <Text style={{ fontSize: 11, color: TEXT_MUTED }}>{allRooms.length} rooms across 5 floors</Text>
+              </View>
+              <View style={{ flexDirection: 'row', gap: 6 }}>
+                <TouchableOpacity
+                  onPress={() => setRoomStatusFilter(roomStatusFilter === 'AVAILABLE' ? 'all' : 'AVAILABLE')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    backgroundColor: roomStatusFilter === 'AVAILABLE' ? BRAND_TEAL : BRAND_MINT_BG,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: BRAND_BORDER,
+                  }}
+                >
+                  <Filter size={12} color={roomStatusFilter === 'AVAILABLE' ? '#FFFFFF' : BRAND_TEAL} />
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: roomStatusFilter === 'AVAILABLE' ? '#FFFFFF' : BRAND_TEAL }}>Vacant</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setAddRoomModalVisible(true)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 4,
+                    backgroundColor: BRAND_TEAL,
+                    paddingHorizontal: 10,
+                    paddingVertical: 6,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Plus size={12} color="#FFFFFF" />
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Add</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Floor Selector Pills */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 12 }}>
+              {[
+                { id: 'all', label: 'Ground', count: allRooms.filter(r => (r.floorNumber || 1) === 1).length },
+                { id: 1, label: 'Floor 1', count: allRooms.filter(r => (r.floorNumber || 1) === 1).length },
+                { id: 2, label: 'Floor 2', count: allRooms.filter(r => r.floorNumber === 2).length },
+                { id: 3, label: 'Floor 3', count: allRooms.filter(r => r.floorNumber === 3).length },
+                { id: 4, label: 'Floor 4', count: allRooms.filter(r => r.floorNumber === 4).length },
+                { id: 5, label: 'Floor 5', count: allRooms.filter(r => r.floorNumber === 5).length },
+              ].map((f) => {
+                const isSelected = studentFloorFilter === f.id;
+                return (
+                  <TouchableOpacity
+                    key={f.label}
+                    onPress={() => setStudentFloorFilter(f.id as any)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 14,
+                      backgroundColor: isSelected ? BRAND_TEAL : '#FFFFFF',
+                      borderWidth: 1,
+                      borderColor: isSelected ? BRAND_TEAL : BRAND_BORDER,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: isSelected ? '#FFFFFF' : TEXT_DARK }}>{f.label}</Text>
+                    <View style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.25)' : BRAND_MINT_BG, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: isSelected ? '#FFFFFF' : BRAND_TEAL }}>{f.count}</Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Status Summary Counts */}
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#065F46' }}>{paidInvoices.length} Paid</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FEF3C7', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#F59E0B' }} />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#92400E' }}>{unpaidInvoices.length} Unpaid</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#3B82F6' }} />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1E40AF' }}>0 Upcoming</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#9CA3AF' }} />
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#374151' }}>{vacantBeds} Vacant</Text>
+              </View>
+            </View>
+
+            {/* Room Bed Cards Grid */}
+            {activeRooms.slice(0, 4).map((room) => {
+              const occupants = room.students || allStudents.filter(s => s.roomId === room.id);
+              const capacity = room.capacity || room.sharingType || 2;
+              const slots = Array.from({ length: capacity }, (_, idx) => occupants[idx] || null);
+
+              return (
+                <TouchableOpacity
+                  key={room.id}
+                  onPress={() => setSelectedRoomDetailModal(room)}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 18,
+                    padding: 16,
+                    marginBottom: 12,
+                    borderWidth: 1,
+                    borderColor: BRAND_BORDER,
+                    shadowColor: BRAND_TEAL_DARK,
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.04,
+                    shadowRadius: 6,
+                    elevation: 2,
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={{ fontSize: 16, fontWeight: '900', color: TEXT_DARK }}>ROOM {room.roomNumber}</Text>
+                      <View style={{ backgroundColor: BRAND_MINT_BG, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, borderWidth: 1, borderColor: BRAND_BORDER }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: BRAND_TEAL }}>{room.isAc ? '❄️ AC' : '✦ NON-AC'}</Text>
+                      </View>
+                    </View>
+                    <ChevronRight size={16} color="#9CA3AF" />
+                  </View>
+
+                  {/* Bed Grid Slots */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {slots.map((student, bIdx) => (
+                      <TouchableOpacity
+                        key={bIdx}
+                        onPress={() => student ? setSelectedStudentPaymentModal(student) : null}
+                        style={{
+                          width: (width - 80) / 4,
+                          backgroundColor: student ? '#FEF3C7' : '#F9FAFB',
+                          borderRadius: 10,
+                          paddingVertical: 10,
+                          paddingHorizontal: 6,
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: student ? '#FDE68A' : '#E5E7EB',
+                        }}
+                      >
+                        <Text style={{ fontSize: 16, marginBottom: 2 }}>🛏️</Text>
+                        <Text style={{ fontSize: 9, fontWeight: '800', color: student ? '#92400E' : '#6B7280' }}>Bed {bIdx + 1}</Text>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: student ? '#B45309' : '#9CA3AF', marginTop: 1 }} numberOfLines={1}>
+                          {student ? (student.user?.name || student.name || 'Resident') : 'Vacant'}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </AnimatedCard>
+
+        {/* ── 6. Monthly Financials & Revenue Snapshot (Matches Web FeesMonthCard) ── */}
+        <AnimatedCard delay={160}>
           <View style={[styles.listCard, { padding: 18, marginBottom: 18 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -1498,8 +1942,8 @@ export default function DashboardScreen() {
                   <Text style={{ fontSize: 11, color: TEXT_MUTED }}>Current 10-to-10 Billing Cycle</Text>
                 </View>
               </View>
-              <TouchableOpacity onPress={openDemandNotesModal} style={{ backgroundColor: BRAND_MINT_CARD, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: BRAND_TEAL }}>Notes & Dues →</Text>
+              <TouchableOpacity onPress={() => setAnalyticsModalVisible(true)} style={{ backgroundColor: BRAND_MINT_CARD, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: BRAND_TEAL }}>Analytics →</Text>
               </TouchableOpacity>
             </View>
 
@@ -1524,7 +1968,7 @@ export default function DashboardScreen() {
           </View>
         </AnimatedCard>
 
-        {/* ── 4. Floor Directory & Company Matrix ── */}
+        {/* ── 7. Floor Directory & Company Matrix ── */}
         <SH title="Floor & Company Directory" count={floorsList.length || 5} onAction={() => openFloorModal('combined')} actionLabel="Consolidated Report" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 10, marginBottom: 20 }}>
           {[
@@ -1549,7 +1993,7 @@ export default function DashboardScreen() {
           ))}
         </ScrollView>
 
-        {/* ── 5. Hostel Operations & Management Modules (8 Modern Cards) ── */}
+        {/* ── 8. Hostel Operations & Management Modules (8 Modern Cards) ── */}
         <SH title="Hostel Operations & Modules" count={8} />
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 }}>
           <TouchableOpacity
@@ -4694,6 +5138,776 @@ export default function DashboardScreen() {
 
             <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { width: '100%', height: 48, borderRadius: 14, marginTop: 10 }]} onPress={() => setFloorModalVisible(false)}>
               <Text style={styles.actionBtnText}>Close Directory</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── 1. EXPENSES TRACKER MODAL ─── */}
+      <Modal visible={expensesModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setExpensesModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setExpensesModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { height: '92%', maxHeight: '92%', paddingHorizontal: 20 }]}>
+            <View style={styles.modalHandle} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <View>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: TEXT_DARK }}>Expenses</Text>
+                <Text style={{ fontSize: 11, color: TEXT_MUTED }}>Mens luxury pg · Hari Pushp</Text>
+              </View>
+              <TouchableOpacity onPress={() => setAddExpenseModalVisible(true)} style={{ backgroundColor: BRAND_TEAL, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Plus size={14} color="#FFFFFF" />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Add</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Month Navigator */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 14, marginBottom: 14, backgroundColor: BRAND_MINT_BG, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: BRAND_BORDER }}>
+              <TouchableOpacity onPress={() => setExpenseMonth('June 2026')}><Text style={{ fontSize: 16, color: BRAND_TEAL, fontWeight: '900' }}>‹</Text></TouchableOpacity>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: TEXT_DARK }}>{expenseMonth}</Text>
+              <TouchableOpacity onPress={() => setExpenseMonth('August 2026')}><Text style={{ fontSize: 16, color: BRAND_TEAL, fontWeight: '900' }}>›</Text></TouchableOpacity>
+            </View>
+
+            {/* Total Expenses Hero Card */}
+            <View style={{
+              backgroundColor: '#EA580C',
+              borderRadius: 20,
+              padding: 18,
+              marginBottom: 16,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              shadowColor: '#EA580C',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.25,
+              shadowRadius: 10,
+              elevation: 4,
+            }}>
+              <View>
+                <Text style={{ fontSize: 11, color: '#FFEDD5', fontWeight: '700', textTransform: 'uppercase' }}>Total Expenses</Text>
+                <Text style={{ fontSize: 26, fontWeight: '900', color: '#FFFFFF', marginTop: 2 }}>
+                  ₹{expensesList.reduce((a, b) => a + (Number(b.amount) || 0), 0).toLocaleString()}
+                </Text>
+                <Text style={{ fontSize: 11, color: '#FFEDD5', marginTop: 2 }}>{expensesList.length} transactions recorded</Text>
+              </View>
+              <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
+                <Wallet size={24} color="#FFFFFF" />
+              </View>
+            </View>
+
+            {/* Category Filter Pills */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 12 }}>
+              {['All', 'Vegetables', 'Cleaning', 'Repair', 'Bill', 'Gas', 'Water', 'Salary', 'Maintenance'].map((cat) => {
+                const isSelected = expenseCategoryFilter === cat;
+                return (
+                  <TouchableOpacity
+                    key={cat}
+                    onPress={() => setExpenseCategoryFilter(cat)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 7,
+                      borderRadius: 12,
+                      backgroundColor: isSelected ? BRAND_TEAL : BRAND_MINT_BG,
+                      borderWidth: 1,
+                      borderColor: isSelected ? BRAND_TEAL : BRAND_BORDER,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: isSelected ? '#FFFFFF' : TEXT_DARK }}>{cat}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Search Input */}
+            <View style={[styles.searchBar, { height: 42, marginBottom: 12 }]}>
+              <Search size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
+              <TextInput
+                placeholder="Search expenses..."
+                value={expenseSearch}
+                onChangeText={setExpenseSearch}
+                style={styles.searchInput}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            {/* Expense Transactions List */}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              {expensesList
+                .filter(e => expenseCategoryFilter === 'All' || e.category.toLowerCase() === expenseCategoryFilter.toLowerCase())
+                .filter(e => !expenseSearch || e.category.toLowerCase().includes(expenseSearch.toLowerCase()) || e.notes?.toLowerCase().includes(expenseSearch.toLowerCase()))
+                .map((exp) => (
+                  <View
+                    key={exp.id}
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      borderRadius: 14,
+                      padding: 14,
+                      marginBottom: 10,
+                      borderWidth: 1,
+                      borderColor: BRAND_BORDER,
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                      <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: BRAND_MINT_BG, justifyContent: 'center', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 16 }}>{exp.category === 'Vegetables' ? '🥦' : exp.category === 'Cleaning' ? '🧹' : exp.category === 'Repair' ? '🔧' : exp.category === 'Bill' ? '⚡' : exp.category === 'Gas' ? '🔥' : '💰'}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: TEXT_DARK }}>{exp.category}</Text>
+                        <Text style={{ fontSize: 11, color: TEXT_MUTED }}>{exp.notes || 'Expense'} · {exp.date} · {exp.mode}</Text>
+                      </View>
+                    </View>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#EA580C' }}>₹{exp.amount.toLocaleString()}</Text>
+                  </View>
+                ))}
+            </ScrollView>
+
+            <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { width: '100%', height: 48, borderRadius: 14 }]} onPress={() => setExpensesModalVisible(false)}>
+              <Text style={styles.actionBtnText}>Done</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── ADD EXPENSE FORM MODAL ─── */}
+      <FormModal visible={addExpenseModalVisible} title="Add New Expense" onClose={() => setAddExpenseModalVisible(false)} onSubmit={handleAddExpense}>
+        <Text style={styles.formLabel}>Expense Category</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 12 }}>
+          {['Vegetables', 'Cleaning', 'Repair', 'Bill', 'Gas', 'Water', 'Salary', 'Maintenance'].map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              onPress={() => setNewExpenseCategory(cat)}
+              style={{ paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, backgroundColor: newExpenseCategory === cat ? BRAND_TEAL : BRAND_MINT_BG, borderWidth: 1, borderColor: BRAND_BORDER }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '800', color: newExpenseCategory === cat ? '#FFFFFF' : TEXT_DARK }}>{cat}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <Text style={styles.formLabel}>Amount (₹) *</Text>
+        <View style={styles.formInput}>
+          <TextInput placeholder="e.g. 3500" value={newExpenseAmount} onChangeText={setNewExpenseAmount} keyboardType="numeric" style={styles.formInputText} />
+        </View>
+
+        <Text style={styles.formLabel}>Payment Mode</Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+          {(['CASH', 'UPI', 'BANK_TRANSFER'] as const).map((m) => (
+            <TouchableOpacity
+              key={m}
+              onPress={() => setNewExpenseMode(m)}
+              style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center', backgroundColor: newExpenseMode === m ? BRAND_TEAL : BRAND_MINT_BG, borderWidth: 1, borderColor: BRAND_BORDER }}
+            >
+              <Text style={{ fontSize: 11, fontWeight: '800', color: newExpenseMode === m ? '#FFFFFF' : TEXT_DARK }}>{m}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={styles.formLabel}>Description / Notes</Text>
+        <View style={[styles.formInput, { height: 60 }]}>
+          <TextInput placeholder="Add invoice notes or vendor name..." value={newExpenseNotes} onChangeText={setNewExpenseNotes} style={styles.formInputText} />
+        </View>
+      </FormModal>
+
+      {/* ─── 2. PG BUDDY AI ASSISTANT MODAL ─── */}
+      <Modal visible={aiBuddyModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setAiBuddyModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setAiBuddyModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { height: '94%', maxHeight: '94%', paddingHorizontal: 20 }]}>
+            <View style={styles.modalHandle} />
+            
+            {/* Header */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 14, backgroundColor: '#581C87', justifyContent: 'center', alignItems: 'center' }}>
+                  <Sparkles size={20} color="#FDE047" />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: TEXT_DARK }}>PG Buddy AI</Text>
+                  <Text style={{ fontSize: 11, color: TEXT_MUTED }}>AI Property Assistant · Live Data</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => setAiBuddyModalVisible(false)} style={{ padding: 6, backgroundColor: '#F1F5F9', borderRadius: 20 }}>
+                <X size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Chat Messages Stream */}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingBottom: 16 }}>
+              {aiBuddyMessages.map((msg) => (
+                <View
+                  key={msg.id}
+                  style={{
+                    alignSelf: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+                    maxWidth: '85%',
+                    backgroundColor: msg.sender === 'user' ? BRAND_TEAL : '#F3E8FF',
+                    padding: 14,
+                    borderRadius: 18,
+                    borderTopRightRadius: msg.sender === 'user' ? 4 : 18,
+                    borderTopLeftRadius: msg.sender === 'ai' ? 4 : 18,
+                  }}
+                >
+                  <Text style={{ fontSize: 13, color: msg.sender === 'user' ? '#FFFFFF' : '#3B0764', lineHeight: 20, fontWeight: '500' }}>
+                    {msg.text}
+                  </Text>
+                  <Text style={{ fontSize: 9, color: msg.sender === 'user' ? '#CCFBF1' : '#9333EA', alignSelf: 'flex-end', marginTop: 4 }}>
+                    {msg.time}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Quick Interactive Prompt Chips */}
+            <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_MUTED, marginBottom: 6 }}>Tap to ask:</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, marginBottom: 12 }}>
+              {[
+                { label: "Who hasn't paid? (34 tenants)", q: "Who has pending rent?" },
+                { label: "Show vacant beds (21)", q: "Show vacant beds" },
+                { label: "This month's expenses", q: "What are this month's expenses?" },
+                { label: "Active leaves today", q: "How many leaves are active today?" },
+                { label: "July 2026 revenue summary", q: "Summarize July 2026 revenue" },
+              ].map((chip, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  onPress={() => handleSendAiMessage(chip.q)}
+                  style={{ backgroundColor: '#FAF5FF', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 12, borderWidth: 1, borderColor: '#E9D5FF' }}
+                >
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#7E22CE' }}>💬 {chip.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            {/* Input Bar */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, borderTopWidth: 1, borderTopColor: BRAND_BORDER, paddingTop: 10 }}>
+              <TextInput
+                placeholder="Ask PG Buddy about occupancy, dues..."
+                value={aiBuddyInput}
+                onChangeText={setAiBuddyInput}
+                onSubmitEditing={() => handleSendAiMessage()}
+                style={[styles.formInput, { flex: 1, marginBottom: 0 }]}
+                placeholderTextColor="#9CA3AF"
+              />
+              <TouchableOpacity onPress={() => handleSendAiMessage()} style={{ width: 48, height: 48, borderRadius: 14, backgroundColor: '#581C87', justifyContent: 'center', alignItems: 'center' }}>
+                <Send size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── 3. TEAM MANAGEMENT & ACCESS CONTROL MODAL ─── */}
+      <Modal visible={teamModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setTeamModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setTeamModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { height: '90%', maxHeight: '90%', paddingHorizontal: 20 }]}>
+            <View style={styles.modalHandle} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <View>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: TEXT_DARK }}>Team Management</Text>
+                <Text style={{ fontSize: 11, color: TEXT_MUTED }}>{staffMembersList.length} active team members</Text>
+              </View>
+              <TouchableOpacity onPress={() => setAddStaffModalVisible(true)} style={{ backgroundColor: BRAND_TEAL, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Plus size={14} color="#FFFFFF" />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Add Member</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 14, paddingBottom: 20 }}>
+              {staffMembersList.map((member) => (
+                <View key={member.id} style={[styles.listCard, { padding: 16 }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={{ width: 42, height: 42, borderRadius: 12, backgroundColor: BRAND_TEAL, justifyContent: 'center', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: '#FFFFFF' }}>{member.name.slice(0, 2).toUpperCase()}</Text>
+                      </View>
+                      <View>
+                        <Text style={{ fontSize: 15, fontWeight: '900', color: TEXT_DARK }}>{member.name}</Text>
+                        <Text style={{ fontSize: 11, color: TEXT_MUTED }}>{member.email}</Text>
+                        <Text style={{ fontSize: 11, color: TEXT_LIGHT }}>📱 {member.phone}</Text>
+                      </View>
+                    </View>
+                    <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#059669' }}>Active</Text>
+                    </View>
+                  </View>
+
+                  {/* Module Access Granular Permissions */}
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_LIGHT, textTransform: 'uppercase', marginBottom: 8 }}>Module Access Permissions</Text>
+                  
+                  {[
+                    { key: 'dashboard', label: 'Dashboard', sub: member.modules?.dashboard ? 'Full view' : 'Off', icon: '🎛️' },
+                    { key: 'properties', label: 'Properties / Rooms', sub: 'View only', icon: '🏢' },
+                    { key: 'tenants', label: 'Tenants / Move Out', sub: 'Move Out Allowed', icon: '👥' },
+                    { key: 'finance', label: 'Finance & Rent', sub: 'View only', icon: '💳' },
+                    { key: 'reports', label: 'Reports & Analytics', sub: member.modules?.reports ? 'Full view' : 'Off', icon: '📊' },
+                  ].map((perm) => (
+                    <View key={perm.key} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={{ fontSize: 14 }}>{perm.icon}</Text>
+                        <View>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>{perm.label}</Text>
+                          <Text style={{ fontSize: 10, color: TEXT_MUTED }}>{perm.sub}</Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => handleToggleStaffModule(member.id, perm.key)}
+                        style={{
+                          width: 42,
+                          height: 24,
+                          borderRadius: 12,
+                          backgroundColor: member.modules?.[perm.key] ? BRAND_TEAL : '#E5E7EB',
+                          padding: 2,
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#FFFFFF', alignSelf: member.modules?.[perm.key] ? 'flex-end' : 'flex-start' }} />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { width: '100%', height: 48, borderRadius: 14 }]} onPress={() => setTeamModalVisible(false)}>
+              <Text style={styles.actionBtnText}>Done</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── ADD STAFF MODAL ─── */}
+      <FormModal visible={addStaffModalVisible} title="Add Team Member" onClose={() => setAddStaffModalVisible(false)} onSubmit={handleAddNewStaff}>
+        <Text style={styles.formLabel}>Staff Full Name *</Text>
+        <View style={styles.formInput}>
+          <TextInput placeholder="e.g. Prasanth Kumar" value={newStaffName} onChangeText={setNewStaffName} style={styles.formInputText} />
+        </View>
+        <Text style={styles.formLabel}>Email Address *</Text>
+        <View style={styles.formInput}>
+          <TextInput placeholder="e.g. prasanth@hms.com" value={newStaffEmail} onChangeText={setNewStaffEmail} keyboardType="email-address" autoCapitalize="none" style={styles.formInputText} />
+        </View>
+        <Text style={styles.formLabel}>Phone Number</Text>
+        <View style={styles.formInput}>
+          <TextInput placeholder="e.g. 9876543210" value={newStaffPhone} onChangeText={setNewStaffPhone} keyboardType="phone-pad" style={styles.formInputText} />
+        </View>
+      </FormModal>
+
+      {/* ─── 4. TENANT PAYMENT DOSSIER & COMMUNICATION MODAL ─── */}
+      <Modal visible={!!selectedStudentPaymentModal} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setSelectedStudentPaymentModal(null)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedStudentPaymentModal(null)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { height: '88%', maxHeight: '88%', paddingHorizontal: 20 }]}>
+            <View style={styles.modalHandle} />
+            {selectedStudentPaymentModal && (
+              <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                {/* Header */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: '#3B82F6', justifyContent: 'center', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#FFFFFF' }}>
+                        {(selectedStudentPaymentModal.user?.name || selectedStudentPaymentModal.name || 'R').charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: TEXT_DARK }}>
+                        {selectedStudentPaymentModal.user?.name || selectedStudentPaymentModal.name}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: TEXT_MUTED }}>
+                        Room {selectedStudentPaymentModal.room?.roomNumber || 'G02'} - Bed 6 · Mens luxury pg
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#059669' }}>Active</Text>
+                  </View>
+                </View>
+
+                {/* Direct 4-Action Communication Strip */}
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+                  <TouchableOpacity
+                    onPress={() => Linking.openURL(`tel:${selectedStudentPaymentModal.phoneNumber || '9876543210'}`)}
+                    style={{ flex: 1, backgroundColor: '#FFFFFF', paddingVertical: 10, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: BRAND_BORDER }}
+                  >
+                    <Phone size={16} color={BRAND_TEAL} />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_DARK, marginTop: 4 }}>Call</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDirectWhatsAppAction(selectedStudentPaymentModal.phoneNumber || '9876543210', selectedStudentPaymentModal.user?.name || selectedStudentPaymentModal.name)}
+                    style={{ flex: 1, backgroundColor: '#DCFCE7', paddingVertical: 10, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#86EFAC' }}
+                  >
+                    <MessageSquare size={16} color="#16A34A" />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#15803D', marginTop: 4 }}>WhatsApp</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => handleDirectSMSAction(selectedStudentPaymentModal.phoneNumber || '9876543210', selectedStudentPaymentModal.user?.name || selectedStudentPaymentModal.name)}
+                    style={{ flex: 1, backgroundColor: '#FFFFFF', paddingVertical: 10, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: BRAND_BORDER }}
+                  >
+                    <Send size={16} color="#3B82F6" />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_DARK, marginTop: 4 }}>Message</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => router.push('/room-change' as any)}
+                    style={{ flex: 1, backgroundColor: '#FFFFFF', paddingVertical: 10, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: BRAND_BORDER }}
+                  >
+                    <RefreshCw size={16} color="#F59E0B" />
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_DARK, marginTop: 4 }}>Shift</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Monthly Rent Card */}
+                <View style={[styles.listCard, { padding: 18, marginBottom: 16, backgroundColor: '#F8FAFC' }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: TEXT_DARK }}>July 2026</Text>
+                    <View style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#2563EB' }}>🕒 Upcoming</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 11, color: TEXT_MUTED, marginBottom: 12 }}>Due Date: 5 Jul 2026</Text>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
+                    <View>
+                      <Text style={{ fontSize: 10, color: TEXT_LIGHT, textTransform: 'uppercase', fontWeight: '700' }}>Total</Text>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: TEXT_DARK }}>₹7,000</Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 10, color: TEXT_LIGHT, textTransform: 'uppercase', fontWeight: '700' }}>Paid</Text>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#10B981' }}>₹0</Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 10, color: TEXT_LIGHT, textTransform: 'uppercase', fontWeight: '700' }}>Due</Text>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#EF4444' }}>₹7,000</Text>
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      showAlert('Payment Recorded', `₹7,000 recorded for ${selectedStudentPaymentModal.user?.name || selectedStudentPaymentModal.name}.`, 'SUCCESS');
+                      setSelectedStudentPaymentModal(null);
+                    }}
+                    style={{ backgroundColor: '#059669', paddingVertical: 14, borderRadius: 14, alignItems: 'center' }}
+                  >
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#FFFFFF' }}>Pay ₹7,000</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Payment History */}
+                <Text style={{ fontSize: 14, fontWeight: '900', color: TEXT_DARK, marginBottom: 10 }}>Payment History</Text>
+                {[
+                  { month: 'Jun 2026', total: '₹7,000', paid: '₹7,000', status: 'Paid' },
+                  { month: 'May 2026', total: '₹7,000', paid: '₹7,000', status: 'Paid' },
+                  { month: 'Apr 2026', total: '₹7,000', paid: '₹7,000', status: 'Paid' },
+                ].map((ph, idx) => (
+                  <View key={idx} style={{ backgroundColor: '#FFFFFF', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: BRAND_BORDER, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: TEXT_DARK }}>{ph.month}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />
+                        <Text style={{ fontSize: 11, color: '#059669', fontWeight: '700' }}>{ph.status}</Text>
+                      </View>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: TEXT_DARK }}>{ph.total}</Text>
+                      <TouchableOpacity onPress={() => showAlert('Receipt Downloaded', `Receipt for ${ph.month} ready.`, 'SUCCESS')}>
+                        <Text style={{ fontSize: 11, color: BRAND_TEAL, fontWeight: '800', marginTop: 2 }}>📄 Receipt</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            )}
+            <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { width: '100%', height: 48, borderRadius: 14 }]} onPress={() => setSelectedStudentPaymentModal(null)}>
+              <Text style={styles.actionBtnText}>Close</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── 5. ANALYTICS & BUSINESS PERFORMANCE MODAL ─── */}
+      <Modal visible={analyticsModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setAnalyticsModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setAnalyticsModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { height: '92%', maxHeight: '92%', paddingHorizontal: 20 }]}>
+            <View style={styles.modalHandle} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <View>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: TEXT_DARK }}>Analytics</Text>
+                <Text style={{ fontSize: 11, color: TEXT_MUTED }}>Track your business performance</Text>
+              </View>
+              <TouchableOpacity onPress={() => setAnalyticsModalVisible(false)} style={{ padding: 6, backgroundColor: '#F1F5F9', borderRadius: 20 }}>
+                <X size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Filter Dropdowns */}
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <View style={{ flex: 2, backgroundColor: BRAND_MINT_BG, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: BRAND_BORDER, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Building2 size={14} color={BRAND_TEAL} />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_DARK }}>All Properties</Text>
+              </View>
+              <View style={{ flex: 1, backgroundColor: BRAND_MINT_BG, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: BRAND_BORDER, alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_DARK }}>2026</Text>
+              </View>
+              <View style={{ flex: 1, backgroundColor: BRAND_MINT_BG, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: BRAND_BORDER, alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: TEXT_DARK }}>Jul</Text>
+              </View>
+            </View>
+
+            {/* Download Excel Button */}
+            <TouchableOpacity
+              onPress={() => showAlert('Excel Generated', 'Downloading hostel performance Excel report...', 'SUCCESS')}
+              style={{ backgroundColor: '#2563EB', paddingVertical: 12, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 14 }}
+            >
+              <Download size={16} color="#FFFFFF" />
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#FFFFFF' }}>Download Excel Report</Text>
+            </TouchableOpacity>
+
+            {/* Sub Tabs */}
+            <View style={{ flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 3, marginBottom: 14 }}>
+              {(['Overview', 'Payments', 'Occupancy'] as const).map((tab) => (
+                <TouchableOpacity
+                  key={tab}
+                  onPress={() => setAnalyticsSubTab(tab)}
+                  style={{ flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 10, backgroundColor: analyticsSubTab === tab ? '#2563EB' : 'transparent' }}
+                >
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: analyticsSubTab === tab ? '#FFFFFF' : '#64748B' }}>{tab}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+              {/* Month Snapshot 4-Card Grid */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={{ fontSize: 14, fontWeight: '900', color: TEXT_DARK }}>July 2026</Text>
+                <Text style={{ fontSize: 11, color: '#10B981', fontWeight: '800' }}>25% collected</Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+                <View style={{ width: (width - 60) / 2, backgroundColor: '#DCFCE7', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#86EFAC' }}>
+                  <Text style={{ fontSize: 10, color: '#15803D', fontWeight: '800', textTransform: 'uppercase' }}>Income</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#166534', marginTop: 4 }}>₹69.5K</Text>
+                </View>
+                <View style={{ width: (width - 60) / 2, backgroundColor: '#FEE2E2', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#FCA5A5' }}>
+                  <Text style={{ fontSize: 10, color: '#991B1B', fontWeight: '800', textTransform: 'uppercase' }}>Expenses</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#B91C1C', marginTop: 4 }}>₹0</Text>
+                </View>
+                <View style={{ width: (width - 60) / 2, backgroundColor: '#CCFBF1', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#5EEAD4' }}>
+                  <Text style={{ fontSize: 10, color: '#115E59', fontWeight: '800', textTransform: 'uppercase' }}>Profit</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#0F766E', marginTop: 4 }}>₹69.5K</Text>
+                </View>
+                <View style={{ width: (width - 60) / 2, backgroundColor: '#FEF3C7', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#FDE68A' }}>
+                  <Text style={{ fontSize: 10, color: '#92400E', fontWeight: '800', textTransform: 'uppercase' }}>Pending</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '900', color: '#B45309', marginTop: 4 }}>₹2.1L</Text>
+                </View>
+              </View>
+
+              {/* Year-to-Date (2026) Card */}
+              <View style={[styles.listCard, { padding: 16, marginBottom: 14 }]}>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK, marginBottom: 10 }}>Year-to-Date (2026)</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <View>
+                    <Text style={{ fontSize: 10, color: TEXT_LIGHT, fontWeight: '700' }}>Total Income</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#2563EB', marginTop: 2 }}>₹15.0L</Text>
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 10, color: TEXT_LIGHT, fontWeight: '700' }}>Total Expenses</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#EA580C', marginTop: 2 }}>₹85.0K</Text>
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 10, color: TEXT_LIGHT, fontWeight: '700' }}>Net Profit</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#10B981', marginTop: 2 }}>₹14.1L</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Security Deposits */}
+              <View style={[styles.listCard, { padding: 16 }]}>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK, marginBottom: 6 }}>🛡️ Security Deposits</Text>
+                <Text style={{ fontSize: 11, color: TEXT_MUTED }}>Active refundable deposits held: <Text style={{ fontWeight: '900', color: BRAND_TEAL }}>₹3,20,000</Text></Text>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { width: '100%', height: 48, borderRadius: 14 }]} onPress={() => setAnalyticsModalVisible(false)}>
+              <Text style={styles.actionBtnText}>Done</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── 6. ROOM & BEDS DEEP DIVE MANAGEMENT DRAWER ─── */}
+      <Modal visible={!!selectedRoomDetailModal} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setSelectedRoomDetailModal(null)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSelectedRoomDetailModal(null)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { height: '90%', maxHeight: '90%', paddingHorizontal: 20 }]}>
+            <View style={styles.modalHandle} />
+            {selectedRoomDetailModal && (() => {
+              const occupants = selectedRoomDetailModal.students || allStudents.filter(s => s.roomId === selectedRoomDetailModal.id);
+              const capacity = selectedRoomDetailModal.capacity || selectedRoomDetailModal.sharingType || 2;
+              const slots = Array.from({ length: capacity }, (_, idx) => occupants[idx] || null);
+
+              return (
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                  {/* Room Header */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <View>
+                      <Text style={{ fontSize: 20, fontWeight: '900', color: TEXT_DARK }}>Room {selectedRoomDetailModal.roomNumber}</Text>
+                      <Text style={{ fontSize: 11, color: TEXT_MUTED }}>{selectedRoomDetailModal.isAc ? 'AC' : 'NON-AC'} · Floor {selectedRoomDetailModal.floorNumber || 0}</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <TouchableOpacity onPress={() => showAlert('Settings', 'Room configuration settings.', 'INFO')} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: BRAND_MINT_BG, justifyContent: 'center', alignItems: 'center' }}>
+                        <Settings size={16} color={BRAND_TEAL} />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => showAlert('Delete Room', 'Are you sure you want to remove this room?', 'CONFIRM')} style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center' }}>
+                        <Trash2 size={16} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* 4-Stat Metric Strip */}
+                  <View style={{
+                    backgroundColor: '#1E40AF',
+                    borderRadius: 18,
+                    padding: 16,
+                    marginBottom: 16,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                  }}>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#FFFFFF' }}>{capacity}</Text>
+                      <Text style={{ fontSize: 9, color: '#93C5FD', fontWeight: '800', textTransform: 'uppercase' }}>TOTAL</Text>
+                    </View>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#FFFFFF' }}>{occupants.length}</Text>
+                      <Text style={{ fontSize: 9, color: '#93C5FD', fontWeight: '800', textTransform: 'uppercase' }}>OCCUPIED</Text>
+                    </View>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#FFFFFF' }}>{Math.max(0, capacity - occupants.length)}</Text>
+                      <Text style={{ fontSize: 9, color: '#93C5FD', fontWeight: '800', textTransform: 'uppercase' }}>AVAILABLE</Text>
+                    </View>
+                    <View style={{ alignItems: 'center', flex: 1 }}>
+                      <Text style={{ fontSize: 18, fontWeight: '900', color: '#FFFFFF' }}>₹6.0K</Text>
+                      <Text style={{ fontSize: 9, color: '#93C5FD', fontWeight: '800', textTransform: 'uppercase' }}>PER BED</Text>
+                    </View>
+                  </View>
+
+                  {/* Bed Management */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <View>
+                      <Text style={{ fontSize: 15, fontWeight: '900', color: TEXT_DARK }}>Bed Management</Text>
+                      <Text style={{ fontSize: 11, color: TEXT_MUTED }}>{capacity} total beds · {Math.max(0, capacity - occupants.length)} available</Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => showAlert('Add Bed', `Add bed to Room ${selectedRoomDetailModal.roomNumber}?`, 'CONFIRM')}
+                      style={{ backgroundColor: '#2563EB', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    >
+                      <Plus size={14} color="#FFFFFF" />
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Add Beds</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Visual Color-Coded Bed Matrix */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+                    {slots.map((st, idx) => (
+                      <View
+                        key={idx}
+                        style={{
+                          width: (width - 70) / 4,
+                          backgroundColor: st ? '#FEF3C7' : '#DCFCE7',
+                          borderRadius: 12,
+                          padding: 10,
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: st ? '#FDE68A' : '#86EFAC',
+                        }}
+                      >
+                        <Text style={{ fontSize: 18, marginBottom: 2 }}>🛏️</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '900', color: st ? '#92400E' : '#166534' }}>{idx + 1}</Text>
+                        <Text style={{ fontSize: 9, fontWeight: '700', color: st ? '#B45309' : '#15803D', marginTop: 2 }} numberOfLines={1}>
+                          {st ? (st.user?.name || st.name || 'Occupied') : 'Free'}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* Room Information Card */}
+                  <View style={[styles.listCard, { padding: 16, marginBottom: 16 }]}>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK, marginBottom: 10 }}>Room Information</Text>
+                    <View style={{ gap: 8 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 12, color: TEXT_MUTED }}>Room Type</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>{selectedRoomDetailModal.isAc ? 'AC' : 'NON-AC'}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 12, color: TEXT_MUTED }}>Floor</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Floor {selectedRoomDetailModal.floorNumber || 0}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 12, color: TEXT_MUTED }}>Rent Per Bed</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '900', color: BRAND_TEAL }}>₹6,000/month</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  {/* Tenants List */}
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: TEXT_DARK }}>Tenants ({occupants.length})</Text>
+                    <TouchableOpacity onPress={() => setAddStudentModalVisible(true)} style={{ backgroundColor: '#059669', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>+ Add</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {occupants.map((occ: any, i: number) => (
+                    <TouchableOpacity
+                      key={occ.id || i}
+                      onPress={() => setSelectedStudentPaymentModal(occ)}
+                      style={{ backgroundColor: '#FFFFFF', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: BRAND_BORDER, marginBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: BRAND_MINT_BG, justifyContent: 'center', alignItems: 'center' }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: BRAND_TEAL }}>{occ.name?.charAt(0) || 'R'}</Text>
+                        </View>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: TEXT_DARK }}>{occ.user?.name || occ.name}</Text>
+                      </View>
+                      <ChevronRight size={16} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              );
+            })()}
+            <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { width: '100%', height: 48, borderRadius: 14 }]} onPress={() => setSelectedRoomDetailModal(null)}>
+              <Text style={styles.actionBtnText}>Done</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── 7. ESSENTIALS TRACKER MODAL ─── */}
+      <Modal visible={essentialsModalVisible} animationType="slide" transparent presentationStyle="overFullScreen" onRequestClose={() => setEssentialsModalVisible(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setEssentialsModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation?.()} style={[styles.modalSheet, { height: '88%', maxHeight: '88%', paddingHorizontal: 20 }]}>
+            <View style={styles.modalHandle} />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <View>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: TEXT_DARK }}>Essentials Tracker</Text>
+                <Text style={{ fontSize: 11, color: TEXT_MUTED }}>Water · Gas · Daily Veggies</Text>
+              </View>
+              <TouchableOpacity onPress={() => showAlert('Log Added', 'New essential delivery record logged.', 'SUCCESS')} style={{ backgroundColor: '#0D9488', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 10, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Plus size={14} color="#FFFFFF" />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Add Log</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: 10, paddingBottom: 20 }}>
+              {essentialsLogs.map((log) => (
+                <View key={log.id} style={[styles.listCard, { padding: 14, borderLeftWidth: 4, borderLeftColor: log.type === 'Water' ? '#06B6D4' : log.type === 'Gas' ? '#F97316' : '#10B981' }]}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK }}>{log.title}</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F766E' }}>{log.cost}</Text>
+                  </View>
+                  <Text style={{ fontSize: 11, color: TEXT_MUTED, marginTop: 4 }}>Vendor: {log.vendor} · {log.date}</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                    <View style={{ backgroundColor: '#CCFBF1', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: '#0F766E' }}>{log.status}</Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { width: '100%', height: 48, borderRadius: 14 }]} onPress={() => setEssentialsModalVisible(false)}>
+              <Text style={styles.actionBtnText}>Close</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </TouchableOpacity>
