@@ -8,7 +8,8 @@ const {
   getProfitLoss,
   getBalanceSheet,
   getStudentLedger,
-  createVoucher
+  createVoucher,
+  syncAccounting
 } = require('../controllers/accountingController');
 
 // All accounting routes protected for ADMIN / STAFF (Warden)
@@ -22,5 +23,6 @@ router.get('/profit-loss', getProfitLoss);
 router.get('/balance-sheet', getBalanceSheet);
 router.get('/student-ledger/:studentId', getStudentLedger);
 router.post('/vouchers', createVoucher);
+router.post('/sync', syncAccounting);
 
 module.exports = router;

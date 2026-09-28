@@ -147,16 +147,19 @@ model Suggestion {
 }
 
 model Invoice {
-  id          String    @id @default(uuid())
-  studentId   String
-  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  amount      Float
-  dueDate     DateTime
-  status      String    @default("UNPAID") // "UNPAID", "PAID"
-  paidAt      DateTime?
-  floorNumber Int?      // 1-5
-  companyName String?   // "Rajken Enterprises", "Vandana Enterprises", etc.
-  createdAt   DateTime  @default(now())
+  id              String    @id @default(uuid())
+  studentId       String
+  student         Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  amount          Float
+  rentAmount      Float?    // Room rent component
+  messAmount      Float?    // Mess/catering component
+  electricityAmount Float?  // Electricity component
+  dueDate         DateTime
+  status          String    @default("UNPAID") // "UNPAID", "PAID"
+  paidAt          DateTime?
+  floorNumber     Int?      // 1-5
+  companyName     String?   // "Rajken Enterprises", "Vandana Enterprises", etc.
+  createdAt       DateTime  @default(now())
 }
 
 model DemandNote {

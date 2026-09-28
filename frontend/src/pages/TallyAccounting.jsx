@@ -42,6 +42,8 @@ export default function TallyAccounting() {
   const [dailyMsg, setDailyMsg] = useState(null);
   const [dailyLoading, setDailyLoading] = useState(false);
   const [recentDailyExpenses, setRecentDailyExpenses] = useState([]);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncMsg, setSyncMsg] = useState(null);
 
   // Single-fetch guards
   const fetchedRef = useRef({});
@@ -129,6 +131,33 @@ export default function TallyAccounting() {
     setSelectedStudentId(id);
     delete fetchedRef.current[`sl-${id}`];
     setStudentLedger(null);
+  };
+
+  const handleSyncAll = async () => {
+    setSyncLoading(true);
+    setSyncMsg(null);
+    try {
+      const res = await fetch(`${API_BASE}/accounting/sync`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Sync failed');
+      // Clear cache to force reload
+      fetchedRef.current = {};
+      if (activeTab === 'daybook') fetchDaybook(true);
+      else if (activeTab === 'trial') fetchTrial(true);
+      else if (activeTab === 'pnl') fetchPnl(true);
+      else if (activeTab === 'bs') fetchBs(true);
+      else if (activeTab === 'student' && selectedStudentId) fetchStudentLedger(selectedStudentId);
+      setSyncMsg(`Synced ${data.stats?.totalSynced || 0} rent receipts into Tally ledger`);
+      setTimeout(() => setSyncMsg(null), 5000);
+    } catch (err) {
+      setSyncMsg('Sync error: ' + err.message);
+      setTimeout(() => setSyncMsg(null), 5000);
+    } finally {
+      setSyncLoading(false);
+    }
   };
 
   const handlePostVoucher = async (e) => {
@@ -242,6 +271,15 @@ export default function TallyAccounting() {
               </select>
             )}
           </div>
+          <button
+            onClick={handleSyncAll}
+            disabled={syncLoading}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-700 text-white font-bold text-[11px] hover:bg-teal-800 border-none cursor-pointer transition-all shadow-xs"
+            title="Sync all paid student rent, mess and electricity receipts into the Tally ledger"
+          >
+            <RefreshCw size={13} className={syncLoading ? 'animate-spin' : ''} />
+            {syncLoading ? 'Syncing...' : 'Sync Incomes & Rent'}
+          </button>
           <button onClick={() => window.print()} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 font-bold text-[11px] hover:bg-slate-200 cursor-pointer">
             <Printer size={13} /> Print
           </button>
@@ -263,6 +301,13 @@ export default function TallyAccounting() {
           </button>
         </div>
       </div>
+
+      {syncMsg && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2">
+          <CheckCircle2 size={15} />
+          {syncMsg}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-1.5 print:hidden">

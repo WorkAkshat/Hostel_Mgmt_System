@@ -54,6 +54,193 @@ const ensureAccountHeads = async () => {
   }
 };
 
+// Auto-sync all paid invoices and demand notes into the Tally Ledger / Vouchers
+const syncAccountingReceipts = async () => {
+  await ensureAccountHeads();
+
+  const firmNames = {
+    1: 'Rajken Enterprises',
+    2: 'Vandana Enterprises',
+    3: 'Pushpa Enterprises',
+    4: 'Harish Chandra Enterprises',
+    5: 'Ramesh Enterprises'
+  };
+
+  const drBankHead = await prisma.accountHead.findUnique({ where: { code: 'ASSET-BANK' } });
+  const crRentHead = await prisma.accountHead.findUnique({ where: { code: 'REV-HOSTEL' } });
+  const crMessHead = await prisma.accountHead.findUnique({ where: { code: 'REV-MESS' } });
+  const crElecHead = await prisma.accountHead.findUnique({ where: { code: 'REV-ELEC' } });
+
+  if (!drBankHead || !crRentHead || !crMessHead || !crElecHead) return { synced: 0 };
+
+  // 1. Sync Paid Invoices
+  const paidInvoices = await prisma.invoice.findMany({
+    where: { status: 'PAID' },
+    include: {
+      student: {
+        include: { user: true, room: true }
+      }
+    }
+  });
+
+  let syncedInvoices = 0;
+  for (const inv of paidInvoices) {
+    const voucherNo = `VCH-INV-${inv.id.substring(0, 8).toUpperCase()}`;
+    const existing = await prisma.voucher.findUnique({ where: { voucherNo } });
+    if (!existing) {
+      const floor = inv.student?.room?.floorNumber || inv.floorNumber || 1;
+      const company = inv.companyName || firmNames[floor] || 'Hari Pushp PG';
+      const studentName = inv.student?.user?.name || 'Student';
+      const rollNo = inv.student?.rollNumber || '';
+      const roomNo = inv.student?.room?.roomNumber || '';
+
+      const totalAmt = parseFloat(inv.amount) || 0;
+      let rentAmt = inv.rentAmount !== null && inv.rentAmount !== undefined ? parseFloat(inv.rentAmount) : null;
+      let messAmt = inv.messAmount !== null && inv.messAmount !== undefined ? parseFloat(inv.messAmount) : null;
+      let elecAmt = inv.electricityAmount !== null && inv.electricityAmount !== undefined ? parseFloat(inv.electricityAmount) : null;
+
+      if (rentAmt === null && messAmt === null && elecAmt === null) {
+        rentAmt = Math.max(0, totalAmt - 3000);
+        messAmt = Math.min(3000, totalAmt);
+        elecAmt = 0;
+      } else {
+        rentAmt = rentAmt || 0;
+        messAmt = messAmt || 0;
+        elecAmt = elecAmt || 0;
+      }
+
+      const vDate = inv.paidAt || inv.createdAt || new Date();
+
+      const voucher = await prisma.voucher.create({
+        data: {
+          voucherNo,
+          voucherType: 'RECEIPT',
+          date: vDate,
+          floorNumber: floor,
+          companyName: company,
+          narration: `Rent & Fee Receipt – ${studentName} (${rollNo}) – Room ${roomNo}`,
+          amount: totalAmt,
+          createdBy: 'system@hms.local'
+        }
+      });
+
+      // Debit Bank (Total)
+      await prisma.voucherEntry.create({
+        data: {
+          voucherId: voucher.id,
+          accountHeadId: drBankHead.id,
+          type: 'DEBIT',
+          amount: totalAmt
+        }
+      });
+
+      // Credit Revenue Heads
+      if (rentAmt > 0) {
+        await prisma.voucherEntry.create({
+          data: { voucherId: voucher.id, accountHeadId: crRentHead.id, type: 'CREDIT', amount: rentAmt }
+        });
+      }
+      if (messAmt > 0) {
+        await prisma.voucherEntry.create({
+          data: { voucherId: voucher.id, accountHeadId: crMessHead.id, type: 'CREDIT', amount: messAmt }
+        });
+      }
+      if (elecAmt > 0) {
+        await prisma.voucherEntry.create({
+          data: { voucherId: voucher.id, accountHeadId: crElecHead.id, type: 'CREDIT', amount: elecAmt }
+        });
+      }
+
+      syncedInvoices++;
+    }
+  }
+
+  // 2. Sync Paid Demand Notes
+  const paidDemandNotes = await prisma.demandNote.findMany({
+    where: { status: 'PAID' },
+    include: {
+      student: {
+        include: { user: true, room: true }
+      }
+    }
+  });
+
+  let syncedDemandNotes = 0;
+  for (const dn of paidDemandNotes) {
+    const voucherNo = `VCH-DN-${dn.id.substring(0, 8).toUpperCase()}`;
+    const existing = await prisma.voucher.findUnique({ where: { voucherNo } });
+    if (!existing) {
+      const floor = dn.student?.room?.floorNumber || dn.floorNumber || 1;
+      const company = dn.companyName || firmNames[floor] || 'Hari Pushp PG';
+      const studentName = dn.student?.user?.name || 'Student';
+      const rollNo = dn.student?.rollNumber || '';
+      const roomNo = dn.student?.room?.roomNumber || '';
+
+      const totalAmt = parseFloat(dn.totalAmount) || 0;
+      const rentAmt = parseFloat(dn.hostelFee) || 0;
+      const messAmt = parseFloat(dn.messFee) || 0;
+      const elecAmt = parseFloat(dn.electricityAmount) || 0;
+      const vDate = dn.paidAt || dn.createdAt || new Date();
+
+      const voucher = await prisma.voucher.create({
+        data: {
+          voucherNo,
+          voucherType: 'RECEIPT',
+          date: vDate,
+          floorNumber: floor,
+          companyName: company,
+          narration: `Demand Note Receipt (${dn.billingMonth}) – ${studentName} (${rollNo}) – Room ${roomNo}`,
+          amount: totalAmt,
+          createdBy: 'system@hms.local'
+        }
+      });
+
+      await prisma.voucherEntry.create({
+        data: { voucherId: voucher.id, accountHeadId: drBankHead.id, type: 'DEBIT', amount: totalAmt }
+      });
+
+      if (rentAmt > 0) {
+        await prisma.voucherEntry.create({
+          data: { voucherId: voucher.id, accountHeadId: crRentHead.id, type: 'CREDIT', amount: rentAmt }
+        });
+      }
+      if (messAmt > 0) {
+        await prisma.voucherEntry.create({
+          data: { voucherId: voucher.id, accountHeadId: crMessHead.id, type: 'CREDIT', amount: messAmt }
+        });
+      }
+      if (elecAmt > 0) {
+        await prisma.voucherEntry.create({
+          data: { voucherId: voucher.id, accountHeadId: crElecHead.id, type: 'CREDIT', amount: elecAmt }
+        });
+      }
+
+      syncedDemandNotes++;
+    }
+  }
+
+  return { syncedInvoices, syncedDemandNotes, totalSynced: syncedInvoices + syncedDemandNotes };
+};
+
+// @desc    Trigger explicit sync of invoices and fees to Accounting
+// @route   POST /api/v1/accounting/sync
+const syncAccounting = async (req, res) => {
+  try {
+    const stats = await syncAccountingReceipts();
+    logActivity({
+      req,
+      action: 'UPDATE',
+      module: 'ACCOUNTING',
+      description: `Synchronized accounting ledger (${stats.totalSynced} new receipts recorded)`,
+      metadata: stats
+    });
+    res.json({ message: 'Accounting ledger synchronized successfully', stats });
+  } catch (error) {
+    console.error('Error syncing accounting:', error);
+    res.status(500).json({ message: 'Failed to synchronize accounting ledger' });
+  }
+};
+
 // @desc    Get Account Heads List
 // @route   GET /api/v1/accounting/heads
 const getAccountHeads = async (req, res) => {
@@ -73,6 +260,7 @@ const getAccountHeads = async (req, res) => {
 // @route   GET /api/v1/accounting/daybook
 const getDayBook = async (req, res) => {
   try {
+    await syncAccountingReceipts();
     const floorNum = resolveFloorFilter(req);
     const where = {};
     if (floorNum !== null) {
@@ -123,6 +311,7 @@ const getDayBook = async (req, res) => {
 // @route   GET /api/v1/accounting/trial-balance
 const getTrialBalance = async (req, res) => {
   try {
+    await syncAccountingReceipts();
     const floorNum = resolveFloorFilter(req);
     const where = {};
     if (floorNum !== null) {
@@ -185,6 +374,7 @@ const getTrialBalance = async (req, res) => {
 // @route   GET /api/v1/accounting/profit-loss
 const getProfitLoss = async (req, res) => {
   try {
+    await syncAccountingReceipts();
     const floorNum = resolveFloorFilter(req);
     const where = {};
     if (floorNum !== null) {
@@ -233,6 +423,7 @@ const getProfitLoss = async (req, res) => {
 // @route   GET /api/v1/accounting/balance-sheet
 const getBalanceSheet = async (req, res) => {
   try {
+    await syncAccountingReceipts();
     const floorNum = resolveFloorFilter(req);
     const where = {};
     if (floorNum !== null) {
@@ -284,14 +475,20 @@ const getBalanceSheet = async (req, res) => {
   }
 };
 
-// @desc    Student-Wise General Ledger
+// @desc    Student-Wise General Ledger (Invoices + Demand Notes + Receipts)
 // @route   GET /api/v1/accounting/student-ledger/:studentId
 const getStudentLedger = async (req, res) => {
   const { studentId } = req.params;
   try {
+    await syncAccountingReceipts();
     const student = await prisma.student.findUnique({
       where: { id: studentId },
-      include: { user: true, room: true, demandNotes: true }
+      include: {
+        user: true,
+        room: true,
+        demandNotes: { orderBy: { createdAt: 'asc' } },
+        invoices: { orderBy: { createdAt: 'asc' } }
+      }
     });
 
     if (!student) {
@@ -300,25 +497,60 @@ const getStudentLedger = async (req, res) => {
 
     const entries = [];
 
-    // Demand notes as Debit (Dr) entries — charge to student
-    student.demandNotes.forEach(dn => {
+    // 1. Invoices (Debit for raised bill; Credit for receipt when paid)
+    (student.invoices || []).forEach(inv => {
+      const invNo = `#INV-${String(inv.id).split('-')[0].toUpperCase()}`;
+      const rent = inv.rentAmount != null ? `Rent ₹${inv.rentAmount}` : '';
+      const mess = inv.messAmount != null ? `Mess ₹${inv.messAmount}` : '';
+      const elec = inv.electricityAmount != null && inv.electricityAmount > 0 ? `Elec ₹${inv.electricityAmount}` : '';
+      const breakdownStr = [rent, mess, elec].filter(Boolean).join(' + ');
+
+      // Debit entry for invoice raised
+      entries.push({
+        date: inv.createdAt,
+        voucherNo: invNo,
+        particulars: `Fee Invoice Raised – ${invNo}${breakdownStr ? ` (${breakdownStr})` : ''}`,
+        debit: parseFloat(inv.amount) || 0,
+        credit: 0,
+        type: 'INVOICE',
+        status: inv.status
+      });
+
+      // Credit entry for payment if paid
+      if (inv.status === 'PAID' && inv.paidAt) {
+        entries.push({
+          date: inv.paidAt,
+          voucherNo: `REC-${String(inv.id).split('-')[0].toUpperCase()}`,
+          particulars: `Payment Received against ${invNo}`,
+          debit: 0,
+          credit: parseFloat(inv.amount) || 0,
+          type: 'RECEIPT',
+          status: 'PAID'
+        });
+      }
+    });
+
+    // 2. Demand notes as Debit (Dr) entries and Receipts as Credit (Cr)
+    (student.demandNotes || []).forEach(dn => {
       entries.push({
         date: dn.createdAt,
         voucherNo: `DN-${dn.billingMonth}`,
         particulars: `Demand Note – ${dn.billingMonth} (Hostel ₹${dn.hostelFee || 0} + Elec ₹${dn.electricityAmount || 0} + Mess ₹${dn.messFee || 0})`,
-        debit: dn.totalAmount,
+        debit: parseFloat(dn.totalAmount) || 0,
         credit: 0,
-        type: 'DEMAND_NOTE'
+        type: 'DEMAND_NOTE',
+        status: dn.status
       });
 
       if (dn.status === 'PAID' && dn.paidAt) {
         entries.push({
           date: dn.paidAt,
           voucherNo: `REC-${dn.billingMonth}`,
-          particulars: `Payment Received – ${dn.billingMonth}`,
+          particulars: `Payment Received – Demand Note ${dn.billingMonth}`,
           debit: 0,
-          credit: dn.totalAmount,
-          type: 'RECEIPT'
+          credit: parseFloat(dn.totalAmount) || 0,
+          type: 'RECEIPT',
+          status: 'PAID'
         });
       }
     });
@@ -347,8 +579,10 @@ const getStudentLedger = async (req, res) => {
         id: student.id,
         name: student.user.name,
         email: student.user.email,
+        phoneNumber: student.phoneNumber,
         rollNumber: student.rollNumber,
         roomNumber: student.room?.roomNumber || 'N/A',
+        floorNumber: student.room?.floorNumber || 'N/A',
         bedId: student.bedId || 'N/A'
       },
       ledger,
@@ -364,7 +598,7 @@ const getStudentLedger = async (req, res) => {
   }
 };
 
-// @desc    Create Voucher Entry (Receipt / Payment / Journal / Contra)
+// @desc    Create Voucher Entry (Receipt / Payment / Journal / Contra / Daily Expense)
 // @route   POST /api/v1/accounting/vouchers
 const createVoucher = async (req, res) => {
   const { voucherType, date, floorNumber, companyName, narration, amount, debitHeadCode, creditHeadCode } = req.body;
@@ -419,6 +653,7 @@ const createVoucher = async (req, res) => {
 
     logActivity({ req, action: 'CREATE', module: 'ACCOUNTING', description: `Posted ${voucherType} voucher ${newVoucher.voucherNo} — ₹${amount} — ${narration}`, targetId: newVoucher.id, targetType: 'Voucher' });
   } catch (error) {
+    console.error('Error creating voucher:', error);
     res.status(500).json({ message: 'Failed to create voucher' });
   }
 };
@@ -430,5 +665,7 @@ module.exports = {
   getProfitLoss,
   getBalanceSheet,
   getStudentLedger,
-  createVoucher
+  createVoucher,
+  syncAccounting,
+  syncAccountingReceipts
 };

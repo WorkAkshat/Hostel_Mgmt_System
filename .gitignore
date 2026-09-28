@@ -55,12 +55,15 @@ firebase-service-account.json
 hari-pushp-pg-firebase-adminsdk-fbsvc-c5ebab804a.json
 google-services.json
 
-# ─── Database files ──────────────────────────────────────────
 # SQLite dev DB — not needed in git (use seed.js to recreate)
 backend/prisma/dev.db
 backend/prisma/dev.db-journal
 *.db
 *.db-journal
+backend/backups/*.json
+backend/backups/*.sql
+backend/backups/*.dump
+*.dump
 
 # ─── Android signing keys ────────────────────────────────────
 *.keystore

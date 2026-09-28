@@ -149,23 +149,30 @@ const getFloorReport = async (req, res) => {
   const month    = req.query.month || new Date().toISOString().slice(0, 7); // "YYYY-MM"
 
   try {
+    const { syncAccountingReceipts } = require('./accountingController');
+    await syncAccountingReceipts().catch(() => {});
+
     const floor = await prisma.floor.findUnique({ where: { floorNumber: floorNum } });
     if (!floor) return res.status(404).json({ message: `Floor ${floorNum} not found.` });
+
+    const monthStart = new Date(`${month}-01T00:00:00.000Z`);
+    const nextMonth = new Date(monthStart);
+    nextMonth.setMonth(nextMonth.getMonth() + 1);
 
     const rooms = await prisma.room.findMany({
       where: { floorNumber: floorNum },
       include: {
         students: {
           include: {
-            user: { select: { name: true } },
+            user: { select: { name: true, email: true } },
             invoices: {
               where: {
                 createdAt: {
-                  gte: new Date(`${month}-01`),
-                  lt:  new Date(new Date(`${month}-01`).setMonth(new Date(`${month}-01`).getMonth() + 1)),
+                  gte: monthStart,
+                  lt: nextMonth,
                 },
               },
-              select: { amount: true, status: true, paidAt: true },
+              select: { id: true, amount: true, status: true, paidAt: true, rentAmount: true, messAmount: true, electricityAmount: true },
             },
           },
         },
@@ -185,48 +192,68 @@ const getFloorReport = async (req, res) => {
     const studentRows     = [];
 
     for (const room of rooms) {
-      const hostelFeePerStudent = FEE[room.sharingType] ?? FEE[2];
-      const electricityPerRoom  = room.electricityReadings.reduce((s, r) => s + r.totalAmount, 0);
+      const defaultRent = (FEE[room.sharingType] ?? FEE[2]) - MESS_FEE;
+      const electricityPerRoom = room.electricityReadings.reduce((s, r) => s + r.totalAmount, 0);
       const electricityPerStudent = room.students.length > 0 ? electricityPerRoom / room.students.length : 0;
 
       for (const student of room.students) {
         totalStudents++;
-        const invoiceTotal   = student.invoices.reduce((s, i) => s + i.amount, 0);
-        const paidTotal      = student.invoices.filter((i) => i.status === 'PAID').reduce((s, i) => s + i.amount, 0);
-        const pendingTotal   = invoiceTotal - paidTotal;
+        const latestInvoice = student.invoices[0] || null;
 
-        totalHostelFee   += hostelFeePerStudent;
-        totalMessFee     += MESS_FEE;
-        totalElectricity += electricityPerStudent;
+        let rentAmt = latestInvoice?.rentAmount != null ? latestInvoice.rentAmount : defaultRent;
+        let messAmt = latestInvoice?.messAmount != null ? latestInvoice.messAmount : MESS_FEE;
+        let elecAmt = latestInvoice?.electricityAmount != null ? latestInvoice.electricityAmount : electricityPerStudent;
+        let studentTotal = latestInvoice ? latestInvoice.amount : (rentAmt + messAmt + elecAmt);
+
+        const isPaid = latestInvoice?.status === 'PAID';
+        const paidTotal = isPaid ? studentTotal : 0;
+        const pendingTotal = isPaid ? 0 : studentTotal;
+
+        totalHostelFee   += rentAmt;
+        totalMessFee     += messAmt;
+        totalElectricity += elecAmt;
         totalCollected   += paidTotal;
         totalPending     += pendingTotal;
 
         studentRows.push({
+          id:           student.id,
           name:         student.user.name,
+          email:        student.user.email,
+          rollNumber:   student.rollNumber,
           roomNumber:   room.roomNumber,
           sharingType:  sharingLabel(room.sharingType),
-          hostelFee:    hostelFeePerStudent,
-          messFee:      MESS_FEE,
-          electricity:  Math.round(electricityPerStudent),
-          total:        hostelFeePerStudent + MESS_FEE + Math.round(electricityPerStudent),
+          hostelFee:    Math.round(rentAmt),
+          messFee:      Math.round(messAmt),
+          electricity:  Math.round(elecAmt),
+          total:        Math.round(studentTotal),
           paid:         Math.round(paidTotal),
           pending:      Math.round(pendingTotal),
+          status:       latestInvoice ? latestInvoice.status : 'PENDING_INVOICE',
+          invoiceId:    latestInvoice ? latestInvoice.id : null
         });
       }
     }
 
     res.json({
-      floor:       { floorNumber: floorNum, companyName: floor.companyName, hostelName: floor.hostelName },
+      floor: {
+        floorNumber: floorNum,
+        companyName: floor.companyName,
+        hostelName: floor.hostelName,
+        shortName: floor.shortName,
+        floorLabel: floor.floorLabel
+      },
       month,
       summary: {
         totalStudents,
-        totalHostelFee,
-        totalMessFee,
+        totalHostelFee:    Math.round(totalHostelFee),
+        totalMessFee:      Math.round(totalMessFee),
         totalElectricity:  Math.round(totalElectricity),
         grandTotal:        Math.round(totalHostelFee + totalMessFee + totalElectricity),
         totalCollected:    Math.round(totalCollected),
         totalPending:      Math.round(totalPending),
-        collectionRate:    totalStudents > 0 ? Math.round((totalCollected / (totalHostelFee + totalMessFee + totalElectricity)) * 100) : 0,
+        collectionRate:    (totalHostelFee + totalMessFee + totalElectricity) > 0
+          ? Math.round((totalCollected / (totalHostelFee + totalMessFee + totalElectricity)) * 100)
+          : 0,
       },
       students: studentRows,
     });
@@ -243,6 +270,9 @@ const getConsolidatedReport = async (req, res) => {
   const month = req.query.month || new Date().toISOString().slice(0, 7);
 
   try {
+    const { syncAccountingReceipts } = require('./accountingController');
+    await syncAccountingReceipts().catch(() => {});
+
     const floors = await prisma.floor.findMany({ orderBy: { floorNumber: 'asc' } });
     const floorReports = [];
     let grandTotal = { totalStudents: 0, hostelFee: 0, messFee: 0, electricity: 0, total: 0, collected: 0, pending: 0 };
@@ -269,8 +299,8 @@ const getConsolidatedReport = async (req, res) => {
       }
     }
 
-    // Meenakshi Catering summary (₹3,000 × all students)
-    const meenakshiTotal = grandTotal.totalStudents * MESS_FEE;
+    // Meenakshi Catering summary (₹3,000 × all students or total mess fee)
+    const meenakshiTotal = grandTotal.messFee || (grandTotal.totalStudents * MESS_FEE);
 
     res.json({
       month,

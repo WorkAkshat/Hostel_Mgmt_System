@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  BedDouble, CalendarDays, Check, IdCard, Mail, Pencil, Phone, PhoneCall, Printer, ReceiptText, Trash2, Wrench, X,
+  BedDouble, CalendarDays, Check, IdCard, Mail, Pencil, Phone, PhoneCall,
+  Printer, ReceiptText, Trash2, Wrench, X, GraduationCap, MapPin,
 } from 'lucide-react';
 import Drawer from '../../components/ui/Drawer';
 import Avatar from '../../components/ui/Avatar';
@@ -29,7 +30,7 @@ const Row = ({ label, children }) => (
 
 const Section = ({ title, children }) => (
   <section className="mt-6">
-    <h4 className="text-[12px] font-bold text-brand-700 tracking-wide m-0 mb-1">{title}</h4>
+    <h4 className="text-[11px] font-bold text-brand-700 tracking-widest uppercase m-0 mb-1">{title}</h4>
     <dl className="m-0">{children}</dl>
   </section>
 );
@@ -92,9 +93,30 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview 
   const pending = detailsFailed ? '—' : '…';
 
   const stats = [
-    { icon: ReceiptText, label: 'Fees due', value: details ? `₹${dues.toLocaleString('en-IN')}` : pending, sub: details ? `${unpaid.length} unpaid` : '', tone: dues ? 'bg-cream-100 text-sun-900' : 'bg-mint-50 text-[var(--text-primary)]' },
-    { icon: CalendarDays, label: 'Leaves', value: details ? details.leaveRequests?.length ?? 0 : pending, sub: details ? `${pendingLeaves} pending` : '', tone: 'bg-lilac-50 text-[var(--text-primary)]' },
-    { icon: Wrench, label: 'Complaints', value: details ? details.complaints?.length ?? 0 : pending, sub: details ? `${openComplaints} open` : '', tone: 'bg-peach-50 text-[var(--text-primary)]' },
+    {
+      icon: ReceiptText,
+      label: 'Fees due',
+      value: details ? `₹${dues.toLocaleString('en-IN')}` : pending,
+      sub: details ? `${unpaid.length} unpaid` : '',
+      bg: dues ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 'linear-gradient(135deg, #f0f8f7, #dcefec)',
+      textColor: dues ? '#92400e' : '#246460',
+    },
+    {
+      icon: CalendarDays,
+      label: 'Leaves',
+      value: details ? details.leaveRequests?.length ?? 0 : pending,
+      sub: details ? `${pendingLeaves} pending` : '',
+      bg: 'linear-gradient(135deg, #f6f4fc, #eae5f8)',
+      textColor: '#5b4a9a',
+    },
+    {
+      icon: Wrench,
+      label: 'Complaints',
+      value: details ? details.complaints?.length ?? 0 : pending,
+      sub: details ? `${openComplaints} open` : '',
+      bg: 'linear-gradient(135deg, #fff6f0, #fde7da)',
+      textColor: '#9c4623',
+    },
   ];
 
   return (
@@ -103,20 +125,76 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview 
       onClose={onClose}
       title={s?.user?.name || 'Student'}
       header={s && (
-        <div className="flex items-center gap-3.5">
-          <Avatar name={s.user?.name} src={s.user?.avatar || s.profilePic} size={56} rounded="rounded-2xl" onPreview={onPreview} />
-          <div className="min-w-0">
-            <h3 className="text-[18px] font-bold m-0 truncate">{s.user?.name}</h3>
-            <p className="text-[13px] text-[var(--text-secondary)] m-0 truncate">{s.rollNumber}</p>
-            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
-              <span className={`badge ${status.badge}`}>{status.label}</span>
-              {room ? (
-                <span className="badge badge-info"><BedDouble size={12} /> Room {room.roomNumber}</span>
-              ) : (
-                <span className="badge bg-[var(--bg-tertiary)] text-[var(--text-secondary)]">No room</span>
-              )}
+        /* ─── Premium gradient profile banner ─── */
+        <div
+          className="relative overflow-hidden rounded-2xl p-5 mb-1"
+          style={{ background: 'linear-gradient(135deg, #246460 0%, #2b7a74 50%, #3a918a 100%)' }}
+        >
+          {/* Decorative blobs */}
+          <div className="pointer-events-none absolute -top-8 -right-8 w-36 h-36 rounded-full opacity-[0.14]"
+            style={{ background: 'radial-gradient(circle, #fff 0%, transparent 70%)' }} />
+          <div className="pointer-events-none absolute bottom-0 left-4 w-24 h-24 rounded-full opacity-[0.08]"
+            style={{ background: 'radial-gradient(circle, #fff 0%, transparent 70%)' }} />
+
+          <div className="relative flex items-center gap-4">
+            <div className="ring-2 ring-white/30 rounded-2xl shrink-0">
+              <Avatar
+                name={s.user?.name}
+                src={s.user?.avatar || s.profilePic}
+                size={60}
+                rounded="rounded-2xl"
+                onPreview={onPreview}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-[18px] font-bold m-0 truncate" style={{ color: '#fff' }}>
+                {s.user?.name}
+              </h3>
+              <p className="text-[13px] m-0 mt-0.5 truncate font-mono" style={{ color: 'rgba(255,255,255,0.72)' }}>
+                {s.rollNumber}
+              </p>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {/* Status badge — white pill */}
+                <span
+                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+                  style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}
+                >
+                  {status?.label}
+                </span>
+                {room ? (
+                  <span
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+                    style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}
+                  >
+                    <BedDouble size={11} /> Room {room.roomNumber}
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold"
+                    style={{ background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.65)', border: '1px solid rgba(255,255,255,0.2)' }}
+                  >
+                    No room
+                  </span>
+                )}
+              </div>
             </div>
           </div>
+
+          {/* Quick info row */}
+          {(s.coachingCollege || s.user?.email) && (
+            <div className="relative flex flex-wrap gap-3 mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.18)' }}>
+              {s.coachingCollege && (
+                <span className="flex items-center gap-1.5 text-[12px]" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                  <GraduationCap size={13} style={{ color: 'rgba(255,255,255,0.6)' }} /> {s.coachingCollege}
+                </span>
+              )}
+              {s.user?.email && (
+                <span className="flex items-center gap-1.5 text-[12px]" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                  <Mail size={13} style={{ color: 'rgba(255,255,255,0.6)' }} /> {s.user.email}
+                </span>
+              )}
+            </div>
+          )}
         </div>
       )}
       footer={s && (
@@ -140,32 +218,47 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview 
     >
       {s && (
         <>
-          {/* Quick contact */}
+          {/* ─── Quick contact ─── */}
           <div className="grid grid-cols-3 gap-2">
-            <a href={s.phoneNumber ? `tel:${s.phoneNumber}` : undefined} className="flex flex-col items-center gap-1 py-3 rounded-xl bg-mint-50 hover:bg-mint-100 text-brand-700 text-[12px] font-semibold transition-colors">
-              <PhoneCall size={18} /> Call student
+            <a
+              href={s.phoneNumber ? `tel:${s.phoneNumber}` : undefined}
+              className="flex flex-col items-center gap-1.5 py-3 rounded-xl text-[12px] font-semibold transition-colors"
+              style={{ background: 'linear-gradient(135deg, #f0f8f7, #dcefec)', color: '#246460' }}
+            >
+              <PhoneCall size={17} /> Call student
             </a>
-            <a href={s.parentContact ? `tel:${s.parentContact}` : undefined} className="flex flex-col items-center gap-1 py-3 rounded-xl bg-mint-50 hover:bg-mint-100 text-brand-700 text-[12px] font-semibold transition-colors">
-              <PhoneCall size={18} /> Call parent
+            <a
+              href={s.parentContact ? `tel:${s.parentContact}` : undefined}
+              className="flex flex-col items-center gap-1.5 py-3 rounded-xl text-[12px] font-semibold transition-colors"
+              style={{ background: 'linear-gradient(135deg, #f0f8f7, #dcefec)', color: '#246460' }}
+            >
+              <PhoneCall size={17} /> Call parent
             </a>
-            <a href={s.user?.email ? `mailto:${s.user.email}` : undefined} className="flex flex-col items-center gap-1 py-3 rounded-xl bg-mint-50 hover:bg-mint-100 text-brand-700 text-[12px] font-semibold transition-colors">
-              <Mail size={18} /> Email
+            <a
+              href={s.user?.email ? `mailto:${s.user.email}` : undefined}
+              className="flex flex-col items-center gap-1.5 py-3 rounded-xl text-[12px] font-semibold transition-colors"
+              style={{ background: 'linear-gradient(135deg, #f0f8f7, #dcefec)', color: '#246460' }}
+            >
+              <Mail size={17} /> Email
             </a>
           </div>
 
-          {/* At a glance */}
+          {/* ─── At a glance stats ─── */}
           <div className="grid grid-cols-3 gap-2 mt-3">
-            {stats.map(({ icon: Icon, label, value, sub, tone }, i) => (
+            {stats.map(({ icon: Icon, label, value, sub, bg, textColor }, i) => (
               <motion.div
                 key={label}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.05 * i }}
-                className={`rounded-xl p-3 ${tone}`}
+                className="rounded-xl p-3"
+                style={{ background: bg }}
               >
-                <div className="flex items-center gap-1.5 text-[12px] text-[var(--text-secondary)]"><Icon size={13} /> {label}</div>
-                <div className="text-[18px] font-bold mt-1">{value}</div>
-                <div className="text-[11px] text-[var(--text-tertiary)]">{sub}</div>
+                <div className="flex items-center gap-1.5 text-[11px] font-medium mb-1" style={{ color: textColor, opacity: 0.75 }}>
+                  <Icon size={12} /> {label}
+                </div>
+                <div className="text-[20px] font-bold leading-none" style={{ color: textColor }}>{value}</div>
+                <div className="text-[11px] mt-1" style={{ color: textColor, opacity: 0.65 }}>{sub}</div>
               </motion.div>
             ))}
           </div>
@@ -195,18 +288,22 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview 
             <Row label="Marital status">{s.maritalStatus}</Row>
             <Row label="College / company">{s.coachingCollege}</Row>
             <Row label="Course">{s.course}</Row>
-            <Row label="Address">{[s.permanentAddress, s.state, s.pincode].filter(Boolean).join(', ')}</Row>
+            <Row label="Address">
+              {[s.permanentAddress, s.state, s.pincode].filter(Boolean).join(', ')}
+            </Row>
           </Section>
 
+          {/* ─── ID documents ─── */}
           <section className="mt-6">
-            <h4 className="text-[12px] font-bold text-brand-700 tracking-wide m-0 mb-2">ID documents</h4>
+            <h4 className="text-[11px] font-bold text-brand-700 tracking-widest uppercase m-0 mb-2">ID documents</h4>
             {documents.length === 0 ? (
               <p className="text-[13px] text-[var(--text-tertiary)] m-0 py-2">No documents submitted yet. Students add these from the mobile app.</p>
             ) : (
               <ul className="list-none m-0 p-0 flex flex-col gap-2">
                 {documents.map((doc) => (
                   <li key={doc.id} className="flex items-center gap-3 p-3 rounded-xl border border-[var(--border-color)]">
-                    <span className="w-9 h-9 rounded-lg bg-lilac-50 text-lilac-700 flex items-center justify-center shrink-0">
+                    <span className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                      style={{ background: 'linear-gradient(135deg, #f6f4fc, #eae5f8)', color: '#5b4a9a' }}>
                       <IdCard size={17} />
                     </span>
                     <span className="flex-1 min-w-0">

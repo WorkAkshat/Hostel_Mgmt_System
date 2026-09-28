@@ -16,10 +16,10 @@ const billingEntity = (room) => {
 // @route   POST /api/invoices
 // @access  Private (Admin/Warden only)
 const createInvoice = async (req, res) => {
-  const { studentRollNumber, amount, dueDate } = req.body;
+  const { studentRollNumber, amount, dueDate, rentAmount, messAmount, electricityAmount } = req.body;
 
-  if (!studentRollNumber || !amount || !dueDate) {
-    return res.status(400).json({ message: 'Student roll number, amount, and due date are required' });
+  if (!studentRollNumber || !dueDate) {
+    return res.status(400).json({ message: 'Student roll number and due date are required' });
   }
 
   try {
@@ -32,10 +32,39 @@ const createInvoice = async (req, res) => {
       return res.status(404).json({ message: 'Student not found with that roll number' });
     }
 
+    const sharing = student.room?.sharingType || student.room?.capacity || 2;
+    const defaultRent = FEE_STRUCTURE.hostel[sharing] || 11000;
+    const defaultMess = FEE_STRUCTURE.mess || 3000;
+
+    let finalRent = rentAmount !== undefined && rentAmount !== null && rentAmount !== '' ? parseFloat(rentAmount) : null;
+    let finalMess = messAmount !== undefined && messAmount !== null && messAmount !== '' ? parseFloat(messAmount) : null;
+    let finalElec = electricityAmount !== undefined && electricityAmount !== null && electricityAmount !== '' ? parseFloat(electricityAmount) : 0;
+
+    let finalTotal = amount ? parseFloat(amount) : 0;
+
+    if (finalRent !== null || finalMess !== null || finalElec !== null) {
+      finalRent = finalRent ?? defaultRent;
+      finalMess = finalMess ?? defaultMess;
+      finalElec = finalElec ?? 0;
+      finalTotal = finalRent + finalMess + finalElec;
+    } else if (finalTotal > 0) {
+      finalRent = defaultRent;
+      finalMess = defaultMess;
+      finalElec = Math.max(0, finalTotal - finalRent - finalMess);
+    } else {
+      finalRent = defaultRent;
+      finalMess = defaultMess;
+      finalElec = 0;
+      finalTotal = finalRent + finalMess;
+    }
+
     const invoice = await prisma.invoice.create({
       data: {
         studentId: student.id,
-        amount: parseFloat(amount),
+        amount: finalTotal,
+        rentAmount: finalRent,
+        messAmount: finalMess,
+        electricityAmount: finalElec,
         dueDate: new Date(dueDate),
         status: 'UNPAID',
         ...billingEntity(student.room)
@@ -43,11 +72,8 @@ const createInvoice = async (req, res) => {
       include: {
         student: {
           include: {
-            user: {
-              select: {
-                name: true
-              }
-            }
+            user: { select: { name: true } },
+            room: true
           }
         }
       }
@@ -55,7 +81,7 @@ const createInvoice = async (req, res) => {
 
     res.status(201).json(invoice);
 
-    logActivity({ req, action: 'CREATE', module: 'FEE', description: `Raised invoice of ₹${invoice.amount} for ${invoice.student.user.name} (${studentRollNumber})`, targetId: invoice.id, targetType: 'Invoice' });
+    logActivity({ req, action: 'CREATE', module: 'FEE', description: `Raised invoice of ₹${invoice.amount} (Rent: ₹${finalRent}, Mess: ₹${finalMess}, Elec: ₹${finalElec}) for ${invoice.student.user.name} (${studentRollNumber})`, targetId: invoice.id, targetType: 'Invoice' });
   } catch (error) {
     console.error('Error generating invoice:', error);
     res.status(500).json({ message: 'Server error generating fee invoice' });
@@ -117,25 +143,36 @@ const getMyInvoices = async (req, res) => {
   }
 };
 
-// @desc    Record a payment received against an invoice (Warden only)
+// @desc    Record a payment against an invoice (Admin records cash; Student pays online)
 // @route   PUT /api/invoices/:id/pay
-// @access  Private (Admin/Warden only)
+// @access  Private (Admin or Student — student can only pay their own)
 const payInvoice = async (req, res) => {
   const { id } = req.params;
-  const { method = 'CASH', reference = '', paidOn } = req.body || {};
+  const isAdmin = req.user.role === 'ADMIN';
+  const method = req.body?.method || (isAdmin ? 'CASH' : 'ONLINE');
+  const { reference = '', paidOn } = req.body || {};
 
-  if (!PAYMENT_METHODS.includes(method)) {
-    return res.status(400).json({ message: `Payment method must be one of ${PAYMENT_METHODS.join(', ')}` });
+  const validMethods = [...PAYMENT_METHODS, 'ONLINE', 'CARD'];
+  if (!validMethods.includes(method)) {
+    return res.status(400).json({ message: `Payment method must be one of ${validMethods.join(', ')}` });
   }
 
   try {
     const invoice = await prisma.invoice.findUnique({
       where: { id },
-      include: { student: { include: { user: { select: { name: true } } } } }
+      include: { student: { include: { user: { select: { name: true, id: true } } } } }
     });
 
     if (!invoice) {
       return res.status(404).json({ message: 'Invoice not found' });
+    }
+
+    // Students can only pay their own invoice
+    if (!isAdmin) {
+      const student = await prisma.student.findUnique({ where: { userId: req.user.id } });
+      if (!student || invoice.studentId !== student.id) {
+        return res.status(403).json({ message: 'You can only pay your own invoices' });
+      }
     }
 
     if (invoice.status === 'PAID') {
@@ -143,7 +180,7 @@ const payInvoice = async (req, res) => {
     }
 
     const paidAt = paidOn ? new Date(paidOn) : new Date();
-    if (Number.isNaN(paidAt.getTime()) || paidAt > new Date()) {
+    if (Number.isNaN(paidAt.getTime()) || (isAdmin && paidAt > new Date())) {
       return res.status(400).json({ message: 'Payment date cannot be in the future' });
     }
 
@@ -153,6 +190,10 @@ const payInvoice = async (req, res) => {
     });
 
     res.json(updatedInvoice);
+
+    // Sync to Tally ledger immediately
+    const { syncAccountingReceipts } = require('./accountingController');
+    syncAccountingReceipts().catch(err => console.error('Failed to auto-sync invoice payment voucher:', err));
 
     const ref = String(reference).trim();
     logActivity({
@@ -223,12 +264,17 @@ const generateMonthlyBillingRun = async () => {
 
     // Standard monthly fee: room rent for the sharing type + catering
     const sharing = student.room.sharingType || student.room.capacity;
-    const billingAmount = (FEE_STRUCTURE.hostel[sharing] || FEE_STRUCTURE.hostel[2]) + FEE_STRUCTURE.mess;
+    const roomRent = (FEE_STRUCTURE.hostel[sharing] || FEE_STRUCTURE.hostel[2]);
+    const messFee = FEE_STRUCTURE.mess;
+    const billingAmount = roomRent + messFee;
 
     await prisma.invoice.create({
       data: {
         studentId: student.id,
         amount: billingAmount,
+        rentAmount: roomRent,
+        messAmount: messFee,
+        electricityAmount: 0,
         dueDate,
         status: 'UNPAID',
         ...billingEntity(student.room)
@@ -258,11 +304,83 @@ const triggerAutoMonthlyInvoices = async (req, res) => {
   }
 };
 
+// @desc    Update an invoice's components (rent, mess, electricity) – Admin only
+// @route   PUT /api/invoices/:id
+// @access  Private (Admin only)
+const updateInvoice = async (req, res) => {
+  const { id } = req.params;
+  const { rentAmount, messAmount, electricityAmount, dueDate } = req.body || {};
+
+  try {
+    const invoice = await prisma.invoice.findUnique({
+      where: { id },
+      include: { student: { include: { user: { select: { name: true } } } } }
+    });
+
+    if (!invoice) {
+      return res.status(404).json({ message: 'Invoice not found' });
+    }
+
+    if (invoice.status === 'PAID') {
+      return res.status(400).json({ message: 'Cannot edit a paid invoice' });
+    }
+
+    const data = {};
+
+    // Accept individual components and recompute total
+    const rent = rentAmount !== undefined ? parseFloat(rentAmount) : null;
+    const mess = messAmount !== undefined ? parseFloat(messAmount) : null;
+    const elec = electricityAmount !== undefined ? parseFloat(electricityAmount) : null;
+
+    if (rent !== null && !isNaN(rent)) data.rentAmount = rent;
+    if (mess !== null && !isNaN(mess)) data.messAmount = mess;
+    if (elec !== null && !isNaN(elec)) data.electricityAmount = elec;
+
+    // Recompute total from components (use existing value if component not updated)
+    const effectiveRent = data.rentAmount ?? invoice.rentAmount ?? 0;
+    const effectiveMess = data.messAmount ?? invoice.messAmount ?? 0;
+    const effectiveElec = data.electricityAmount ?? invoice.electricityAmount ?? 0;
+    const newTotal = effectiveRent + effectiveMess + effectiveElec;
+    if (newTotal > 0) data.amount = newTotal;
+
+    if (dueDate) data.dueDate = new Date(dueDate);
+
+    const updated = await prisma.invoice.update({
+      where: { id },
+      data,
+      include: {
+        student: {
+          include: {
+            user: { select: { name: true } },
+            room: true
+          }
+        }
+      }
+    });
+
+    logActivity({
+      req,
+      action: 'UPDATE',
+      module: 'FEE',
+      description: `Edited invoice for ${invoice.student.user.name}: Rent ₹${data.rentAmount ?? '-'}, Mess ₹${data.messAmount ?? '-'}, Elec ₹${data.electricityAmount ?? '-'}, Total ₹${updated.amount}`,
+      targetId: id,
+      targetType: 'Invoice'
+    });
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Error updating invoice:', error);
+    res.status(500).json({ message: 'Server error updating invoice' });
+  }
+};
+
 module.exports = {
   createInvoice,
   getAllInvoices,
   getMyInvoices,
   payInvoice,
+  updateInvoice,
   generateMonthlyBillingRun,
   triggerAutoMonthlyInvoices
 };
+

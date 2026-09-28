@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  BedDouble, ChevronRight, Download, LayoutGrid, List, Pencil, Phone, RefreshCw, Search, TriangleAlert, UserPlus, Users, X,
+  BedDouble, ChevronRight, Download, LayoutGrid, List, Pencil, Phone,
+  RefreshCw, Search, TriangleAlert, UserPlus, Users, X, UserCheck,
+  UserX,
 } from 'lucide-react';
 import { students as studentsApi, rooms as roomsApi } from '../utils/api';
 import StudentAdmissionFormPrint from '../components/StudentAdmissionFormPrint';
@@ -60,6 +62,25 @@ const RoomLabel = ({ room }) =>
     <span className="text-[13px] text-[var(--text-tertiary)]">No room</span>
   );
 
+/* ─── Hero banner stat pill ─── */
+const HeroStat = ({ icon: Icon, label, value, tone }) => (
+  <div
+    className="flex items-center gap-3 rounded-2xl px-4 py-3"
+    style={{ background: 'rgba(255,255,255,0.13)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.22)' }}
+  >
+    <span
+      className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+      style={{ background: 'rgba(255,255,255,0.22)' }}
+    >
+      <Icon size={17} style={{ color: '#fff' }} />
+    </span>
+    <div>
+      <div className="text-[20px] font-bold leading-none" style={{ color: '#fff' }}>{value}</div>
+      <div className="text-[11px] font-medium mt-0.5" style={{ color: 'rgba(255,255,255,0.78)' }}>{label}</div>
+    </div>
+  </div>
+);
+
 const Students = () => {
   const toast = useToast();
   const location = useLocation();
@@ -95,9 +116,7 @@ const Students = () => {
     }
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); }, [load]);
 
   // Dashboard "Add student" quick action lands here
   useEffect(() => {
@@ -203,25 +222,72 @@ const Students = () => {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="page-title">Students</h1>
-          <p className="page-subtitle">
-            {loading ? 'Loading residents…' : `${counts.all} residents · ${counts.CHECKED_IN} checked in · ${counts.unallocated} without a room`}
-          </p>
+
+      {/* ─── Premium gradient hero banner ─── */}
+      <div
+        className="relative overflow-hidden rounded-[var(--border-radius-card)] p-6 sm:p-8"
+        style={{ background: 'linear-gradient(135deg, #246460 0%, #2b7a74 45%, #3a918a 100%)' }}
+      >
+        {/* decorative blobs */}
+        <div className="pointer-events-none absolute -top-10 -right-10 w-52 h-52 rounded-full opacity-[0.12]"
+          style={{ background: 'radial-gradient(circle, #fff 0%, transparent 70%)' }} />
+        <div className="pointer-events-none absolute bottom-0 left-0 w-40 h-40 rounded-full opacity-[0.08]"
+          style={{ background: 'radial-gradient(circle, #fff 0%, transparent 70%)' }} />
+
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div>
+            <div className="flex items-center gap-2.5 mb-1">
+              <span
+                className="w-9 h-9 rounded-xl flex items-center justify-center"
+                style={{ background: 'rgba(255,255,255,0.18)' }}
+              >
+                <Users size={18} style={{ color: '#fff' }} />
+              </span>
+              <h1 className="text-[24px] font-bold m-0 leading-none" style={{ color: '#fff' }}>Students</h1>
+            </div>
+            <p className="m-0 text-[13px] font-medium mt-2" style={{ color: 'rgba(255,255,255,0.75)' }}>
+              {loading
+                ? 'Loading residents…'
+                : `${counts.all} total residents · ${counts.unallocated} without a room`}
+            </p>
+          </div>
+
+          {/* Hero stats row */}
+          {!loading && (
+            <div className="flex flex-wrap gap-2.5">
+              <HeroStat icon={UserCheck} label="Checked in" value={counts.CHECKED_IN} />
+              <HeroStat icon={UserX} label="Checked out" value={counts.CHECKED_OUT} />
+              <HeroStat icon={BedDouble} label="No room" value={counts.unallocated} />
+            </div>
+          )}
         </div>
-        <div className="flex gap-2">
-          <button className="btn-secondary" onClick={exportCsv} disabled={!filtered.length} title="Download the current list as CSV">
-            <Download size={16} /> <span className="hidden sm:inline">Export</span>
+
+        {/* Action buttons inside banner */}
+        <div className="relative flex gap-2.5 mt-5">
+          <button
+            className="h-10 px-4 rounded-[var(--border-radius-btn)] text-[13px] font-semibold flex items-center gap-2 cursor-pointer border-none transition-all"
+            style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', backdropFilter: 'blur(4px)', border: '1px solid rgba(255,255,255,0.25)' }}
+            onClick={exportCsv}
+            disabled={!filtered.length}
+            title="Download the current list as CSV"
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.26)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+          >
+            <Download size={15} /> <span className="hidden sm:inline">Export CSV</span><span className="sm:hidden">Export</span>
           </button>
-          <button className="btn-primary" onClick={openAdd}>
-            <UserPlus size={17} /> Add student
+          <button
+            className="h-10 px-5 rounded-[var(--border-radius-btn)] text-[13px] font-bold flex items-center gap-2 cursor-pointer border-none transition-all"
+            style={{ background: '#fff', color: '#246460' }}
+            onClick={openAdd}
+            onMouseEnter={e => e.currentTarget.style.background = '#f0f8f7'}
+            onMouseLeave={e => e.currentTarget.style.background = '#fff'}
+          >
+            <UserPlus size={16} /> Add student
           </button>
         </div>
       </div>
 
-      {/* Filters */}
+      {/* ─── Filters ─── */}
       <div className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-4 flex flex-col gap-3">
         <div className="flex flex-col lg:flex-row gap-3">
           <label className="relative flex-1">
@@ -229,7 +295,7 @@ const Students = () => {
             <Search size={17} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
             <input
               className="form-input pl-10 pr-10"
-              placeholder="Search by name, roll no., room, phone or college"
+              placeholder="Search by name, roll no., room, phone or college…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -272,7 +338,7 @@ const Students = () => {
         <FilterChips id="student-status" options={chipOptions} value={statusFilter} onChange={setStatusFilter} />
       </div>
 
-      {/* Results */}
+      {/* ─── Results ─── */}
       {loading ? (
         <div className="flex flex-col gap-2" aria-busy="true">
           {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-[68px] rounded-2xl skeleton-loading" />)}
@@ -368,33 +434,40 @@ const Students = () => {
                 exit={{ opacity: 0 }}
                 whileHover={{ y: -3 }}
                 onClick={() => setViewing(s)}
-                className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-4 cursor-pointer hover:border-brand-200 hover:shadow-[var(--shadow-hover)] transition-[border-color,box-shadow]"
+                className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] overflow-hidden cursor-pointer hover:border-brand-200 hover:shadow-[var(--shadow-hover)] transition-[border-color,box-shadow]"
               >
-                <div className="flex items-start gap-3">
-                  <Avatar name={s.user?.name} src={s.user?.avatar || s.profilePic} size={48} rounded="rounded-2xl" onPreview={setPreview} />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-[15px] font-bold m-0 truncate">{s.user?.name}</h3>
-                    <p className="text-[12px] text-[var(--text-tertiary)] m-0 truncate">{s.rollNumber}</p>
-                    <div className="mt-1.5"><StatusBadge status={s.status} /></div>
+                {/* Card top gradient strip */}
+                <div
+                  className="h-1.5 w-full"
+                  style={{ background: 'linear-gradient(90deg, #246460, #5aada5)' }}
+                />
+                <div className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Avatar name={s.user?.name} src={s.user?.avatar || s.profilePic} size={48} rounded="rounded-2xl" onPreview={setPreview} />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-[15px] font-bold m-0 truncate">{s.user?.name}</h3>
+                      <p className="text-[12px] text-[var(--text-tertiary)] m-0 truncate">{s.rollNumber}</p>
+                      <div className="mt-1.5"><StatusBadge status={s.status} /></div>
+                    </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2 mt-4">
-                  <div className="rounded-xl bg-mint-50 px-3 py-2">
-                    <div className="text-[11px] text-[var(--text-tertiary)]">Room</div>
-                    <RoomLabel room={s.room} />
+                  <div className="grid grid-cols-2 gap-2 mt-4">
+                    <div className="rounded-xl bg-mint-50 px-3 py-2">
+                      <div className="text-[11px] text-[var(--text-tertiary)]">Room</div>
+                      <RoomLabel room={s.room} />
+                    </div>
+                    <div className="rounded-xl bg-mint-50 px-3 py-2">
+                      <div className="text-[11px] text-[var(--text-tertiary)]">Parent</div>
+                      <div className="text-[13px] font-medium flex items-center gap-1"><Phone size={12} className="text-brand-600" /> {s.parentContact || '—'}</div>
+                    </div>
                   </div>
-                  <div className="rounded-xl bg-mint-50 px-3 py-2">
-                    <div className="text-[11px] text-[var(--text-tertiary)]">Parent</div>
-                    <div className="text-[13px] font-medium flex items-center gap-1"><Phone size={12} className="text-brand-600" /> {s.parentContact || '—'}</div>
+                  <div className="flex gap-2 mt-3">
+                    <button className="btn-secondary flex-1 h-9 text-[13px]" onClick={(e) => { e.stopPropagation(); openEdit(s); }}>
+                      <Pencil size={14} /> Edit
+                    </button>
+                    <button className="btn-secondary flex-1 h-9 text-[13px]" onClick={(e) => { e.stopPropagation(); setViewing(s); }}>
+                      View profile
+                    </button>
                   </div>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <button className="btn-secondary flex-1 h-9 text-[13px]" onClick={(e) => { e.stopPropagation(); openEdit(s); }}>
-                    <Pencil size={14} /> Edit
-                  </button>
-                  <button className="btn-secondary flex-1 h-9 text-[13px]" onClick={(e) => { e.stopPropagation(); setViewing(s); }}>
-                    View profile
-                  </button>
                 </div>
               </motion.article>
             ))}

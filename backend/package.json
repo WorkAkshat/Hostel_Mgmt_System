@@ -11,7 +11,9 @@
     "db:generate": "npx prisma generate",
     "db:seed": "node prisma/seed.js",
     "db:reset": "npx prisma migrate reset",
-    "db:studio": "npx prisma studio"
+    "db:studio": "npx prisma studio",
+    "db:backup": "node scripts/dbBackupSync.js",
+    "db:restore": "node scripts/restoreToLocal.js"
   },
   "keywords": [],
   "author": "",
