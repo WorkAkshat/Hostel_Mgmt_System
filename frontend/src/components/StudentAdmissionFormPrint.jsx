@@ -1,8 +1,17 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Printer, X, Download, ShieldCheck, GraduationCap, Phone, MapPin, User, Heart, Calendar } from 'lucide-react';
 
 const StudentAdmissionFormPrint = ({ student, onClose }) => {
   const printRef = useRef(null);
+
+  // Prevent background body scroll
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   if (!student) return null;
 
@@ -24,10 +33,10 @@ const StudentAdmissionFormPrint = ({ student, onClose }) => {
   const joiningDate = student.dateOfJoining ? new Date(student.dateOfJoining).toLocaleDateString('en-IN') : new Date().toLocaleDateString('en-IN');
   const dobDate = student.dob ? new Date(student.dob).toLocaleDateString('en-IN') : 'N/A';
 
-  return (
-    <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+  return createPortal(
+    <div className="fixed inset-0 z-[99999] bg-[#1b2a29]/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto" onClick={onClose}>
       {/* Modal Container */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] my-auto flex flex-col overflow-hidden animate-fade-in text-slate-800 text-left border border-slate-200">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] my-auto flex flex-col overflow-hidden animate-fade-in text-slate-800 text-left border border-slate-200 relative z-[100000]" onClick={(e) => e.stopPropagation()}>
         
         {/* Top Control Bar (Hidden when printing) */}
         <div className="p-4 bg-slate-900 text-white flex justify-between items-center shrink-0 print:hidden">
@@ -346,7 +355,8 @@ const StudentAdmissionFormPrint = ({ student, onClose }) => {
           }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -1,9 +1,18 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Download, FileDown, GraduationCap, Mail, MapPin, Phone, Printer, ShieldCheck, User, Users, X } from 'lucide-react';
 import { downloadPendingStudentsPDF } from '../utils/pendingApprovalsPDF';
 
 const PendingStudentsPrintModal = ({ pendingUsers = [], onClose }) => {
   const printRef = useRef(null);
+
+  // Prevent background body scroll while modal is active
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   const pendingStudents = pendingUsers.filter((u) => {
     const role = (u.role || '').replace('PENDING_', '');
@@ -24,10 +33,15 @@ const PendingStudentsPrintModal = ({ pendingUsers = [], onClose }) => {
     year: 'numeric',
   });
 
-  return (
-    <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] my-auto flex flex-col overflow-hidden animate-fade-in text-slate-800 text-left border border-slate-200">
-        
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[99999] bg-[#1b2a29]/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-5xl max-h-[92vh] my-auto flex flex-col overflow-hidden animate-fade-in text-slate-800 text-left border border-slate-200 relative z-[100000]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Top Control Bar (Hidden when printing) */}
         <div className="p-4 bg-slate-900 text-white flex justify-between items-center shrink-0 print:hidden">
           <div className="flex items-center gap-2">
@@ -197,7 +211,8 @@ const PendingStudentsPrintModal = ({ pendingUsers = [], onClose }) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

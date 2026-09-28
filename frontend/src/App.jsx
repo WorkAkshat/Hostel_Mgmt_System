@@ -91,17 +91,9 @@ const DashboardLayout = () => {
           onMenuToggle={() => setIsMobileOpen(true)} 
         />
         <SectionTabs />
-        <AnimatePresence mode="wait">
-          <motion.main 
-            key={location.pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-          >
-            <Outlet />
-          </motion.main>
-        </AnimatePresence>
+        <main className="w-full min-h-[calc(100vh-var(--header-height)-80px)]">
+          <Outlet />
+        </main>
       </div>
 
       {/* Bottom navigation bar for mobile */}

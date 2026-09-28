@@ -1,4 +1,5 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Download, Building2, Phone, Mail, MapPin, Calendar, Zap, Home, UtensilsCrossed, CheckCircle, Clock } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -294,10 +295,9 @@ const InvoicePreviewModal = ({ invoice, onClose }) => {
   const invNo = `#INV-${String(invoice.id).split('-')[0].toUpperCase()}`;
   const period = billingPeriod(invoice);
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}
+      className="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-[#1b2a29]/70 backdrop-blur-xs"
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div
@@ -529,7 +529,8 @@ const InvoicePreviewModal = ({ invoice, onClose }) => {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
