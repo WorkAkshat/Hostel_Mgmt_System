@@ -202,6 +202,10 @@ const registerUser = async (req, res) => {
     return res.status(400).json({ message: 'Please provide name, email, password and role.' });
   }
 
+  if (!profilePic) {
+    return res.status(400).json({ message: 'Profile photograph is mandatory. Please upload your photo.' });
+  }
+
   if (role !== 'STUDENT' && role !== 'STAFF') {
     return res.status(400).json({ message: 'Role must be STUDENT or STAFF.' });
   }

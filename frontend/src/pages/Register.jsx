@@ -3,8 +3,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { auth as authApi } from '../utils/api';
 import {
   UserPlus, Key, Mail, ShieldAlert, Home, User, CheckCircle2, Phone,
-  Briefcase, GraduationCap, Calendar, Heart, MapPin, Map, Camera, Upload,
-  Crop, RotateCw, ZoomIn, ZoomOut, Check, X, Sliders, Eye, EyeOff
+  Briefcase, GraduationCap, Calendar, Heart, MapPin, Map, Camera,
+  Crop, Check, X, Eye, EyeOff, ShieldCheck, Sparkles, Building2,
+  Users, AlertCircle
 } from 'lucide-react';
 
 const INDIAN_STATES_AND_UTS = [
@@ -64,10 +65,9 @@ const Register = () => {
   const [cropOffsetX, setCropOffsetX] = useState(0);
   const [cropOffsetY, setCropOffsetY] = useState(0);
 
-  // Dragging state for touch/mouse pointer gestures
+  // Dragging state for touch/mouse gestures
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0, initialOffsetX: 0, initialOffsetY: 0 });
-
   const canvasRef = useRef(null);
 
   // Student specific details
@@ -104,10 +104,12 @@ const Register = () => {
     if (!submitted) return null;
 
     switch (field) {
+      case 'profilePic':
+        return !profilePic ? 'Profile photo is required' : null;
       case 'name':
-        return !name.trim() ? 'Full Name is required' : null;
+        return !name.trim() ? 'Full name is required' : null;
       case 'email':
-        if (!email.trim()) return 'Email Address is required';
+        if (!email.trim()) return 'Email address is required';
         if (!/\S+@\S+\.\S+/.test(email)) return 'Enter a valid email address';
         return null;
       case 'password':
@@ -165,13 +167,13 @@ const Register = () => {
     }
   };
 
-  const getInputStyleClass = (field, extraPaddingRight = false) => {
+  const getInputClass = (field, hasRightIcon = false) => {
     const hasErr = !!getFieldError(field);
-    const prClass = extraPaddingRight ? 'pr-10' : 'pr-3.5';
-    return `w-full h-11 pl-9 sm:pl-10 ${prClass} rounded-[12px] border outline-none text-[13px] sm:text-[14px] font-medium transition-all ${
+    const rightPad = hasRightIcon ? 'pr-11' : 'pr-3.5';
+    return `w-full h-11 pl-10 ${rightPad} rounded-xl border outline-none text-[14px] font-medium transition-all ${
       hasErr
-        ? 'border-red-500 bg-red-50/40 text-red-900 ring-2 ring-red-100 placeholder-red-400'
-        : 'border-slate-200 bg-white/90 text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50'
+        ? 'border-red-400 bg-red-50/50 text-red-900 ring-2 ring-red-100 placeholder-red-400'
+        : 'border-[var(--border-color)] bg-white text-[var(--text-primary)] focus:border-brand-500 focus:ring-3 focus:ring-brand-100/60 placeholder:text-[var(--text-tertiary)]'
     }`;
   };
 
@@ -195,7 +197,7 @@ const Register = () => {
     }
   };
 
-  // Touch and mouse drag handlers for finger gestures
+  // Pointer/Touch drag handlers for cropping
   const handlePointerDown = (clientX, clientY) => {
     setIsDragging(true);
     dragStartRef.current = {
@@ -264,6 +266,13 @@ const Register = () => {
     setSubmitted(true);
     setError(null);
 
+    // Validate photo first
+    if (!profilePic) {
+      setError('Profile photograph is mandatory. Please upload and adjust your photo.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     // Validate general fields
     const nameErr = getFieldError('name');
     const emailErr = getFieldError('email');
@@ -272,6 +281,7 @@ const Register = () => {
 
     if (nameErr || emailErr || pwdErr || confirmErr) {
       setError('Please fix the highlighted fields in red before submitting.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -299,6 +309,7 @@ const Register = () => {
         fatherErr || collegeErr || addrErr || stateErr || pinErr
       ) {
         setError('Please fill in all student information fields correctly (highlighted in red).');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
@@ -324,6 +335,7 @@ const Register = () => {
 
       if (deptErr || desigErr || phoneErr) {
         setError('Please fill in all staff information fields correctly (highlighted in red).');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         return;
       }
 
@@ -336,8 +348,10 @@ const Register = () => {
     try {
       await authApi.register(payload);
       setSuccess(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
     }
@@ -345,49 +359,32 @@ const Register = () => {
 
   if (success) {
     return (
-      <div
-        className="min-h-screen w-full flex items-center justify-center relative overflow-y-auto px-4 py-8 sm:py-12"
-        style={{
-          background: 'radial-gradient(circle at top left, rgba(16,185,129,0.1), transparent 40%), radial-gradient(circle at bottom right, rgba(99,102,241,0.1), transparent 35%), linear-gradient(135deg, #F8FAFF 0%, #EEF4FF 30%, #FDFBFF 60%, #F5F8FF 100%)',
-        }}
-      >
-        <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(16,185,129,0.07), transparent)', filter: 'blur(60px)' }} />
-        <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.07), transparent)', filter: 'blur(60px)' }} />
-
-        <div
-          className="w-full max-w-[480px] p-6 sm:p-8 md:p-10 rounded-2xl sm:rounded-[28px] text-center flex flex-col items-center gap-5 sm:gap-6 relative z-10 mx-auto"
-          style={{
-            background: 'rgba(255,255,255,0.88)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(255,255,255,0.8)',
-            boxShadow: '0 20px 60px rgba(15,23,42,0.08)',
-          }}
-        >
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-inner">
-            <CheckCircle2 size={32} className="sm:w-9 sm:h-9" />
+      <div className="min-h-screen w-full flex items-center justify-center bg-[var(--bg-primary)] px-4 py-12">
+        <div className="glass-card w-full max-w-[500px] p-8 sm:p-10 rounded-[24px] text-center flex flex-col items-center gap-5 shadow-md">
+          <div className="w-16 h-16 rounded-2xl bg-mint-100 text-brand-700 flex items-center justify-center">
+            <CheckCircle2 size={36} />
           </div>
           <div>
-            <h2 className="text-[20px] sm:text-[24px] font-bold text-slate-800 tracking-tight">Request Submitted!</h2>
-            <p className="text-[13px] sm:text-[14px] text-slate-600 font-medium mt-2 leading-relaxed">
-              Hi, <span className="font-bold text-slate-800">{name}</span>. Your registration details have been received successfully.
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-mint-100 text-brand-800 mb-2">
+              <Sparkles size={13} />
+              Registration Submitted
+            </span>
+            <h2 className="text-[22px] sm:text-[24px] font-bold text-[var(--text-primary)]">Application Under Review</h2>
+            <p className="text-[14px] text-[var(--text-secondary)] font-medium mt-2 leading-relaxed">
+              Hi, <span className="font-bold text-[var(--text-primary)]">{name}</span>. Your registration details and photograph have been received successfully.
             </p>
-            <p className="text-[12px] sm:text-[13px] text-slate-500 font-medium mt-2 leading-relaxed">
-              Hostel administration will review and approve your account. You can log in once approved.
+            <p className="text-[13px] text-[var(--text-tertiary)] font-medium mt-1 leading-relaxed">
+              The hostel warden office will review and verify your account. You will be able to log in once approved.
             </p>
           </div>
 
-          <div className="w-full h-[1px] bg-slate-100 my-1"></div>
+          <div className="w-full h-px bg-[var(--border-color)] my-1" />
 
           <Link
             to="/login"
-            className="w-full h-11 sm:h-12 text-white rounded-[14px] font-bold flex items-center justify-center gap-2 transition-all text-[14px]"
-            style={{
-              background: 'linear-gradient(135deg, #2563eb, #4f46e5)',
-              boxShadow: '0 4px 14px rgba(37,99,235,0.3)',
-            }}
+            className="w-full h-12 bg-sun-300 hover:bg-sun-400 text-sun-900 rounded-xl font-bold flex items-center justify-center gap-2 transition-colors text-[14px] shadow-xs"
           >
-            <span>Back to Login</span>
+            <span>Proceed to Login</span>
           </Link>
         </div>
       </div>
@@ -395,526 +392,614 @@ const Register = () => {
   }
 
   return (
-    <div
-      className="min-h-screen w-full flex flex-col items-center justify-start sm:justify-center relative overflow-y-auto px-3 sm:px-6 md:px-8 py-8 sm:py-12"
-      style={{
-        background: 'radial-gradient(circle at top left, rgba(59,130,246,0.1), transparent 40%), radial-gradient(circle at bottom right, rgba(139,92,246,0.1), transparent 35%), linear-gradient(135deg, #F8FAFF 0%, #EEF4FF 30%, #FDFBFF 60%, #F5F8FF 100%)',
-      }}
-    >
-      <div className="absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(37,99,235,0.07), transparent)', filter: 'blur(60px)' }} />
-      <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(139,92,246,0.07), transparent)', filter: 'blur(60px)' }} />
-
-      <div className="relative z-10 w-full max-w-[680px] mx-auto flex flex-col items-center">
-        {/* Branding header */}
-        <div className="flex items-center gap-2.5 sm:gap-3 justify-center mb-4 sm:mb-6">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-[14px] flex items-center justify-center shadow-md shrink-0" style={{ background: 'linear-gradient(135deg, #2563eb, #4f46e5)' }}>
-            <Home size={18} className="text-white" />
+    <div className="min-h-screen w-full bg-[var(--bg-primary)] flex flex-col items-center justify-start py-8 sm:py-12 px-4 sm:px-6">
+      <div className="w-full max-w-[720px] mx-auto flex flex-col items-center">
+        {/* Portal Header Branding */}
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-xs">
+              <Building2 size={20} />
+            </div>
+            <span className="text-[18px] sm:text-[20px] font-bold text-[var(--text-primary)] tracking-tight">
+              Hari Pushp PG Hostel
+            </span>
           </div>
-          <h2 className="text-[17px] sm:text-[20px] font-bold text-slate-800 tracking-tight">Hari Pushp PG Hostel</h2>
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-mint-100 text-brand-800 border border-mint-200">
+            <ShieldCheck size={14} />
+            Official Student & Staff Registration Portal
+          </span>
         </div>
 
-        {/* Form Card */}
-        <div
-          className="w-full p-4 sm:p-8 md:p-10 rounded-2xl sm:rounded-[28px] flex flex-col"
-          style={{
-            background: 'rgba(255,255,255,0.88)',
-            backdropFilter: 'blur(24px)',
-            WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(255,255,255,0.8)',
-            boxShadow: '0 20px 60px rgba(15,23,42,0.08)',
-          }}
-        >
-          {/* Header */}
-          <div className="flex flex-col mb-5 sm:mb-6 text-center sm:text-left">
-            <h2 className="text-[20px] sm:text-[24px] font-bold text-slate-800 tracking-tight">Student & Staff Registration</h2>
-            <p className="text-[12px] sm:text-[13px] text-slate-500 font-medium mt-1">Fill out your official details for hostel admission</p>
+        {/* Main Card */}
+        <div className="glass-card w-full bg-white border border-[var(--border-color)] rounded-[24px] p-6 sm:p-10 shadow-sm flex flex-col">
+          {/* Card Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-[var(--border-color)] pb-5 mb-6">
+            <div>
+              <h1 className="text-[20px] sm:text-[22px] font-bold text-[var(--text-primary)] tracking-tight">
+                Hostel Admission Form
+              </h1>
+              <p className="text-[13px] text-[var(--text-secondary)] font-medium mt-0.5">
+                Complete your details below to request hostel registration
+              </p>
+            </div>
+            <div className="text-[12px] font-bold text-brand-700 bg-brand-50 px-3 py-1 rounded-lg self-start sm:self-auto border border-brand-100">
+              * All fields marked * are required
+            </div>
           </div>
 
-          {/* Error Alert */}
+          {/* Global Error Banner */}
           {error && (
-            <div className="flex items-center gap-3 p-3.5 sm:p-4 rounded-[14px] border border-red-200 bg-red-50 text-red-600 text-[12px] sm:text-[13px] font-semibold mb-5">
-              <ShieldAlert size={18} className="shrink-0" />
+            <div className="flex items-center gap-3 p-4 rounded-xl border border-red-200 bg-red-50 text-red-700 text-[13px] font-semibold mb-6">
+              <AlertCircle size={18} className="shrink-0 text-red-500" />
               <span>{error}</span>
             </div>
           )}
 
-          {/* Profile Picture Uploader */}
-          <div className="flex flex-col items-center justify-center mb-5 sm:mb-6 p-4 sm:p-5 rounded-2xl bg-indigo-50/60 border border-indigo-100/90 text-center">
+          {/* Role Switcher */}
+          <div className="flex flex-col gap-1.5 mb-6">
+            <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+              Register As <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 p-1 bg-[var(--bg-tertiary)] rounded-xl border border-[var(--border-color)]">
+              <button
+                type="button"
+                onClick={() => setRole('STUDENT')}
+                className={`py-2.5 rounded-lg font-bold text-[13px] border-none cursor-pointer transition-all flex items-center justify-center gap-2 ${
+                  role === 'STUDENT'
+                    ? 'bg-white text-brand-800 shadow-xs border border-mint-200'
+                    : 'bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <GraduationCap size={17} />
+                <span>Student Resident</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setRole('STAFF')}
+                className={`py-2.5 rounded-lg font-bold text-[13px] border-none cursor-pointer transition-all flex items-center justify-center gap-2 ${
+                  role === 'STAFF'
+                    ? 'bg-white text-brand-800 shadow-xs border border-mint-200'
+                    : 'bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                <Briefcase size={17} />
+                <span>Staff Member</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Profile Photo Uploader (Mandatory) */}
+          <div
+            className={`flex flex-col items-center justify-center p-5 rounded-2xl mb-6 transition-all text-center ${
+              submitted && !profilePic
+                ? 'bg-red-50/70 border-2 border-red-400 ring-4 ring-red-100'
+                : 'bg-mint-50/60 border border-mint-200/80'
+            }`}
+          >
             <div className="relative group cursor-pointer mb-2">
               {profilePic ? (
-                <img src={profilePic} alt="Profile Preview" className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white shadow-md" />
+                <img
+                  src={profilePic}
+                  alt="Profile Preview"
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-white shadow-md"
+                />
               ) : (
-                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center border-4 border-white shadow-md">
-                  <User size={36} />
+                <div
+                  className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center border-4 border-white shadow-md ${
+                    submitted && !profilePic
+                      ? 'bg-red-100 text-red-500'
+                      : 'bg-mint-100 text-brand-600'
+                  }`}
+                >
+                  <User size={40} />
                 </div>
               )}
-              <label htmlFor="profile-pic-input" className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-indigo-700 transition-all">
+              <label
+                htmlFor="profile-pic-input"
+                className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-brand-600 text-white flex items-center justify-center shadow-md cursor-pointer hover:bg-brand-700 transition-colors"
+                title="Upload Photo"
+              >
                 <Camera size={15} />
               </label>
-              <input id="profile-pic-input" type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              <input
+                id="profile-pic-input"
+                type="file"
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
             </div>
+
             <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
-              <label htmlFor="profile-pic-input" className="text-[12px] font-bold text-indigo-600 hover:text-indigo-700 cursor-pointer underline">
-                {profilePic ? 'Change Photo' : 'Upload Profile Photo'}
+              <label
+                htmlFor="profile-pic-input"
+                className="text-[13px] font-bold text-brand-700 hover:text-brand-800 cursor-pointer underline"
+              >
+                {profilePic ? 'Change Photo' : 'Upload Passport Photo * (Mandatory)'}
               </label>
               {profilePic && (
                 <button
                   type="button"
                   onClick={() => setShowCropModal(true)}
-                  className="text-[11px] font-semibold text-slate-600 hover:text-slate-900 bg-white px-2.5 py-0.5 rounded-full border border-slate-200 flex items-center gap-1 shadow-xs"
+                  className="text-[11px] font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] bg-white px-3 py-1 rounded-full border border-[var(--border-color)] flex items-center gap-1.5 shadow-xs cursor-pointer"
                 >
                   <Crop size={12} />
                   <span>Adjust / Crop</span>
                 </button>
               )}
             </div>
-            <span className="text-[10px] text-slate-400 font-medium mt-1">JPG or PNG (Max 8MB)</span>
+
+            {submitted && !profilePic ? (
+              <span className="text-[12px] text-red-600 font-bold mt-2 flex items-center gap-1">
+                <AlertCircle size={14} />
+                Passport photograph is mandatory for hostel ID card & student records
+              </span>
+            ) : (
+              <span className="text-[11px] text-[var(--text-tertiary)] font-medium mt-1">
+                JPG or PNG format &bull; Passport style &bull; Max 8MB
+              </span>
+            )}
           </div>
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-            {/* General Info */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Full Name *</label>
-                <div className="relative flex items-center">
-                  <User size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('name') ? 'text-red-400' : 'text-slate-400'}`} />
-                  <input
-                    type="text"
-                    placeholder="e.g. Ananya Sharma"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    disabled={loading}
-                    className={getInputStyleClass('name')}
-                  />
-                </div>
-                {getFieldError('name') && (
-                  <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('name')}</span>
-                )}
+          {/* Form Fields */}
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6" noValidate>
+            {/* 1. Account Credentials */}
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 text-[13px] font-bold text-brand-800 bg-mint-50 px-3 py-1.5 rounded-lg border border-mint-100">
+                <ShieldCheck size={16} className="text-brand-600" />
+                <span>1. Login Credentials & Basic Details</span>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Email Address *</label>
-                <div className="relative flex items-center">
-                  <Mail size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('email') ? 'text-red-400' : 'text-slate-400'}`} />
-                  <input
-                    type="email"
-                    placeholder="ananya@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={loading}
-                    className={getInputStyleClass('email')}
-                  />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <User size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('name') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                    <input
+                      type="text"
+                      placeholder="e.g. Priya Sharma"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      disabled={loading}
+                      className={getInputClass('name')}
+                    />
+                  </div>
+                  {getFieldError('name') && (
+                    <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('name')}</span>
+                  )}
                 </div>
-                {getFieldError('email') && (
-                  <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('email')}</span>
-                )}
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <Mail size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('email') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                    <input
+                      type="email"
+                      placeholder="priya@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={loading}
+                      className={getInputClass('email')}
+                    />
+                  </div>
+                  {getFieldError('email') && (
+                    <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('email')}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                    Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <Key size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('password') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="Min 6 characters"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={loading}
+                      className={getInputClass('password', true)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus:outline-none p-1 rounded-full cursor-pointer"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {getFieldError('password') && (
+                    <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('password')}</span>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                    Confirm Password <span className="text-red-500">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <Key size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('confirmPassword') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                    <input
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      placeholder="Re-enter password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={loading}
+                      className={getInputClass('confirmPassword', true)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus:outline-none p-1 rounded-full cursor-pointer"
+                    >
+                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  {getFieldError('confirmPassword') && (
+                    <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('confirmPassword')}</span>
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Password *</label>
-                <div className="relative flex items-center">
-                  <Key size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('password') ? 'text-red-400' : 'text-slate-400'}`} />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Min 6 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                    className={getInputStyleClass('password', true)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none p-1 rounded-full cursor-pointer"
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {getFieldError('password') && (
-                  <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('password')}</span>
-                )}
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Confirm Password *</label>
-                <div className="relative flex items-center">
-                  <Key size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('confirmPassword') ? 'text-red-400' : 'text-slate-400'}`} />
-                  <input
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    placeholder="Re-enter password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={loading}
-                    className={getInputStyleClass('confirmPassword', true)}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none p-1 rounded-full cursor-pointer"
-                  >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                {getFieldError('confirmPassword') && (
-                  <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('confirmPassword')}</span>
-                )}
-              </div>
-            </div>
-
-            {/* Role Switcher */}
-            <div className="flex flex-col gap-1.5 mt-1">
-              <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Register As</label>
-              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-[14px]">
-                <button
-                  type="button"
-                  onClick={() => setRole('STUDENT')}
-                  className={`py-2 rounded-[11px] font-bold text-[13px] border-none cursor-pointer transition-all flex items-center justify-center gap-1.5 ${role === 'STUDENT'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'bg-transparent text-slate-500 hover:text-slate-700'
-                    }`}
-                >
-                  <GraduationCap size={16} />
-                  <span>Student</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('STAFF')}
-                  className={`py-2 rounded-[11px] font-bold text-[13px] border-none cursor-pointer transition-all flex items-center justify-center gap-1.5 ${role === 'STAFF'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'bg-transparent text-slate-500 hover:text-slate-700'
-                    }`}
-                >
-                  <Briefcase size={16} />
-                  <span>Staff</span>
-                </button>
-              </div>
-            </div>
-
-            <div className="w-full h-[1px] bg-slate-100 my-1"></div>
-
-            {/* Conditional Sub-forms */}
+            {/* 2. Role Specific Information */}
             {role === 'STUDENT' ? (
-              <div className="flex flex-col gap-3.5 sm:gap-4 text-left">
-                <h4 className="text-[13px] sm:text-[14px] font-bold text-slate-700 flex items-center gap-2 mt-1">
-                  <GraduationCap size={16} className="text-blue-500" />
-                  <span>Student Enrollment Information</span>
-                </h4>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
-                  {/* Student Phone */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Your Mobile Number *</label>
-                    <div className="relative flex items-center">
-                      <Phone size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('studentPhone') ? 'text-red-400' : 'text-slate-400'}`} />
-                      <input
-                        type="tel"
-                        placeholder="10-digit mobile"
-                        value={studentPhone}
-                        onChange={(e) => setStudentPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        disabled={loading}
-                        className={getInputStyleClass('studentPhone')}
-                      />
-                    </div>
-                    {getFieldError('studentPhone') && (
-                      <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('studentPhone')}</span>
-                    )}
+              <>
+                {/* Contact & Personal */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-[13px] font-bold text-brand-800 bg-mint-50 px-3 py-1.5 rounded-lg border border-mint-100">
+                    <Users size={16} className="text-brand-600" />
+                    <span>2. Student Contact & Personal Details</span>
                   </div>
 
-                  {/* Parent Contact */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Parent/Emergency Contact *</label>
-                    <div className="relative flex items-center">
-                      <Phone size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('parentContact') ? 'text-red-400' : 'text-slate-400'}`} />
-                      <input
-                        type="tel"
-                        placeholder="Parent mobile number"
-                        value={parentContact}
-                        onChange={(e) => setParentContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        disabled={loading}
-                        className={getInputStyleClass('parentContact')}
-                      />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Student Mobile Number <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <Phone size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('studentPhone') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                        <input
+                          type="tel"
+                          placeholder="10-digit mobile number"
+                          value={studentPhone}
+                          onChange={(e) => setStudentPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          disabled={loading}
+                          className={getInputClass('studentPhone')}
+                        />
+                      </div>
+                      {getFieldError('studentPhone') && (
+                        <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('studentPhone')}</span>
+                      )}
                     </div>
-                    {getFieldError('parentContact') && (
-                      <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('parentContact')}</span>
-                    )}
-                  </div>
 
-                  {/* Date of Joining */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Date of Joining *</label>
-                    <div className="relative flex items-center">
-                      <Calendar size={15} className={`absolute left-3.5 pointer-events-none z-10 ${getFieldError('dateOfJoining') ? 'text-red-400' : 'text-slate-400'}`} />
-                      <input
-                        type="date"
-                        value={dateOfJoining}
-                        onChange={(e) => setDateOfJoining(e.target.value)}
-                        disabled={loading}
-                        className={getInputStyleClass('dateOfJoining')}
-                      />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Parent / Guardian Contact <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <Phone size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('parentContact') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                        <input
+                          type="tel"
+                          placeholder="Parent 10-digit mobile"
+                          value={parentContact}
+                          onChange={(e) => setParentContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          disabled={loading}
+                          className={getInputClass('parentContact')}
+                        />
+                      </div>
+                      {getFieldError('parentContact') && (
+                        <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('parentContact')}</span>
+                      )}
                     </div>
-                    {getFieldError('dateOfJoining') && (
-                      <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('dateOfJoining')}</span>
-                    )}
-                  </div>
 
-                  {/* DOB */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Date of Birth *</label>
-                    <div className="relative flex items-center">
-                      <Calendar size={15} className={`absolute left-3.5 pointer-events-none z-10 ${getFieldError('dob') ? 'text-red-400' : 'text-slate-400'}`} />
-                      <input
-                        type="date"
-                        value={dob}
-                        onChange={(e) => setDob(e.target.value)}
-                        disabled={loading}
-                        className={getInputStyleClass('dob')}
-                      />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Date of Joining <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <Calendar size={16} className={`absolute left-3.5 pointer-events-none z-10 ${getFieldError('dateOfJoining') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                        <input
+                          type="date"
+                          value={dateOfJoining}
+                          onChange={(e) => setDateOfJoining(e.target.value)}
+                          disabled={loading}
+                          className={getInputClass('dateOfJoining')}
+                        />
+                      </div>
+                      {getFieldError('dateOfJoining') && (
+                        <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('dateOfJoining')}</span>
+                      )}
                     </div>
-                    {getFieldError('dob') && (
-                      <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('dob')}</span>
-                    )}
-                  </div>
 
-                  {/* Father's Name */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Father's Name *</label>
-                    <div className="relative flex items-center">
-                      <User size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('fatherName') ? 'text-red-400' : 'text-slate-400'}`} />
-                      <input
-                        type="text"
-                        placeholder="Father's Full Name"
-                        value={fatherName}
-                        onChange={(e) => setFatherName(e.target.value)}
-                        disabled={loading}
-                        className={getInputStyleClass('fatherName')}
-                      />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Date of Birth <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <Calendar size={16} className={`absolute left-3.5 pointer-events-none z-10 ${getFieldError('dob') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                        <input
+                          type="date"
+                          value={dob}
+                          onChange={(e) => setDob(e.target.value)}
+                          disabled={loading}
+                          className={getInputClass('dob')}
+                        />
+                      </div>
+                      {getFieldError('dob') && (
+                        <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('dob')}</span>
+                      )}
                     </div>
-                    {getFieldError('fatherName') && (
-                      <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('fatherName')}</span>
-                    )}
-                  </div>
 
-                  {/* Mother's Name */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Mother's Name</label>
-                    <div className="relative flex items-center">
-                      <User size={15} className="absolute left-3.5 pointer-events-none text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Mother's Full Name"
-                        value={motherName}
-                        onChange={(e) => setMotherName(e.target.value)}
-                        disabled={loading}
-                        className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
-                      />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Father's Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <User size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('fatherName') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                        <input
+                          type="text"
+                          placeholder="Father's full name"
+                          value={fatherName}
+                          onChange={(e) => setFatherName(e.target.value)}
+                          disabled={loading}
+                          className={getInputClass('fatherName')}
+                        />
+                      </div>
+                      {getFieldError('fatherName') && (
+                        <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('fatherName')}</span>
+                      )}
                     </div>
-                  </div>
 
-                  {/* Mother's Mobile */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Mother's Mobile Number</label>
-                    <div className="relative flex items-center">
-                      <Phone size={15} className="absolute left-3.5 pointer-events-none text-slate-400" />
-                      <input
-                        type="tel"
-                        placeholder="Mother's 10-digit mobile"
-                        value={motherContact}
-                        onChange={(e) => setMotherContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        disabled={loading}
-                        className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
-                      />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Mother's Name
+                      </label>
+                      <div className="relative flex items-center">
+                        <User size={16} className="absolute left-3.5 pointer-events-none text-[var(--text-tertiary)]" />
+                        <input
+                          type="text"
+                          placeholder="Mother's full name"
+                          value={motherName}
+                          onChange={(e) => setMotherName(e.target.value)}
+                          disabled={loading}
+                          className={getInputClass('motherName')}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Brother/Sister Mobile */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Brother / Sister Mobile Number</label>
-                    <div className="relative flex items-center">
-                      <Phone size={15} className="absolute left-3.5 pointer-events-none text-slate-400" />
-                      <input
-                        type="tel"
-                        placeholder="Sibling's 10-digit mobile"
-                        value={siblingContact}
-                        onChange={(e) => setSiblingContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                        disabled={loading}
-                        className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
-                      />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Mother's Mobile Number
+                      </label>
+                      <div className="relative flex items-center">
+                        <Phone size={16} className="absolute left-3.5 pointer-events-none text-[var(--text-tertiary)]" />
+                        <input
+                          type="tel"
+                          placeholder="Mother's 10-digit mobile"
+                          value={motherContact}
+                          onChange={(e) => setMotherContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          disabled={loading}
+                          className={getInputClass('motherContact')}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Emergency Contact */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Emergency Contact Person & Phone</label>
-                    <div className="relative flex items-center">
-                      <Phone size={15} className="absolute left-3.5 pointer-events-none text-slate-400" />
-                      <input
-                        type="text"
-                        placeholder="Emergency contact name & mobile"
-                        value={emergencyContact}
-                        onChange={(e) => setEmergencyContact(e.target.value)}
-                        disabled={loading}
-                        className="w-full h-11 pl-9 sm:pl-10 pr-3.5 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 transition-all"
-                      />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Sibling Mobile Number
+                      </label>
+                      <div className="relative flex items-center">
+                        <Phone size={16} className="absolute left-3.5 pointer-events-none text-[var(--text-tertiary)]" />
+                        <input
+                          type="tel"
+                          placeholder="Brother / Sister 10-digit mobile"
+                          value={siblingContact}
+                          onChange={(e) => setSiblingContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                          disabled={loading}
+                          className={getInputClass('siblingContact')}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-
-
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Blood Group</label>
-                    <div className="relative flex items-center">
-                      <Heart size={15} className="absolute left-3.5 pointer-events-none text-slate-400 z-10" />
-                      <select
-                        value={bloodGroup}
-                        onChange={(e) => setBloodGroup(e.target.value)}
-                        disabled={loading}
-                        className="w-full h-11 pl-9 sm:pl-10 pr-8 rounded-[12px] border border-slate-200 bg-white/90 outline-none text-[13px] sm:text-[14px] font-medium text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50 appearance-none cursor-pointer transition-all"
-                      >
-                        <option value="A+">A+</option>
-                        <option value="A-">A-</option>
-                        <option value="B+">B+</option>
-                        <option value="B-">B-</option>
-                        <option value="O+">O+</option>
-                        <option value="O-">O-</option>
-                        <option value="AB+">AB+</option>
-                        <option value="AB-">AB-</option>
-                      </select>
-                      <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-slate-400 w-0 h-0" />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Emergency Contact Details
+                      </label>
+                      <div className="relative flex items-center">
+                        <Phone size={16} className="absolute left-3.5 pointer-events-none text-[var(--text-tertiary)]" />
+                        <input
+                          type="text"
+                          placeholder="Emergency contact person & phone"
+                          value={emergencyContact}
+                          onChange={(e) => setEmergencyContact(e.target.value)}
+                          disabled={loading}
+                          className={getInputClass('emergencyContact')}
+                        />
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Marital Status */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Marital Status *</label>
-                    <div className="relative flex items-center">
-                      <Heart size={15} className={`absolute left-3.5 pointer-events-none z-10 ${getFieldError('maritalStatus') ? 'text-red-400' : 'text-slate-400'}`} />
-                      <select
-                        value={maritalStatus}
-                        onChange={(e) => setMaritalStatus(e.target.value)}
-                        disabled={loading}
-                        className={`w-full h-11 pl-9 sm:pl-10 pr-8 rounded-[12px] border outline-none text-[13px] sm:text-[14px] font-medium appearance-none cursor-pointer transition-all ${
-                          getFieldError('maritalStatus')
-                            ? 'border-red-500 bg-red-50/40 text-red-900 ring-2 ring-red-100'
-                            : 'border-slate-200 bg-white/90 text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50'
-                        }`}
-                      >
-                        <option value="Unmarried">Unmarried</option>
-                        <option value="Married">Married</option>
-                        <option value="Divorced">Divorced</option>
-                      </select>
-                      <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-slate-400 w-0 h-0" />
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Blood Group
+                      </label>
+                      <div className="relative flex items-center">
+                        <Heart size={16} className="absolute left-3.5 pointer-events-none text-[var(--text-tertiary)] z-10" />
+                        <select
+                          value={bloodGroup}
+                          onChange={(e) => setBloodGroup(e.target.value)}
+                          disabled={loading}
+                          className="w-full h-11 pl-10 pr-8 rounded-xl border border-[var(--border-color)] bg-white outline-none text-[14px] font-medium text-[var(--text-primary)] focus:border-brand-500 focus:ring-3 focus:ring-brand-100/60 appearance-none cursor-pointer transition-all"
+                        >
+                          <option value="A+">A+</option>
+                          <option value="A-">A-</option>
+                          <option value="B+">B+</option>
+                          <option value="B-">B-</option>
+                          <option value="O+">O+</option>
+                          <option value="O-">O-</option>
+                          <option value="AB+">AB+</option>
+                          <option value="AB-">AB-</option>
+                        </select>
+                        <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-[var(--text-tertiary)] w-0 h-0" />
+                      </div>
                     </div>
-                    {getFieldError('maritalStatus') && (
-                      <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('maritalStatus')}</span>
-                    )}
-                  </div>
 
-                  {/* Company / College Name */}
-                  <div className="flex flex-col gap-1 sm:col-span-2">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Company / College *</label>
-                    <div className="relative flex items-center">
-                      <GraduationCap size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('coachingCollege') ? 'text-red-400' : 'text-slate-400'}`} />
-                      <input
-                        type="text"
-                        placeholder="e.g. Company Name / University / College"
-                        value={coachingCollege}
-                        onChange={(e) => setCoachingCollege(e.target.value)}
-                        disabled={loading}
-                        className={getInputStyleClass('coachingCollege')}
-                      />
+                    <div className="flex flex-col gap-1 sm:col-span-2">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Marital Status <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <Heart size={16} className={`absolute left-3.5 pointer-events-none z-10 ${getFieldError('maritalStatus') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                        <select
+                          value={maritalStatus}
+                          onChange={(e) => setMaritalStatus(e.target.value)}
+                          disabled={loading}
+                          className={`w-full h-11 pl-10 pr-8 rounded-xl border outline-none text-[14px] font-medium appearance-none cursor-pointer transition-all ${
+                            getFieldError('maritalStatus')
+                              ? 'border-red-400 bg-red-50/50 text-red-900 ring-2 ring-red-100'
+                              : 'border-[var(--border-color)] bg-white text-[var(--text-primary)] focus:border-brand-500 focus:ring-3 focus:ring-brand-100/60'
+                          }`}
+                        >
+                          <option value="Unmarried">Unmarried</option>
+                          <option value="Married">Married</option>
+                          <option value="Divorced">Divorced</option>
+                        </select>
+                        <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-[var(--text-tertiary)] w-0 h-0" />
+                      </div>
+                      {getFieldError('maritalStatus') && (
+                        <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('maritalStatus')}</span>
+                      )}
                     </div>
-                    {getFieldError('coachingCollege') && (
-                      <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('coachingCollege')}</span>
-                    )}
-                  </div>
-
-                  {/* Permanent Address */}
-                  <div className="flex flex-col gap-1 sm:col-span-2">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Permanent Address *</label>
-                    <div className="relative flex items-center">
-                      <MapPin size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('permanentAddress') ? 'text-red-400' : 'text-slate-400'}`} />
-                      <input
-                        type="text"
-                        placeholder="House No, Street, Village/Town"
-                        value={permanentAddress}
-                        onChange={(e) => setPermanentAddress(e.target.value)}
-                        disabled={loading}
-                        className={getInputStyleClass('permanentAddress')}
-                      />
-                    </div>
-                    {getFieldError('permanentAddress') && (
-                      <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('permanentAddress')}</span>
-                    )}
-                  </div>
-
-                  {/* State Select Dropdown (A to Z) */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">State / Union Territory *</label>
-                    <div className="relative flex items-center">
-                      <Map size={15} className={`absolute left-3.5 pointer-events-none z-10 ${getFieldError('state') ? 'text-red-400' : 'text-slate-400'}`} />
-                      <select
-                        value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        disabled={loading}
-                        className={`w-full h-11 pl-9 sm:pl-10 pr-8 rounded-[12px] border outline-none text-[13px] sm:text-[14px] font-medium appearance-none cursor-pointer transition-all ${
-                          getFieldError('state')
-                            ? 'border-red-500 bg-red-50/40 text-red-900 ring-2 ring-red-100'
-                            : 'border-slate-200 bg-white/90 text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50'
-                        }`}
-                      >
-                        {INDIAN_STATES_AND_UTS.map((st) => (
-                          <option key={st} value={st}>{st}</option>
-                        ))}
-                      </select>
-                      <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-slate-400 w-0 h-0" />
-                    </div>
-                    {getFieldError('state') && (
-                      <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('state')}</span>
-                    )}
-                  </div>
-
-                  {/* Pincode */}
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Pincode *</label>
-                    <div className="relative flex items-center">
-                      <MapPin size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('pincode') ? 'text-red-400' : 'text-slate-400'}`} />
-                      <input
-                        type="text"
-                        placeholder="6-digit PIN code"
-                        value={pincode}
-                        onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        disabled={loading}
-                        className={getInputStyleClass('pincode')}
-                      />
-                    </div>
-                    {getFieldError('pincode') && (
-                      <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('pincode')}</span>
-                    )}
                   </div>
                 </div>
-              </div>
+
+                {/* Academic & Permanent Address */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-2 text-[13px] font-bold text-brand-800 bg-mint-50 px-3 py-1.5 rounded-lg border border-mint-100">
+                    <GraduationCap size={16} className="text-brand-600" />
+                    <span>3. College, Coaching & Address Information</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1 sm:col-span-2">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        College / Coaching / Company Name <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <GraduationCap size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('coachingCollege') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                        <input
+                          type="text"
+                          placeholder="e.g. Allen Career Institute / University of Rajasthan / Tech Mahindra"
+                          value={coachingCollege}
+                          onChange={(e) => setCoachingCollege(e.target.value)}
+                          disabled={loading}
+                          className={getInputClass('coachingCollege')}
+                        />
+                      </div>
+                      {getFieldError('coachingCollege') && (
+                        <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('coachingCollege')}</span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1 sm:col-span-2">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        Permanent Residential Address <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <MapPin size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('permanentAddress') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                        <input
+                          type="text"
+                          placeholder="House No., Street, Colony, Village/City"
+                          value={permanentAddress}
+                          onChange={(e) => setPermanentAddress(e.target.value)}
+                          disabled={loading}
+                          className={getInputClass('permanentAddress')}
+                        />
+                      </div>
+                      {getFieldError('permanentAddress') && (
+                        <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('permanentAddress')}</span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        State / Union Territory <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <Map size={16} className={`absolute left-3.5 pointer-events-none z-10 ${getFieldError('state') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                        <select
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          disabled={loading}
+                          className={`w-full h-11 pl-10 pr-8 rounded-xl border outline-none text-[14px] font-medium appearance-none cursor-pointer transition-all ${
+                            getFieldError('state')
+                              ? 'border-red-400 bg-red-50/50 text-red-900 ring-2 ring-red-100'
+                              : 'border-[var(--border-color)] bg-white text-[var(--text-primary)] focus:border-brand-500 focus:ring-3 focus:ring-brand-100/60'
+                          }`}
+                        >
+                          {INDIAN_STATES_AND_UTS.map((st) => (
+                            <option key={st} value={st}>{st}</option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-[var(--text-tertiary)] w-0 h-0" />
+                      </div>
+                      {getFieldError('state') && (
+                        <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('state')}</span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                        PIN Code <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative flex items-center">
+                        <MapPin size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('pincode') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
+                        <input
+                          type="text"
+                          placeholder="6-digit PIN code"
+                          value={pincode}
+                          onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                          disabled={loading}
+                          className={getInputClass('pincode')}
+                        />
+                      </div>
+                      {getFieldError('pincode') && (
+                        <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('pincode')}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
             ) : (
-              <div className="flex flex-col gap-3.5 sm:gap-4 text-left">
-                <h4 className="text-[13px] sm:text-[14px] font-bold text-slate-700 flex items-center gap-2 mt-1">
-                  <Briefcase size={16} className="text-blue-500" />
-                  <span>Staff Designation & Work Details</span>
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4">
+              /* Staff Information Section */
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-[13px] font-bold text-brand-800 bg-mint-50 px-3 py-1.5 rounded-lg border border-mint-100">
+                  <Briefcase size={16} className="text-brand-600" />
+                  <span>2. Staff Designation & Department Details</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Department *</label>
+                    <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                      Department <span className="text-red-500">*</span>
+                    </label>
                     <div className="relative flex items-center">
-                      <Briefcase size={15} className={`absolute left-3.5 pointer-events-none z-10 ${getFieldError('department') ? 'text-red-400' : 'text-slate-400'}`} />
+                      <Briefcase size={16} className={`absolute left-3.5 pointer-events-none z-10 ${getFieldError('department') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
                       <select
                         value={department}
                         onChange={(e) => setDepartment(e.target.value)}
                         disabled={loading}
-                        className={`w-full h-11 pl-9 sm:pl-10 pr-8 rounded-[12px] border outline-none text-[13px] sm:text-[14px] font-medium appearance-none cursor-pointer transition-all ${
+                        className={`w-full h-11 pl-10 pr-8 rounded-xl border outline-none text-[14px] font-medium appearance-none cursor-pointer transition-all ${
                           getFieldError('department')
-                            ? 'border-red-500 bg-red-50/40 text-red-900 ring-2 ring-red-100'
-                            : 'border-slate-200 bg-white/90 text-slate-800 focus:border-blue-500 focus:ring-4 focus:ring-blue-50/50'
+                            ? 'border-red-400 bg-red-50/50 text-red-900 ring-2 ring-red-100'
+                            : 'border-[var(--border-color)] bg-white text-[var(--text-primary)] focus:border-brand-500 focus:ring-3 focus:ring-brand-100/60'
                         }`}
                       >
                         <option value="Warden">Warden Office</option>
@@ -923,40 +1008,46 @@ const Register = () => {
                         <option value="Cleaning">Cleaning & Utility</option>
                         <option value="Maintenance">Maintenance Crew</option>
                       </select>
-                      <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-slate-400 w-0 h-0" />
+                      <div className="absolute right-3.5 pointer-events-none border-l border-r-0 border-t-[5px] border-b-0 border-transparent border-t-[var(--text-tertiary)] w-0 h-0" />
                     </div>
                     {getFieldError('department') && (
                       <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('department')}</span>
                     )}
                   </div>
+
                   <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Designation *</label>
+                    <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                      Designation / Role Title <span className="text-red-500">*</span>
+                    </label>
                     <div className="relative flex items-center">
-                      <Briefcase size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('designation') ? 'text-red-400' : 'text-slate-400'}`} />
+                      <Briefcase size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('designation') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
                       <input
                         type="text"
-                        placeholder="e.g. Night Warden / Supervisor"
+                        placeholder="e.g. Night Supervisor / Warden"
                         value={designation}
                         onChange={(e) => setDesignation(e.target.value)}
                         disabled={loading}
-                        className={getInputStyleClass('designation')}
+                        className={getInputClass('designation')}
                       />
                     </div>
                     {getFieldError('designation') && (
                       <span className="text-[11px] font-semibold text-red-500 mt-0.5">{getFieldError('designation')}</span>
                     )}
                   </div>
+
                   <div className="flex flex-col gap-1 sm:col-span-2">
-                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Contact Mobile Number *</label>
+                    <label className="text-[12px] font-bold text-[var(--text-secondary)] uppercase tracking-wider">
+                      Staff Mobile Number <span className="text-red-500">*</span>
+                    </label>
                     <div className="relative flex items-center">
-                      <Phone size={15} className={`absolute left-3.5 pointer-events-none ${getFieldError('staffPhone') ? 'text-red-400' : 'text-slate-400'}`} />
+                      <Phone size={16} className={`absolute left-3.5 pointer-events-none ${getFieldError('staffPhone') ? 'text-red-400' : 'text-[var(--text-tertiary)]'}`} />
                       <input
                         type="tel"
                         placeholder="10-digit mobile number"
                         value={staffPhone}
                         onChange={(e) => setStaffPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                         disabled={loading}
-                        className={getInputStyleClass('staffPhone')}
+                        className={getInputClass('staffPhone')}
                       />
                     </div>
                     {getFieldError('staffPhone') && (
@@ -967,61 +1058,62 @@ const Register = () => {
               </div>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full h-11 sm:h-12 text-white rounded-[14px] font-bold flex items-center justify-center gap-2 transition-all text-[14px] cursor-pointer mt-3"
-              style={{
-                background: loading ? '#94a3b8' : 'linear-gradient(135deg, #2563eb, #4f46e5)',
-                boxShadow: loading ? 'none' : '0 4px 14px rgba(37,99,235,0.3)',
-              }}
-            >
-              {loading ? (
-                <span>Submitting Registration...</span>
-              ) : (
-                <>
-                  <span>Submit Registration Request</span>
-                  <UserPlus size={16} />
-                </>
-              )}
-            </button>
+            {/* Submit Action */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full h-12 bg-sun-300 hover:bg-sun-400 text-sun-900 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-[15px] cursor-pointer shadow-xs disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <span>Submitting Admission Request...</span>
+                ) : (
+                  <>
+                    <span>Submit Admission Registration</span>
+                    <UserPlus size={18} />
+                  </>
+                )}
+              </button>
+            </div>
           </form>
 
-          {/* Quick links */}
-          <div className="flex items-center justify-center gap-1.5 mt-5 sm:mt-6 text-[12px] sm:text-[13px] font-medium text-slate-500">
-            <span>Already registered?</span>
-            <Link to="/login" className="text-blue-600 hover:text-blue-700 font-semibold underline">
+          {/* Footer link to login */}
+          <div className="flex items-center justify-center gap-2 mt-6 pt-5 border-t border-[var(--border-color)] text-[13px] font-medium text-[var(--text-secondary)]">
+            <span>Already have an account?</span>
+            <Link to="/login" className="text-brand-700 hover:text-brand-800 font-bold underline">
               Sign In Here
             </Link>
           </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-[11px] sm:text-[12px] text-slate-400 font-medium mt-4 sm:mt-6">
-          Hari Pushp PG &mdash; Official Student Admission Portal
+        {/* Portal footer */}
+        <p className="text-center text-[12px] text-[var(--text-tertiary)] font-medium mt-6">
+          Hari Pushp PG Girls Hostel &bull; Secure Admission Portal
         </p>
       </div>
 
-      {/* Image Crop & Adjust Modal */}
+      {/* Image Crop Modal */}
       {showCropModal && rawImage && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-white w-full max-w-[420px] rounded-3xl p-5 sm:p-6 shadow-2xl flex flex-col items-center gap-4 relative">
-            <div className="flex items-center justify-between w-full border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2 text-slate-800 font-bold text-[16px]">
-                <Crop size={18} className="text-indigo-600" />
-                <span>Adjust Profile Photo</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1b2a29]/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white w-full max-w-[420px] rounded-[22px] p-6 shadow-2xl flex flex-col items-center gap-4 relative border border-[var(--border-color)]">
+            <div className="flex items-center justify-between w-full border-b border-[var(--border-color)] pb-3">
+              <div className="flex items-center gap-2 text-[var(--text-primary)] font-bold text-[16px]">
+                <Crop size={18} className="text-brand-600" />
+                <span>Adjust & Align Photo</span>
               </div>
               <button
                 onClick={() => setShowCropModal(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 flex items-center justify-center transition-all cursor-pointer"
+                className="w-8 h-8 rounded-full bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--border-color)] flex items-center justify-center transition-colors cursor-pointer"
               >
                 <X size={16} />
               </button>
             </div>
 
-            {/* Circular Preview Container with Touch & Drag Support */}
+            {/* Circular Preview Container with Touch & Drag */}
             <div
-              className={`relative w-[240px] h-[240px] sm:w-[260px] sm:h-[260px] rounded-full overflow-hidden border-4 border-indigo-500 shadow-lg bg-slate-100 flex items-center justify-center select-none touch-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+              className={`relative w-[240px] h-[240px] rounded-full overflow-hidden border-4 border-brand-500 shadow-md bg-[var(--bg-tertiary)] flex items-center justify-center select-none touch-none ${
+                isDragging ? 'cursor-grabbing' : 'cursor-grab'
+              }`}
               onTouchStart={(e) => {
                 const touch = e.touches[0];
                 handlePointerDown(touch.clientX, touch.clientY);
@@ -1037,29 +1129,27 @@ const Register = () => {
               onMouseLeave={handlePointerUp}
             >
               <canvas ref={canvasRef} className="w-full h-full object-cover pointer-events-none" />
-              <div className="absolute bottom-3 bg-slate-900/70 backdrop-blur-xs text-white text-[10px] font-semibold px-3 py-1 rounded-full pointer-events-none flex items-center gap-1 shadow-sm">
-                <span>Drag photo to align</span>
+              <div className="absolute bottom-3 bg-[#1b2a29]/75 text-white text-[10px] font-semibold px-3 py-1 rounded-full pointer-events-none flex items-center gap-1 shadow-sm">
+                <span>Drag photo to center</span>
               </div>
             </div>
 
-
-
             {/* Modal Actions */}
-            <div className="grid grid-cols-2 gap-3 w-full pt-1">
+            <div className="grid grid-cols-2 gap-3 w-full pt-2">
               <button
                 type="button"
                 onClick={() => setShowCropModal(false)}
-                className="w-full h-11 rounded-2xl font-bold text-[13px] bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all cursor-pointer"
+                className="w-full h-11 rounded-xl font-bold text-[13px] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:bg-[var(--border-color)] transition-colors cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={applyCroppedImage}
-                className="w-full h-11 rounded-2xl font-bold text-[13px] bg-indigo-600 hover:bg-indigo-700 text-white flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                className="w-full h-11 rounded-xl font-bold text-[13px] bg-brand-600 hover:bg-brand-700 text-white flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
               >
                 <Check size={16} />
-                <span>Save Crop</span>
+                <span>Save Photo</span>
               </button>
             </div>
           </div>
