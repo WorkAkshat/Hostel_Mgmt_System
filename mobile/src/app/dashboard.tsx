@@ -4,7 +4,7 @@ import { registerForPushNotificationsAsync } from '../../utils/pushNotifications
 import {
   StyleSheet, Text, View, TouchableOpacity, ScrollView,
   ActivityIndicator, RefreshControl, TextInput, Modal,
-  Platform, Dimensions, Alert, Animated, FlatList,
+  Platform, Dimensions, Alert, Animated, FlatList, Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../../context/AuthContext';
@@ -29,7 +29,10 @@ import {
   DollarSign, UserCheck, TrendingUp, Shield,
   ChevronRight, ArrowLeft, Filter, User, CreditCard,
   Bed, AlertCircle, Clock, BookOpen, Navigation, Quote,
-  Building2,
+  Building2, Phone, MessageSquare, Utensils, Wrench,
+  Receipt, ArrowRight, Sparkles, AlertTriangle, Eye,
+  Calendar, Moon, Sun, Check, X, ShieldCheck, Zap,
+  PhoneCall, RefreshCw, BarChart3, PieChart, Layers,
 } from 'lucide-react-native';
 import { getDailyQuote, getGreeting } from '../../utils/quotes';
 
@@ -301,6 +304,9 @@ export default function DashboardScreen() {
     return user?.assignedFloor ? user.assignedFloor : 'combined';
   });
   const [workspaceModalVisible, setWorkspaceModalVisible] = useState(false);
+  const [studentFloorFilter, setStudentFloorFilter] = useState<number | 'all'>('all');
+  const [roomFloorFilter, setRoomFloorFilter] = useState<number | 'all'>('all');
+  const [roomStatusFilter, setRoomStatusFilter] = useState<'all' | 'OCCUPIED' | 'AVAILABLE' | 'MAINTENANCE'>('all');
 
   // Floor Directory States
   const [selectedFloorNum, setSelectedFloorNum] = useState<number | 'combined' | null>(null);
@@ -1250,37 +1256,10 @@ export default function DashboardScreen() {
   const verifyStudentDocAction = async (id: string, status: 'VERIFIED' | 'REJECTED') => {
     try {
       await studentsApi.verifyDocument(id, status);
-      showAlert('Updated', `Document verification status marked as ${status}.`, 'SUCCESS');
+      showAlert('Success', `Document marked as ${status.toLowerCase()}`, 'SUCCESS');
       loadDashboardData();
     } catch (e: any) { showAlert('Error', e.message, 'ERROR'); }
   };
-
-  // ─── Bottom Nav Config ─────────────────────────────────────────────────
-  const getNavTabs = () => {
-    if (user?.role === 'ADMIN') return [
-      { id: 'Home',       icon: Home,       label: 'Home'      },
-      { id: 'Students',   icon: Users,       label: 'Students'  },
-      { id: 'Rooms',      icon: Bed,         label: 'Rooms'     },
-      { id: 'Requests',   icon: FileText,    label: 'Requests'  },
-      { id: 'Settings',   icon: Settings,    label: 'Settings'  },
-    ];
-    if (user?.role === 'STUDENT') return [
-      { id: 'Home',       icon: Home,        label: 'Home'      },
-      { id: 'Leaves',     icon: Navigation,  label: 'Leaves'    },
-      { id: 'Complaints', icon: AlertCircle, label: 'Issues'    },
-      { id: 'Fees',       icon: DollarSign,  label: 'Fees'      },
-      { id: 'Profile',    icon: User,        label: 'Profile'   },
-    ];
-    return [
-      { id: 'Home',       icon: Home,        label: 'Gate'      },
-      { id: 'Visitors',   icon: Users,       label: 'Visitors'  },
-      { id: 'Profile',    icon: User,        label: 'Profile'   },
-    ];
-  };
-
-  // ══════════════════════════════════════════════════════════════════════════
-  //  TAB RENDERERS
-  // ══════════════════════════════════════════════════════════════════════════
 
   // ─── ADMIN: Home Overview ───────────────────────────────────────────────
   const renderAdminHome = () => {
@@ -1292,61 +1271,273 @@ export default function DashboardScreen() {
       ? allStudents
       : allStudents.filter(s => activeRoomIds.has(s.roomId));
 
-    const occupancy = activeRooms.length > 0
-      ? Math.round((activeRooms.filter(r => r.status === 'FULL' || r.status === 'OCCUPIED').length / activeRooms.length) * 100)
-      : 0;
+    const totalBeds = activeRooms.reduce((acc, r) => acc + (r.capacity || r.sharingType || 2), 0);
+    const occupiedBeds = activeRooms.reduce((acc, r) => acc + (r.students?.length || (r.status === 'OCCUPIED' ? 2 : 0)), 0);
+    const vacantBeds = Math.max(0, totalBeds - occupiedBeds);
+    const occupancy = totalBeds > 0 ? Math.min(100, Math.round((occupiedBeds / totalBeds) * 100)) : 0;
+
     const pendingLeaves = leavesList.filter(l => l.status === 'PENDING').length;
+    const outNowCount = leavesList.filter(l => l.status === 'CHECKED_OUT').length;
     const openComplaints = complaintsList.filter(c => c.status !== 'RESOLVED').length;
 
+    // Financial Metrics
+    const unpaidInvoices = invoicesList.filter(i => i.status !== 'PAID');
+    const totalDuesAmount = unpaidInvoices.reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+    const paidInvoices = invoicesList.filter(i => i.status === 'PAID');
+    const totalCollectedAmount = paidInvoices.reduce((acc, i) => acc + (Number(i.amount) || 0), 0);
+    const totalBilled = totalCollectedAmount + totalDuesAmount;
+    const collectionRate = totalBilled > 0 ? Math.round((totalCollectedAmount / totalBilled) * 100) : 100;
+
     const workspaceLabel = selectedWorkspaceFloor === 'combined'
-      ? '🌐 Consolidated View (All Floors)'
-      : `Floor ${selectedWorkspaceFloor} Workspace`;
+      ? '🌐 All 5 Floors Consolidated'
+      : `Floor ${selectedWorkspaceFloor} Dedicated Workspace`;
 
     return (
       <View>
-        {/* Workspace Switcher Pill */}
-        <TouchableOpacity
-          style={{
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-            backgroundColor: BRAND_MINT_CARD, borderWidth: 1, borderColor: '#bce0db',
-            borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
-          }}
-          onPress={() => setWorkspaceModalVisible(true)}
-          activeOpacity={0.7}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Building2 size={18} color={BRAND_TEAL} />
-            <Text style={{ fontSize: 13, fontWeight: '800', color: BRAND_TEAL_DARK }}>{workspaceLabel}</Text>
-          </View>
-          <View style={{ backgroundColor: BRAND_TEAL, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 }}>
-            <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF' }}>Switch ▼</Text>
-          </View>
-        </TouchableOpacity>
+        {/* ── 1. Executive Master Dashboard Hero ── */}
+        <AnimatedCard delay={0}>
+          <View style={{
+            backgroundColor: BRAND_TEAL,
+            borderRadius: 22,
+            padding: 18,
+            marginBottom: 16,
+            shadowColor: BRAND_TEAL_DARK,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.25,
+            shadowRadius: 14,
+            elevation: 6,
+          }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#34D399' }} />
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: BRAND_GOLD, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Hari Pushp PG Network
+                  </Text>
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.3 }}>
+                  Executive Overview
+                </Text>
+                <Text style={{ fontSize: 12, color: '#DCEFEC', marginTop: 2, fontWeight: '500' }}>
+                  {workspaceLabel}
+                </Text>
+              </View>
 
-        {/* Hero Grid */}
+              <TouchableOpacity
+                onPress={() => setWorkspaceModalVisible(true)}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 7,
+                  borderRadius: 12,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.25)',
+                }}
+                activeOpacity={0.7}
+              >
+                <Building2 size={14} color="#FFFFFF" />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Switch</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Occupancy Mini Progress Gauge */}
+            <View style={{ marginTop: 16, paddingTop: 14, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#DCEFEC' }}>Hostel Capacity & Occupancy</Text>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: BRAND_GOLD }}>{occupancy}% Full ({occupiedBeds}/{totalBeds} Beds)</Text>
+              </View>
+              <View style={{ height: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 4, overflow: 'hidden' }}>
+                <View style={{ height: '100%', width: `${occupancy}%`, backgroundColor: BRAND_GOLD, borderRadius: 4 }} />
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 }}>
+                <Text style={{ fontSize: 10, color: '#BCE0DB', fontWeight: '600' }}>🛏️ {vacantBeds} Vacant Bed{vacantBeds === 1 ? '' : 's'}</Text>
+                <Text style={{ fontSize: 10, color: '#BCE0DB', fontWeight: '600' }}>👥 {activeStudents.length} Residents Active</Text>
+              </View>
+            </View>
+
+            {/* Quick Action Shortcuts inside Hero */}
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+              <TouchableOpacity
+                onPress={() => setAddStudentModalVisible(true)}
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  backgroundColor: BRAND_GOLD,
+                  paddingVertical: 9,
+                  borderRadius: 10,
+                }}
+                activeOpacity={0.8}
+              >
+                <Plus size={14} color={BRAND_GOLD_DARK} />
+                <Text style={{ fontSize: 11, fontWeight: '900', color: BRAND_GOLD_DARK }}>+ Student</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => openNightRoundModal()}
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  paddingVertical: 9,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.25)',
+                }}
+                activeOpacity={0.8}
+              >
+                <Moon size={14} color="#FFFFFF" />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>Roll Call</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => openFloorModal(selectedWorkspaceFloor)}
+                style={{
+                  flex: 1,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  backgroundColor: 'rgba(255,255,255,0.18)',
+                  paddingVertical: 9,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,255,255,0.25)',
+                }}
+                activeOpacity={0.8}
+              >
+                <BarChart3 size={14} color="#FFFFFF" />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>PDF Dues</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </AnimatedCard>
+
+        {/* ── 2. 6-KPI Metric Matrix Grid ── */}
         <View style={styles.heroGrid}>
-          <StatHero icon={Users}       count={activeStudents.length}   label="Students"       color={BRAND_TEAL} delay={0}   onPress={() => setActiveTab('Students')}   showArrow={false} />
-          <StatHero icon={Bed}         count={activeRooms.length}      label="Rooms"          color="#10B981"    delay={60}  onPress={() => setActiveTab('Rooms')}      showArrow={false} />
-          <StatHero icon={UserCheck}   count={pendingApprovals.length} label="Approvals"      color="#D97706"    delay={120} onPress={() => setActiveTab('Requests')}   sub={pendingApprovals.length > 0 ? 'Pending' : 'All Clear'} showArrow={false} />
-          <StatHero icon={Navigation}  count={pendingLeaves}           label="Leave Requests" color="#0284C7"    delay={180} onPress={() => setActiveTab('Requests')}   sub={pendingLeaves > 0 ? `${pendingLeaves} pending` : 'All clear'} showArrow={false} />
-          <StatHero icon={AlertCircle} count={openComplaints}          label="Open Issues"    color="#EF4444"    delay={240} onPress={() => setActiveTab('Requests')}   sub={openComplaints > 0 ? 'Pending action' : 'All Clear'} showArrow={false} />
-          <StatHero icon={TrendingUp}  count={`${occupancy}%`}         label="Occupancy"      color={BRAND_TEAL_MED} delay={300} onPress={() => setActiveTab('Rooms')} showArrow={false} />
+          <StatHero
+            icon={Users}
+            count={activeStudents.length}
+            label="Residents"
+            color={BRAND_TEAL}
+            delay={0}
+            onPress={() => setActiveTab('Students')}
+            sub={`${activeStudents.filter(s => s.roomId).length} Assigned`}
+            showArrow={true}
+          />
+          <StatHero
+            icon={Bed}
+            count={activeRooms.length}
+            label="Rooms"
+            color="#10B981"
+            delay={60}
+            onPress={() => setActiveTab('Rooms')}
+            sub={`${vacantBeds} Available`}
+            showArrow={true}
+          />
+          <StatHero
+            icon={UserCheck}
+            count={pendingApprovals.length}
+            label="Approvals"
+            color={pendingApprovals.length > 0 ? '#D97706' : '#6B7280'}
+            delay={120}
+            onPress={() => { setActiveTab('Requests'); setRequestSection('Approvals'); }}
+            sub={pendingApprovals.length > 0 ? 'Action Req.' : 'All Clear'}
+            showArrow={true}
+          />
+          <StatHero
+            icon={Navigation}
+            count={pendingLeaves}
+            label="Leaves"
+            color="#0284C7"
+            delay={180}
+            onPress={() => { setActiveTab('Requests'); setRequestSection('Leaves'); }}
+            sub={outNowCount > 0 ? `${outNowCount} Outside` : pendingLeaves > 0 ? `${pendingLeaves} Pending` : 'None'}
+            showArrow={true}
+          />
+          <StatHero
+            icon={AlertCircle}
+            count={openComplaints}
+            label="Open Issues"
+            color={openComplaints > 0 ? '#EF4444' : '#10B981'}
+            delay={240}
+            onPress={() => { setActiveTab('Requests'); setRequestSection('Complaints'); }}
+            sub={openComplaints > 0 ? `${openComplaints} Pending` : 'Resolved'}
+            showArrow={true}
+          />
+          <StatHero
+            icon={DollarSign}
+            count={totalDuesAmount > 0 ? `₹${(totalDuesAmount / 1000).toFixed(0)}k` : '₹0'}
+            label="Fee Dues"
+            color="#E11D48"
+            delay={300}
+            onPress={openDemandNotesModal}
+            sub={unpaidInvoices.length > 0 ? `${unpaidInvoices.length} Unpaid` : 'All Paid'}
+            showArrow={true}
+          />
         </View>
 
-        {/* Floor Directory & Company Setup Section */}
+        {/* ── 3. Monthly Financials & Revenue Snapshot (Matches Web FeesMonthCard) ── */}
+        <AnimatedCard delay={120}>
+          <View style={[styles.listCard, { padding: 18, marginBottom: 18 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: BRAND_MINT_CARD, justifyContent: 'center', alignItems: 'center' }}>
+                  <Receipt size={18} color={BRAND_TEAL} />
+                </View>
+                <View>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: TEXT_DARK }}>Monthly Revenue & Dues</Text>
+                  <Text style={{ fontSize: 11, color: TEXT_MUTED }}>Current 10-to-10 Billing Cycle</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={openDemandNotesModal} style={{ backgroundColor: BRAND_MINT_CARD, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: BRAND_TEAL }}>Notes & Dues →</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginVertical: 8 }}>
+              <View>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: TEXT_LIGHT, textTransform: 'uppercase' }}>Collected</Text>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#10B981', marginTop: 2 }}>₹{totalCollectedAmount.toLocaleString()}</Text>
+              </View>
+              <View>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: TEXT_LIGHT, textTransform: 'uppercase' }}>Pending Dues</Text>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#EF4444', marginTop: 2 }}>₹{totalDuesAmount.toLocaleString()}</Text>
+              </View>
+              <View>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: TEXT_LIGHT, textTransform: 'uppercase' }}>Collection Rate</Text>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: BRAND_TEAL, marginTop: 2 }}>{collectionRate}%</Text>
+              </View>
+            </View>
+
+            <View style={{ height: 6, backgroundColor: '#E3ECEA', borderRadius: 3, overflow: 'hidden', marginTop: 6 }}>
+              <View style={{ height: '100%', width: `${collectionRate}%`, backgroundColor: '#10B981', borderRadius: 3 }} />
+            </View>
+          </View>
+        </AnimatedCard>
+
+        {/* ── 4. Floor Directory & Company Matrix ── */}
         <SH title="Floor & Company Directory" count={floorsList.length || 5} onAction={() => openFloorModal('combined')} actionLabel="Consolidated Report" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 10, marginBottom: 20 }}>
           {[
-            { num: 1, name: 'Rajken Ent.', label: 'Floor 1', sub: 'Hari Pushp PG', color: BRAND_TEAL, icon: '🏠' },
-            { num: 2, name: 'Vandana Ent.', label: 'Floor 2', sub: 'Vandana PG', color: '#EC4899', icon: '🏢' },
-            { num: 3, name: 'Pushpa Ent.', label: 'Floor 3', sub: 'Pushpa PG', color: '#06B6D4', icon: '🏙️' },
-            { num: 4, name: 'Harish Chandra', label: 'Floor 4', sub: 'Harish Chandra PG', color: '#10B981', icon: '🌿' },
-            { num: 5, name: 'Ramesh Ent.', label: 'Floor 5&6', sub: 'Ramesh PG', color: '#F59E0B', icon: '⭐' },
-            { num: 'combined', name: 'Consolidated', label: 'All 5 Floors', sub: 'Meenakshi Catering', color: BRAND_TEAL, icon: '🌐' },
+            { num: 1, name: 'Rajken Ent.', label: 'Floor 1', sub: 'Hari Pushp PG', color: BRAND_TEAL, icon: '🏠', bg: '#F0F8F7' },
+            { num: 2, name: 'Vandana Ent.', label: 'Floor 2', sub: 'Vandana PG', color: '#EC4899', icon: '🏢', bg: '#FDF2F8' },
+            { num: 3, name: 'Pushpa Ent.', label: 'Floor 3', sub: 'Pushpa PG', color: '#06B6D4', icon: '🏙️', bg: '#ECFEFF' },
+            { num: 4, name: 'Harish Chandra', label: 'Floor 4', sub: 'Harish Chandra PG', color: '#10B981', icon: '🌿', bg: '#ECFDF5' },
+            { num: 5, name: 'Ramesh Ent.', label: 'Floor 5&6', sub: 'Ramesh PG', color: '#F59E0B', icon: '⭐', bg: '#FFFBEB' },
+            { num: 'combined', name: 'Consolidated', label: 'All 5 Floors', sub: 'Meenakshi Catering', color: BRAND_TEAL, icon: '🌐', bg: '#E6F4F2' },
           ].map((item) => (
             <TouchableOpacity
               key={item.label}
-              style={[styles.listCard, { width: 140, padding: 14, borderLeftWidth: 4, borderLeftColor: item.color }]}
+              style={[styles.listCard, { width: 145, padding: 14, borderLeftWidth: 4, borderLeftColor: item.color }]}
               onPress={() => openFloorModal(item.num as any)}
               activeOpacity={0.7}
             >
@@ -1358,102 +1549,117 @@ export default function DashboardScreen() {
           ))}
         </ScrollView>
 
-        {/* Modules Operations Quick Access */}
-        <SH title="Hostel Operations & Modules" count={7} />
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 10, marginBottom: 20 }}>
+        {/* ── 5. Hostel Operations & Management Modules (8 Modern Cards) ── */}
+        <SH title="Hostel Operations & Modules" count={8} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 20 }}>
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: BRAND_TEAL }]}
-            onPress={() => openFloorModal(selectedWorkspaceFloor)}
+            style={[styles.listCard, { width: (width - 50) / 2, padding: 14, marginBottom: 10, borderLeftWidth: 3.5, borderLeftColor: BRAND_TEAL }]}
+            onPress={() => router.push('/accounting' as any)}
             activeOpacity={0.7}
           >
-            <Text style={{ fontSize: 20, marginBottom: 4 }}>📊</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Financial Reports</Text>
-            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Floor PDF & Dues</Text>
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>📊</Text>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK }}>Tally Ledger</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Daybook & Reports</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#D97706' }]}
+            style={[styles.listCard, { width: (width - 50) / 2, padding: 14, marginBottom: 10, borderLeftWidth: 3.5, borderLeftColor: '#D97706' }]}
             onPress={openDemandNotesModal}
             activeOpacity={0.7}
           >
-            <Text style={{ fontSize: 20, marginBottom: 4 }}>🧾</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Demand Notes</Text>
-            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Electricity & Cycle</Text>
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>🧾</Text>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK }}>Demand Notes</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Electricity & Dues</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#10B981' }]}
+            style={[styles.listCard, { width: (width - 50) / 2, padding: 14, marginBottom: 10, borderLeftWidth: 3.5, borderLeftColor: '#10B981' }]}
             onPress={openCookDashboardModal}
             activeOpacity={0.7}
           >
-            <Text style={{ fontSize: 20, marginBottom: 4 }}>🍽️</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Cook Dashboard</Text>
-            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Meal Opt-Out Counts</Text>
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>🍽️</Text>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK }}>Cook Dashboard</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Daily Meal Counts</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: BRAND_TEAL_MED }]}
+            style={[styles.listCard, { width: (width - 50) / 2, padding: 14, marginBottom: 10, borderLeftWidth: 3.5, borderLeftColor: BRAND_TEAL_DARK }]}
+            onPress={() => openNightRoundModal(selectedWorkspaceFloor === 'combined' ? 1 : Number(selectedWorkspaceFloor))}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>🌙</Text>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK }}>Night Roll Call</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Room Attendance</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.listCard, { width: (width - 50) / 2, padding: 14, marginBottom: 10, borderLeftWidth: 3.5, borderLeftColor: '#5AADA5' }]}
+            onPress={openGateLogsModal}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>🚪</Text>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK }}>Gate Entry Logs</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Biometric Movement</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.listCard, { width: (width - 50) / 2, padding: 14, marginBottom: 10, borderLeftWidth: 3.5, borderLeftColor: '#E11D48' }]}
+            onPress={() => setActiveTab('Visitors')}
+            activeOpacity={0.7}
+          >
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>🛡️</Text>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK }}>Visitor Passes</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Guest Approvals</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.listCard, { width: (width - 50) / 2, padding: 14, marginBottom: 10, borderLeftWidth: 3.5, borderLeftColor: BRAND_TEAL_MED }]}
             onPress={openSuggestionsModal}
             activeOpacity={0.7}
           >
-            <Text style={{ fontSize: 20, marginBottom: 4 }}>💬</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Suggestion Box</Text>
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>💬</Text>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK }}>Suggestions</Text>
             <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Student Feedback</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: BRAND_TEAL_DARK }]}
-            onPress={() => openNightRoundModal(selectedWorkspaceFloor === 'combined' ? 1 : Number(selectedWorkspaceFloor))}
+            style={[styles.listCard, { width: (width - 50) / 2, padding: 14, marginBottom: 10, borderLeftWidth: 3.5, borderLeftColor: '#8B5CF6' }]}
+            onPress={() => setMessMenuModalVisible(true)}
             activeOpacity={0.7}
           >
-            <Text style={{ fontSize: 20, marginBottom: 4 }}>🌙</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Night Roll Call</Text>
-            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Attendance</Text>
+            <Text style={{ fontSize: 22, marginBottom: 6 }}>📜</Text>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: TEXT_DARK }}>Mess Planner</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Weekly Meal Menu</Text>
           </TouchableOpacity>
+        </View>
 
-          <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#5AADA5' }]}
-            onPress={openGateLogsModal}
-            activeOpacity={0.7}
-          >
-            <Text style={{ fontSize: 20, marginBottom: 4 }}>🚪</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Gate Entry Logs</Text>
-            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Biometric Entry/Exit</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#E11D48' }]}
-            onPress={() => setActiveTab('Visitors')}
-            activeOpacity={0.7}
-          >
-            <Text style={{ fontSize: 20, marginBottom: 4 }}>🛡️</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Visitor Passes</Text>
-            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Guest Approvals</Text>
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* Recent Approvals Preview */}
+        {/* ── 6. Recent Approvals Quick Triage ── */}
         {pendingApprovals.length > 0 && (
           <>
-            <SH title="Pending Approvals" count={pendingApprovals.length} onAction={() => setActiveTab('Requests')} actionLabel="View All" />
-            {pendingApprovals.slice(0, 2).map((p, i) => (
-              <AnimatedCard key={p.id} delay={i * 60}>
-                <View style={styles.listCard}>
+            <SH title="Pending Approvals" count={pendingApprovals.length} onAction={() => { setActiveTab('Requests'); setRequestSection('Approvals'); }} actionLabel="View All" />
+            {pendingApprovals.slice(0, 3).map((p, i) => (
+              <AnimatedCard key={p.id} delay={i * 50}>
+                <View style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: '#F59E0B' }]}>
                   <View style={styles.approvalCardInner}>
                     <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} onPress={() => openDetails(p.student || p, 'student')} activeOpacity={0.7}>
                       <View style={styles.avatarCircle}><Text style={styles.avatarText}>{p.name?.charAt(0)?.toUpperCase()}</Text></View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.cardPrimary}>{p.name}</Text>
                         <Text style={styles.cardSecondary}>{p.email}</Text>
-                        <Badge label={p.role?.replace('PENDING_', '')} />
+                        <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
+                          <Badge label={p.role?.replace('PENDING_', '')} color="#F59E0B" />
+                          {p.student?.phoneNumber && (
+                            <Text style={styles.cardTiny}>📱 {p.student.phoneNumber}</Text>
+                          )}
+                        </View>
                       </View>
                     </TouchableOpacity>
-                    <View style={{ gap: 6 }}>
-                      <TouchableOpacity style={[styles.iconAction, { backgroundColor: '#ECFDF5' }]} onPress={() => approveUser(p.id, p.role?.replace('PENDING_', ''))}>
-                        <CheckCircle size={18} color="#10B981" />
+                    <View style={{ gap: 6, flexDirection: 'row', alignItems: 'center' }}>
+                      <TouchableOpacity style={[styles.iconAction, { backgroundColor: '#ECFDF5', width: 38, height: 38 }]} onPress={() => approveUser(p.id, p.role?.replace('PENDING_', ''))}>
+                        <CheckCircle size={20} color="#10B981" />
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.iconAction, { backgroundColor: '#FEF2F2', marginTop: 8 }]} onPress={() => rejectUser(p.id)}>
-                        <XCircle size={18} color="#EF4444" />
+                      <TouchableOpacity style={[styles.iconAction, { backgroundColor: '#FEF2F2', width: 38, height: 38 }]} onPress={() => rejectUser(p.id)}>
+                        <XCircle size={20} color="#EF4444" />
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1463,19 +1669,19 @@ export default function DashboardScreen() {
           </>
         )}
 
-        {/* Recent Leaves Preview */}
-        {leavesList.filter(l => l.status === 'PENDING').length > 0 && (
+        {/* ── 7. Recent Leaves Quick Triage ── */}
+        {pendingLeaves > 0 && (
           <>
-            <SH title="Pending Leaves" count={pendingLeaves} onAction={() => setActiveTab('Requests')} />
+            <SH title="Pending Leave Passes" count={pendingLeaves} onAction={() => { setActiveTab('Requests'); setRequestSection('Leaves'); }} actionLabel="View All" />
             {leavesList.filter(l => l.status === 'PENDING').slice(0, 2).map((l, i) => (
-              <AnimatedCard key={l.id} delay={300 + i * 60}>
-                <TouchableOpacity style={styles.listCard} onPress={() => openDetails(l, 'leave')} activeOpacity={0.75}>
+              <AnimatedCard key={l.id} delay={200 + i * 50}>
+                <TouchableOpacity style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: '#0284C7' }]} onPress={() => openDetails(l, 'leave')} activeOpacity={0.75}>
                   <View style={styles.rowBetween}>
                     <Text style={styles.cardPrimary}>{l.student?.user?.name}</Text>
-                    <Badge label={l.type?.replace('_', ' ')} color="#3B82F6" />
+                    <Badge label={l.type?.replace('_', ' ')} color="#0284C7" />
                   </View>
                   <Text style={styles.cardSecondary}>{l.reason}</Text>
-                  <Text style={styles.cardTiny}>{new Date(l.startDate).toLocaleDateString()} → {new Date(l.endDate).toLocaleDateString()}</Text>
+                  <Text style={styles.cardTiny}>📅 {new Date(l.startDate).toLocaleDateString()} → {new Date(l.endDate).toLocaleDateString()}</Text>
                   <View style={styles.actionRow}>
                     <TouchableOpacity style={[styles.actionBtn, styles.btnGreen, { flex: 1 }]} onPress={() => resolveLeave(l.id, 'APPROVED')}>
                       <Text style={styles.actionBtnText}>Approve</Text>
@@ -1490,7 +1696,7 @@ export default function DashboardScreen() {
           </>
         )}
 
-        {/* Quick announcements & Polls */}
+        {/* ── 8. Notice Board & Polls ── */}
         <SH 
           title="Notice & Polls" 
           onAction={activePollSection === 'notices' ? () => setNoticeModalVisible(true) : () => setPollModalVisible(true)} 
@@ -1523,14 +1729,14 @@ export default function DashboardScreen() {
             </View>
           ) : (
             noticesList.map((n, i) => (
-              <AnimatedCard key={n.id || i} delay={400 + i * 50}>
+              <AnimatedCard key={n.id || i} delay={300 + i * 50}>
                 <View style={styles.noticeCard}>
-                  <View style={{ marginRight: 14 }}><Bell size={20} color={PURPLE} /></View>
+                  <View style={{ marginRight: 14 }}><Bell size={20} color={BRAND_TEAL} /></View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardPrimary}>{n.title}</Text>
                     <Text style={styles.cardSecondary}>{n.content}</Text>
+                    <Text style={styles.cardTiny}>by {n.postedBy}</Text>
                   </View>
-                  <Text style={styles.cardTiny}>by {n.postedBy}</Text>
                 </View>
               </AnimatedCard>
             ))
@@ -1542,7 +1748,7 @@ export default function DashboardScreen() {
             </View>
           ) : (
             pollsList.map((p, i) => (
-              <AnimatedCard key={p.id || i} delay={400 + i * 50}>
+              <AnimatedCard key={p.id || i} delay={300 + i * 50}>
                 <View style={styles.pollCard}>
                   <View style={styles.pollHeader}>
                     <Text style={styles.pollQuestion}>{p.question}</Text>
@@ -1558,7 +1764,7 @@ export default function DashboardScreen() {
                           <Text style={styles.pollResultPercentText}>{opt.percentage}% ({opt.votes} votes)</Text>
                         </View>
                         <View style={styles.pollProgressBackground}>
-                          <View style={[styles.pollProgressFill, { width: `${opt.percentage}%`, backgroundColor: PURPLE }]} />
+                          <View style={[styles.pollProgressFill, { width: `${opt.percentage}%`, backgroundColor: BRAND_TEAL }]} />
                         </View>
                       </View>
                     );
@@ -1583,72 +1789,226 @@ export default function DashboardScreen() {
     );
   };
 
-  // ─── ADMIN: Students Tab ────────────────────────────────────────────────
+  // ─── ADMIN: Students Tab (Redesigned with Floor Matrix, Direct Call, and Dues) ─
   const renderStudentsTab = () => {
-    const filtered = allStudents.filter(s =>
+    const floorFiltered = studentFloorFilter === 'all'
+      ? allStudents
+      : allStudents.filter(s => s.room?.floorNumber === Number(studentFloorFilter));
+
+    const filtered = floorFiltered.filter(s =>
       s.rollNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.user?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      s.user?.email?.toLowerCase().includes(searchQuery.toLowerCase())
+      s.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.room?.roomNumber?.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+    const assignedCount = filtered.filter(s => s.roomId).length;
+    const unassignedCount = filtered.length - assignedCount;
+
     return (
       <View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        {/* Search Bar */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
           <View style={[styles.searchBar, { flex: 1, marginBottom: 0 }]}>
-            <Search size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
-            <TextInput style={styles.searchInput} placeholder="Search by name, roll or email..." value={searchQuery} onChangeText={setSearchQuery} />
+            <Search size={16} color={BRAND_TEAL} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by name, roll, room or email..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#8A9895"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                <X size={16} color="#8A9895" />
+              </TouchableOpacity>
+            )}
           </View>
-          <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { marginLeft: 10, height: 46, borderRadius: 12, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' }]} onPress={() => setAddStudentModalVisible(true)}>
-            <Plus size={16} color="#FFFFFF" />
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.btnPurple, { marginLeft: 10, height: 48, borderRadius: 14, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center' }]}
+            onPress={() => setAddStudentModalVisible(true)}
+          >
+            <Plus size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-        <SH title="All Students" count={filtered.length} />
-        {filtered.length === 0
-          ? <Empty icon={Users} title="No students found" sub="Try adjusting your search." />
-          : filtered.map((s, i) => (
-            <AnimatedCard key={s.id} delay={Math.min(i * 40, 400)}>
-              <TouchableOpacity style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: PURPLE }]} onPress={() => openDetails(s, 'student')} activeOpacity={0.75}>
-                <View style={styles.approvalCardInner}>
-                  <View style={styles.avatarCircle}><Text style={styles.avatarText}>{s.user?.name?.charAt(0)?.toUpperCase()}</Text></View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cardPrimary}>{s.user?.name}</Text>
-                    <Text style={styles.cardSecondary}>{s.user?.email}</Text>
-                    <View style={styles.inlineRow}>
-                      <Badge label={`Roll: ${s.rollNumber}`} color={PURPLE} />
-                      {s.room && <Badge label={`Room ${s.room.roomNumber}`} color="#10B981" />}
-                    </View>
-                    {s.phoneNumber && <Text style={styles.cardTiny}>📱 {s.phoneNumber}</Text>}
-                    {s.fatherName && <Text style={styles.cardTiny}>👤 Father: {s.fatherName}</Text>}
-                    {s.parentContact && <Text style={styles.cardTiny}>📞 Parent: {s.parentContact}</Text>}
-                  </View>
-                  <View style={[styles.statusDot, { backgroundColor: s.room ? '#10B981' : '#F59E0B' }]} />
-                </View>
+
+        {/* Floor Filter Horizontal Pills */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 12, paddingHorizontal: 2 }}>
+          {[
+            { id: 'all', label: `All Floors (${allStudents.length})` },
+            { id: 1, label: 'Floor 1 (Rajken)' },
+            { id: 2, label: 'Floor 2 (Vandana)' },
+            { id: 3, label: 'Floor 3 (Pushpa)' },
+            { id: 4, label: 'Floor 4 (Harish)' },
+            { id: 5, label: 'Floor 5 (Ramesh)' },
+          ].map(f => {
+            const isSelected = studentFloorFilter === f.id;
+            return (
+              <TouchableOpacity
+                key={String(f.id)}
+                onPress={() => setStudentFloorFilter(f.id as any)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 20,
+                  backgroundColor: isSelected ? BRAND_TEAL : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: isSelected ? BRAND_TEAL : BRAND_BORDER,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '800', color: isSelected ? '#FFFFFF' : TEXT_MUTED }}>
+                  {f.label}
+                </Text>
               </TouchableOpacity>
-            </AnimatedCard>
-          ))
-        }
+            );
+          })}
+        </ScrollView>
+
+        {/* Count summary bar */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingHorizontal: 4 }}>
+          <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>
+            Showing {filtered.length} Resident{filtered.length === 1 ? '' : 's'}
+          </Text>
+          <Text style={{ fontSize: 11, color: TEXT_MUTED, fontWeight: '600' }}>
+            🛏️ {assignedCount} Assigned · {unassignedCount} Pending Room
+          </Text>
+        </View>
+
+        {filtered.length === 0 ? (
+          <Empty icon={Users} title="No residents found" sub="Try adjusting your search query or floor filter." />
+        ) : (
+          filtered.map((s, i) => {
+            const hasRoom = !!s.room;
+            return (
+              <AnimatedCard key={s.id} delay={Math.min(i * 35, 300)}>
+                <TouchableOpacity
+                  style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: hasRoom ? BRAND_TEAL : '#F59E0B' }]}
+                  onPress={() => openDetails(s, 'student')}
+                  activeOpacity={0.75}
+                >
+                  <View style={styles.approvalCardInner}>
+                    <View style={styles.avatarCircle}>
+                      <Text style={styles.avatarText}>{s.user?.name?.charAt(0)?.toUpperCase() || 'S'}</Text>
+                      <View style={[styles.statusDot, { position: 'absolute', bottom: 0, right: 0, backgroundColor: hasRoom ? '#10B981' : '#F59E0B' }]} />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <Text style={styles.cardPrimary}>{s.user?.name}</Text>
+                        <Badge label={`Roll: ${s.rollNumber}`} color={BRAND_TEAL} />
+                      </View>
+
+                      <Text style={styles.cardSecondary}>{s.user?.email}</Text>
+
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 4 }}>
+                        {s.room ? (
+                          <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#A7F3D0' }}>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#065F46' }}>
+                              Room {s.room.roomNumber} · Floor {s.room.floorNumber || 1}
+                            </Text>
+                          </View>
+                        ) : (
+                          <View style={{ backgroundColor: '#FFFBEB', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, borderWidth: 1, borderColor: '#FDE68A' }}>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>No Room Assigned</Text>
+                          </View>
+                        )}
+                        {s.fatherName && (
+                          <Text style={styles.cardTiny}>👤 {s.fatherName}</Text>
+                        )}
+                      </View>
+
+                      {/* Direct Call Actions & Dossier */}
+                      <View style={{ flexDirection: 'row', gap: 8, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+                        {s.phoneNumber && (
+                          <TouchableOpacity
+                            onPress={() => Linking.openURL(`tel:${s.phoneNumber}`)}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              backgroundColor: BRAND_MINT_CARD,
+                              paddingHorizontal: 8,
+                              paddingVertical: 5,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <Phone size={12} color={BRAND_TEAL} />
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: BRAND_TEAL }}>Call</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {s.parentContact && (
+                          <TouchableOpacity
+                            onPress={() => Linking.openURL(`tel:${s.parentContact}`)}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              backgroundColor: '#FFFBEB',
+                              paddingHorizontal: 8,
+                              paddingVertical: 5,
+                              borderRadius: 8,
+                            }}
+                          >
+                            <Phone size={12} color="#D97706" />
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>Parent</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity
+                          onPress={() => openDetails(s, 'student')}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4,
+                            marginLeft: 'auto',
+                            paddingHorizontal: 8,
+                            paddingVertical: 5,
+                          }}
+                        >
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: BRAND_TEAL }}>Dossier →</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </AnimatedCard>
+            );
+          })
+        )}
       </View>
     );
   };
 
-  // ─── ADMIN: Rooms Tab ───────────────────────────────────────────────────
+  // ─── ADMIN: Rooms Tab (Redesigned with Capacity Breakdown, Bed Slots, & Filters) ─
   const renderRoomsTab = () => {
-    const filtered = allRooms.filter(r =>
+    const floorFiltered = roomFloorFilter === 'all'
+      ? allRooms
+      : allRooms.filter(r => r.floorNumber === Number(roomFloorFilter));
+
+    const statusFiltered = roomStatusFilter === 'all'
+      ? floorFiltered
+      : floorFiltered.filter(r => r.status === roomStatusFilter);
+
+    const filtered = statusFiltered.filter(r =>
       r.roomNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       r.block?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    const occupied = filtered.filter(r => r.status === 'OCCUPIED').length;
-    const available = filtered.filter(r => r.status === 'AVAILABLE').length;
-    const maintenance = filtered.filter(r => r.status === 'MAINTENANCE').length;
+
+    const totalBedsCount = filtered.reduce((acc, r) => acc + (r.capacity || r.sharingType || 2), 0);
+    const occupiedCount = filtered.filter(r => r.status === 'OCCUPIED' || r.status === 'FULL').length;
+    const availableCount = filtered.filter(r => r.status === 'AVAILABLE').length;
+    const maintenanceCount = filtered.filter(r => r.status === 'MAINTENANCE').length;
 
     return (
       <View>
-        {/* Summary row */}
+        {/* Capacity Metrics Row */}
         <View style={styles.roomSummaryRow}>
           {[
-            { label: 'Total',       count: filtered.length, color: PURPLE  },
-            { label: 'Occupied',    count: occupied,         color: '#10B981' },
-            { label: 'Available',   count: available,        color: '#3B82F6' },
-            { label: 'Maintenance', count: maintenance,      color: '#EF4444' },
+            { label: 'Total', count: filtered.length, color: BRAND_TEAL },
+            { label: 'Occupied', count: occupiedCount, color: '#10B981' },
+            { label: 'Available', count: availableCount, color: '#0284C7' },
+            { label: 'Maint.', count: maintenanceCount, color: '#EF4444' },
           ].map(({ label, count, color }) => (
             <View key={label} style={[styles.roomSummaryBox, { borderTopColor: color }]}>
               <Text style={[styles.roomSummaryCount, { color }]}>{count}</Text>
@@ -1657,51 +2017,154 @@ export default function DashboardScreen() {
           ))}
         </View>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        {/* Search Bar */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
           <View style={[styles.searchBar, { flex: 1, marginBottom: 0 }]}>
-            <Search size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
-            <TextInput style={styles.searchInput} placeholder="Search rooms..." value={searchQuery} onChangeText={setSearchQuery} />
+            <Search size={16} color={BRAND_TEAL} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search room number or block..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#8A9895"
+            />
           </View>
-          <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { marginLeft: 10, height: 46, borderRadius: 12, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' }]} onPress={() => setAddRoomModalVisible(true)}>
-            <Plus size={16} color="#FFFFFF" />
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.btnPurple, { marginLeft: 10, height: 48, borderRadius: 14, paddingHorizontal: 14, justifyContent: 'center', alignItems: 'center' }]}
+            onPress={() => setAddRoomModalVisible(true)}
+          >
+            <Plus size={18} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
 
-        <SH title="All Rooms" count={filtered.length} />
-        {filtered.length === 0
-          ? <Empty icon={Bed} title="No rooms found" sub="Try adjusting your search." />
-          : filtered.map((r, i) => {
-            const statusColor = r.status === 'OCCUPIED' ? '#10B981' : r.status === 'MAINTENANCE' ? '#EF4444' : '#3B82F6';
+        {/* Floor Filter Pills */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, marginBottom: 10, paddingHorizontal: 2 }}>
+          {[
+            { id: 'all', label: `All Floors (${allRooms.length})` },
+            { id: 1, label: 'Floor 1 (Rajken)' },
+            { id: 2, label: 'Floor 2 (Vandana)' },
+            { id: 3, label: 'Floor 3 (Pushpa)' },
+            { id: 4, label: 'Floor 4 (Harish)' },
+            { id: 5, label: 'Floor 5 (Ramesh)' },
+          ].map(f => {
+            const isSelected = roomFloorFilter === f.id;
             return (
-              <AnimatedCard key={r.id} delay={Math.min(i * 40, 400)}>
-                <TouchableOpacity style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: statusColor }]} onPress={() => openDetails(r, 'room')} activeOpacity={0.75}>
+              <TouchableOpacity
+                key={String(f.id)}
+                onPress={() => setRoomFloorFilter(f.id as any)}
+                style={{
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 20,
+                  backgroundColor: isSelected ? BRAND_TEAL : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: isSelected ? BRAND_TEAL : BRAND_BORDER,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '800', color: isSelected ? '#FFFFFF' : TEXT_MUTED }}>
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+
+        {/* Status Filter Chips */}
+        <View style={{ flexDirection: 'row', gap: 6, marginBottom: 14, paddingHorizontal: 2 }}>
+          {[
+            { id: 'all', label: 'All Status' },
+            { id: 'AVAILABLE', label: 'Available' },
+            { id: 'OCCUPIED', label: 'Occupied' },
+            { id: 'MAINTENANCE', label: 'Maintenance' },
+          ].map(st => {
+            const isSelected = roomStatusFilter === st.id;
+            return (
+              <TouchableOpacity
+                key={st.id}
+                onPress={() => setRoomStatusFilter(st.id as any)}
+                style={{
+                  flex: 1,
+                  paddingVertical: 6,
+                  alignItems: 'center',
+                  borderRadius: 8,
+                  backgroundColor: isSelected ? BRAND_MINT_CARD : '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: isSelected ? BRAND_TEAL : BRAND_BORDER,
+                }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '800', color: isSelected ? BRAND_TEAL : TEXT_MUTED }}>
+                  {st.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {filtered.length === 0 ? (
+          <Empty icon={Bed} title="No rooms found" sub="Try changing your floor or status filter." />
+        ) : (
+          filtered.map((r, i) => {
+            const statusColor = r.status === 'OCCUPIED' || r.status === 'FULL' ? '#10B981' : r.status === 'MAINTENANCE' ? '#EF4444' : '#0284C7';
+            const capacity = r.capacity || r.sharingType || 2;
+            const residentsInRoom = r.students || [];
+
+            return (
+              <AnimatedCard key={r.id} delay={Math.min(i * 35, 300)}>
+                <TouchableOpacity
+                  style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: statusColor }]}
+                  onPress={() => openDetails(r, 'room')}
+                  activeOpacity={0.75}
+                >
                   <View style={styles.rowBetween}>
-                    <Text style={styles.cardPrimary}>Room {r.roomNumber}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <Text style={styles.cardPrimary}>Room {r.roomNumber}</Text>
+                      <View style={{ backgroundColor: r.isAc ? '#DBEAFE' : '#F3F4F6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                        <Text style={{ fontSize: 9, fontWeight: '800', color: r.isAc ? '#1E40AF' : '#6B7280' }}>
+                          {r.isAc ? 'A/C' : 'Non-A/C'}
+                        </Text>
+                      </View>
+                    </View>
                     <Badge label={r.status} color={statusColor} />
                   </View>
-                  <Text style={styles.cardSecondary}>Block {r.block} · {r.sharingType} · {r.isAc ? 'A/C' : 'Non-A/C'}</Text>
-                  {r.floor && <Text style={styles.cardSecondary}>Floor: {r.floor}</Text>}
-                  {r.capacity && <Text style={styles.cardSecondary}>Capacity: {r.capacity} beds</Text>}
-                  {r.students && r.students.length > 0 && (
-                    <View style={{ marginTop: 10 }}>
-                      <Text style={styles.cardTiny}>Residents:</Text>
-                      {r.students.map((st: any) => (
-                        <Text key={st.id} style={[styles.cardTiny, { marginTop: 3 }]}>
-                          • {st.user?.name} (Roll: {st.rollNumber})
-                        </Text>
+
+                  <Text style={styles.cardSecondary}>
+                    Floor {r.floorNumber || 1} · {r.sharingType ? `${r.sharingType}-Sharing` : 'Standard'} · {r.block} Block
+                  </Text>
+
+                  {/* Visual Bed Breakdown Chips */}
+                  <View style={{ marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: TEXT_LIGHT, textTransform: 'uppercase', marginBottom: 4 }}>
+                      Bed Slots ({residentsInRoom.length}/{capacity} Occupied):
+                    </Text>
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                      {residentsInRoom.map((st: any, bIdx: number) => (
+                        <View key={st.id || bIdx} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: BRAND_MINT_CARD, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#BCE0DB' }}>
+                          <Text style={{ fontSize: 10 }}>🛏️</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: BRAND_TEAL_DARK }} numberOfLines={1}>
+                            {st.user?.name || `Bed ${bIdx + 1}`}
+                          </Text>
+                        </View>
+                      ))}
+                      {Array.from({ length: Math.max(0, capacity - residentsInRoom.length) }).map((_, emptyIdx) => (
+                        <View key={`empty-${emptyIdx}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F0FDF4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: '#BBF7D0', borderStyle: 'dashed' }}>
+                          <Text style={{ fontSize: 10 }}>🟢</Text>
+                          <Text style={{ fontSize: 10, fontWeight: '800', color: '#166534' }}>
+                            Vacant Slot
+                          </Text>
+                        </View>
                       ))}
                     </View>
-                  )}
+                  </View>
                 </TouchableOpacity>
               </AnimatedCard>
             );
           })
-        }
+        )}
       </View>
     );
   };
 
-  // ─── ADMIN: Requests Tab (Approvals + Leaves + Complaints) ─────────────
+  // ─── ADMIN: Requests Tab (Approvals + Leaves + Complaints + Profile Changes) ─
   const [requestSection, setRequestSection] = useState<'Approvals' | 'Leaves' | 'Complaints' | 'Profile Changes'>('Approvals');
   const renderRequestsTab = () => {
     const filtered = requestSection === 'Leaves'
@@ -1716,7 +2179,7 @@ export default function DashboardScreen() {
 
     return (
       <View>
-        {/* Sub-section tabs */}
+        {/* 4-Way Sub-Section Tabs with Live Badges */}
         <View style={styles.subTabRow}>
           {(['Approvals', 'Leaves', 'Complaints', 'Profile Changes'] as const).map((s) => (
             <TouchableOpacity
@@ -1738,22 +2201,27 @@ export default function DashboardScreen() {
           ))}
         </View>
 
+        {/* Search Bar */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
           <View style={[styles.searchBar, { flex: 1, marginBottom: 0 }]}>
-            <Search size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
-            <TextInput style={styles.searchInput} placeholder="Search by name or roll..." value={searchQuery} onChangeText={setSearchQuery} />
+            <Search size={16} color={BRAND_TEAL} style={{ marginRight: 8 }} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by student name or roll..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#8A9895"
+            />
           </View>
-          <TouchableOpacity style={[styles.actionBtn, styles.btnPurple, { marginLeft: 10, height: 46, borderRadius: 12, paddingHorizontal: 12, justifyContent: 'center', alignItems: 'center' }]} onPress={() => setCreateBillModalVisible(true)}>
-            <Plus size={16} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
 
         {/* Approvals */}
         {requestSection === 'Approvals' && (
-          pendingApprovals.length === 0
-            ? <Empty icon={CheckCircle} title="All caught up!" sub="No pending account approvals." />
-            : pendingApprovals.map((p, i) => (
-              <AnimatedCard key={p.id} delay={i * 60}>
+          pendingApprovals.length === 0 ? (
+            <Empty icon={CheckCircle} title="All caught up!" sub="No pending student registration approvals." />
+          ) : (
+            pendingApprovals.map((p, i) => (
+              <AnimatedCard key={p.id} delay={i * 50}>
                 <View style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: '#F59E0B' }]}>
                   <View style={styles.approvalCardInner}>
                     <TouchableOpacity style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }} onPress={() => openDetails(p.student || p, 'student')} activeOpacity={0.7}>
@@ -1761,31 +2229,36 @@ export default function DashboardScreen() {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.cardPrimary}>{p.name}</Text>
                         <Text style={styles.cardSecondary}>{p.email}</Text>
-                        <Badge label={p.role?.replace('PENDING_', '')} />
-                        {p.student && <Text style={styles.cardTiny}>Roll: {p.student.rollNumber}</Text>}
-                        {p.student && <Text style={styles.cardTiny}>📱 {p.student.phoneNumber}</Text>}
+                        <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
+                          <Badge label={p.role?.replace('PENDING_', '')} color="#F59E0B" />
+                          {p.student?.phoneNumber && (
+                            <Text style={styles.cardTiny}>📱 {p.student.phoneNumber}</Text>
+                          )}
+                        </View>
                       </View>
                     </TouchableOpacity>
-                    <View style={{ gap: 6 }}>
-                      <TouchableOpacity style={[styles.iconAction, { backgroundColor: '#ECFDF5' }]} onPress={() => approveUser(p.id, p.role?.replace('PENDING_', ''))}>
-                        <CheckCircle size={20} color="#10B981" />
+                    <View style={{ gap: 6, flexDirection: 'row', alignItems: 'center' }}>
+                      <TouchableOpacity style={[styles.iconAction, { backgroundColor: '#ECFDF5', width: 40, height: 40 }]} onPress={() => approveUser(p.id, p.role?.replace('PENDING_', ''))}>
+                        <CheckCircle size={22} color="#10B981" />
                       </TouchableOpacity>
-                      <TouchableOpacity style={[styles.iconAction, { backgroundColor: '#FEF2F2', marginTop: 8 }]} onPress={() => rejectUser(p.id)}>
-                        <XCircle size={20} color="#EF4444" />
+                      <TouchableOpacity style={[styles.iconAction, { backgroundColor: '#FEF2F2', width: 40, height: 40 }]} onPress={() => rejectUser(p.id)}>
+                        <XCircle size={22} color="#EF4444" />
                       </TouchableOpacity>
                     </View>
                   </View>
                 </View>
               </AnimatedCard>
             ))
+          )
         )}
 
         {/* Leaves */}
         {requestSection === 'Leaves' && (
-          filtered.length === 0
-            ? <Empty icon={Navigation} title="No records" sub="No matching leave requests." />
-            : (filtered as any[]).map((l, i) => (
-              <AnimatedCard key={l.id} delay={Math.min(i * 50, 400)}>
+          filtered.length === 0 ? (
+            <Empty icon={Navigation} title="No leave requests" sub="No pending or active leaves." />
+          ) : (
+            (filtered as any[]).map((l, i) => (
+              <AnimatedCard key={l.id} delay={Math.min(i * 45, 300)}>
                 <TouchableOpacity style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: l.status === 'APPROVED' ? '#10B981' : l.status === 'REJECTED' ? '#EF4444' : '#F59E0B' }]} onPress={() => openDetails(l, 'leave')} activeOpacity={0.75}>
                   <View style={styles.rowBetween}>
                     <Text style={styles.cardPrimary}>{l.student?.user?.name}</Text>
@@ -1793,7 +2266,7 @@ export default function DashboardScreen() {
                   </View>
                   <Text style={styles.cardSecondary}>Roll: {l.student?.rollNumber} · {l.type?.replace('_', ' ')}</Text>
                   <Text style={styles.cardSecondary}>{l.reason}</Text>
-                  <Text style={styles.cardTiny}>{new Date(l.startDate).toLocaleDateString()} → {new Date(l.endDate).toLocaleDateString()}</Text>
+                  <Text style={styles.cardTiny}>📅 {new Date(l.startDate).toLocaleDateString()} → {new Date(l.endDate).toLocaleDateString()}</Text>
                   {l.status === 'PENDING' && (
                     <View style={styles.actionRow}>
                       <TouchableOpacity style={[styles.actionBtn, styles.btnGreen, { flex: 1 }]} onPress={() => resolveLeave(l.id, 'APPROVED')}>
@@ -1807,14 +2280,16 @@ export default function DashboardScreen() {
                 </TouchableOpacity>
               </AnimatedCard>
             ))
+          )
         )}
 
         {/* Complaints */}
         {requestSection === 'Complaints' && (
-          filtered.length === 0
-            ? <Empty icon={AlertCircle} title="No complaints" sub="All maintenance cleared." />
-            : (filtered as any[]).map((c, i) => (
-              <AnimatedCard key={c.id} delay={Math.min(i * 50, 400)}>
+          filtered.length === 0 ? (
+            <Empty icon={AlertCircle} title="All maintenance cleared!" sub="No active resident complaints." />
+          ) : (
+            (filtered as any[]).map((c, i) => (
+              <AnimatedCard key={c.id} delay={Math.min(i * 45, 300)}>
                 <TouchableOpacity style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: c.status === 'RESOLVED' ? '#10B981' : '#EF4444' }]} onPress={() => openDetails(c, 'complaint')} activeOpacity={0.75}>
                   <View style={styles.rowBetween}>
                     <Text style={styles.cardPrimary}>{c.category}</Text>
@@ -1824,7 +2299,7 @@ export default function DashboardScreen() {
                   {c.student?.room && <Text style={styles.cardTiny}>Room: {c.student.room.roomNumber}, Block {c.student.room.block}</Text>}
                   <Text style={styles.cardSecondary}>{c.description}</Text>
                   <View style={styles.rowBetween}>
-                    <Badge label={c.status} color={c.status === 'RESOLVED' ? '#10B981' : PURPLE} />
+                    <Badge label={c.status} color={c.status === 'RESOLVED' ? '#10B981' : BRAND_TEAL} />
                     <Text style={styles.cardTiny}>{new Date(c.createdAt).toLocaleDateString()}</Text>
                   </View>
                   {c.status !== 'RESOLVED' && (
@@ -1842,15 +2317,17 @@ export default function DashboardScreen() {
                 </TouchableOpacity>
               </AnimatedCard>
             ))
+          )
         )}
 
         {/* Profile Changes */}
         {requestSection === 'Profile Changes' && (
-          profileRequestsList.length === 0
-            ? <Empty icon={User} title="No requests" sub="No pending student profile changes." />
-            : profileRequestsList.map((r, i) => (
-              <AnimatedCard key={r.id} delay={i * 60}>
-                <View style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: PURPLE }]}>
+          profileRequestsList.length === 0 ? (
+            <Empty icon={User} title="No requests" sub="No pending student profile changes." />
+          ) : (
+            profileRequestsList.map((r, i) => (
+              <AnimatedCard key={r.id} delay={i * 50}>
+                <View style={[styles.listCard, { borderLeftWidth: 4, borderLeftColor: BRAND_TEAL }]}>
                   <View style={styles.rowBetween}>
                     <Text style={styles.cardPrimary}>{r.studentName}</Text>
                     <Text style={styles.cardTiny}>Roll: {r.studentRoll}</Text>
@@ -1861,7 +2338,7 @@ export default function DashboardScreen() {
                     return (
                       <View key={field} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
                         <Text style={[styles.cardTiny, { textTransform: 'capitalize' }]}>{field.replace(/([A-Z])/g, ' $1')}</Text>
-                        <Text style={[styles.cardTiny, { fontWeight: '700', color: PURPLE }]}>{newVal}</Text>
+                        <Text style={[styles.cardTiny, { fontWeight: '700', color: BRAND_TEAL }]}>{newVal}</Text>
                       </View>
                     );
                   })}
@@ -1876,31 +2353,37 @@ export default function DashboardScreen() {
                 </View>
               </AnimatedCard>
             ))
+          )
         )}
       </View>
     );
   };
 
-  // ─── ADMIN: Settings/Profile Tab ────────────────────────────────────────
+  // ─── ADMIN: Settings & Hostel Management Tools Tab ──────────────────────
   const renderAdminSettings = () => (
     <View>
       <AnimatedCard delay={0}>
-        <View style={[styles.profileHero, { backgroundColor: '#FFFFFF', shadowColor: '#101828', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1, paddingVertical: 24 }]}>
-          <View style={[styles.profileAvatar, { backgroundColor: PURPLE, borderColor: '#F4F3FF' }]}>
-            <Text style={[styles.profileAvatarText, { color: '#FFFFFF' }]}>{user.name?.charAt(0)?.toUpperCase()}</Text>
+        <View style={styles.profileHero}>
+          <View style={styles.profileAvatar}>
+            <Text style={styles.profileAvatarText}>{user.name?.charAt(0)?.toUpperCase()}</Text>
           </View>
-          <Text style={[styles.profileName, { color: '#111827' }]}>{user.name}</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 8 }}>
-            <Badge label={user.role} color={PURPLE} />
+          <Text style={styles.profileName}>{user.name}</Text>
+          <Text style={styles.profileEmail}>{user.email}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 10 }}>
+            <View style={{ backgroundColor: BRAND_GOLD, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 }}>
+              <Text style={{ fontSize: 11, fontWeight: '900', color: BRAND_GOLD_DARK, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                {user.role} · WARDEN IN-CHARGE
+              </Text>
+            </View>
           </View>
         </View>
       </AnimatedCard>
 
       <SH title="Warden Management Tools" />
-      <AnimatedCard delay={100}>
+      <AnimatedCard delay={60}>
         <TouchableOpacity style={styles.listCard} onPress={() => setMessMenuModalVisible(true)} activeOpacity={0.75}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ marginRight: 12 }}><Coffee size={20} color={PURPLE} /></View>
+            <View style={[styles.avatarCircle, { width: 42, height: 42 }]}><Coffee size={20} color={BRAND_TEAL} /></View>
             <View style={{ flex: 1 }}>
               <Text style={styles.cardPrimary}>Mess Menu Planner</Text>
               <Text style={styles.cardSecondary}>Customize daily meal menus for residents.</Text>
@@ -1910,26 +2393,54 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </AnimatedCard>
 
-      <AnimatedCard delay={150}>
-        <TouchableOpacity style={styles.listCard} onPress={() => { setActiveTab('Home'); setActivePollSection('polls'); }} activeOpacity={0.75}>
+      <AnimatedCard delay={100}>
+        <TouchableOpacity style={styles.listCard} onPress={() => router.push('/accounting' as any)} activeOpacity={0.75}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ marginRight: 12 }}><FileText size={20} color={PURPLE} /></View>
+            <View style={[styles.avatarCircle, { width: 42, height: 42 }]}><Receipt size={20} color={BRAND_TEAL} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.cardPrimary}>Manage Hostel Polls</Text>
-              <Text style={styles.cardSecondary}>Create, toggle status, and delete active student polls.</Text>
+              <Text style={styles.cardPrimary}>Tally Accounting & Daybook</Text>
+              <Text style={styles.cardSecondary}>Ledger transactions, cash flows, and trial balance.</Text>
             </View>
             <ChevronRight size={18} color="#9CA3AF" />
           </View>
         </TouchableOpacity>
       </AnimatedCard>
 
-      <AnimatedCard delay={200}>
+      <AnimatedCard delay={140}>
+        <TouchableOpacity style={styles.listCard} onPress={() => { setActiveTab('Home'); setActivePollSection('polls'); }} activeOpacity={0.75}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={[styles.avatarCircle, { width: 42, height: 42 }]}><FileText size={20} color={BRAND_TEAL} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardPrimary}>Hostel Voting Polls</Text>
+              <Text style={styles.cardSecondary}>Create, toggle status, and inspect student polls.</Text>
+            </View>
+            <ChevronRight size={18} color="#9CA3AF" />
+          </View>
+        </TouchableOpacity>
+      </AnimatedCard>
+
+      <AnimatedCard delay={180}>
+        <TouchableOpacity style={styles.listCard} onPress={() => openNightRoundModal()} activeOpacity={0.75}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={[styles.avatarCircle, { width: 42, height: 42 }]}><Moon size={20} color={BRAND_TEAL} /></View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardPrimary}>Night Roll Call Attendance</Text>
+              <Text style={styles.cardSecondary}>Conduct room-by-room night roll calls.</Text>
+            </View>
+            <ChevronRight size={18} color="#9CA3AF" />
+          </View>
+        </TouchableOpacity>
+      </AnimatedCard>
+
+      <AnimatedCard delay={220}>
         <TouchableOpacity style={styles.listCard} onPress={handleLogout} activeOpacity={0.75}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <View style={{ marginRight: 12 }}><LogOut size={20} color="#EF4444" /></View>
+            <View style={[styles.avatarCircle, { width: 42, height: 42, backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}>
+              <LogOut size={20} color="#EF4444" />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.cardPrimary, { color: '#EF4444' }]}>Sign Out</Text>
-              <Text style={styles.cardSecondary}>Logout from your session.</Text>
+              <Text style={styles.cardSecondary}>Securely logout from your warden session.</Text>
             </View>
             <ChevronRight size={18} color="#EF4444" />
           </View>
@@ -2495,6 +3006,33 @@ export default function DashboardScreen() {
     }
   };
 
+  const getNavTabs = () => {
+    if (!user) return [];
+    if (user.role === 'ADMIN') {
+      return [
+        { id: 'Home', label: 'Home', icon: Home },
+        { id: 'Students', label: 'Residents', icon: Users },
+        { id: 'Rooms', label: 'Rooms', icon: Bed },
+        { id: 'Requests', label: 'Requests', icon: FileText },
+        { id: 'Settings', label: 'Settings', icon: Settings },
+      ];
+    }
+    if (user.role === 'STUDENT') {
+      return [
+        { id: 'Home', label: 'Home', icon: Home },
+        { id: 'Rooms', label: 'Rooms', icon: Bed },
+        { id: 'Services', label: 'Services', icon: Layers },
+        { id: 'Requests', label: 'Requests', icon: FileText },
+        { id: 'Profile', label: 'Profile', icon: User },
+      ];
+    }
+    return [
+      { id: 'Home', label: 'Home', icon: Home },
+      { id: 'Visitors', label: 'Visitors', icon: Users },
+      { id: 'Profile', label: 'Profile', icon: User },
+    ];
+  };
+
   if (!user) return <View style={styles.center}><ActivityIndicator size="large" color={PURPLE} /></View>;
 
   const navTabs = getNavTabs();
@@ -2565,7 +3103,7 @@ export default function DashboardScreen() {
 
       {/* ── Bottom Navigation Bar ── */}
       <Animated.View style={[styles.bottomNav, { transform: [{ translateY: bottomNavAnim }] }]}>
-        {navTabs.map((tab) => {
+        {navTabs.map((tab: any) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
