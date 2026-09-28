@@ -12,11 +12,11 @@ import {
 } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
-const PURPLE = '#7F56D9';
+const PURPLE = '#246460';
 
 const STATUS_META: Record<string, { color: string; bg: string; icon: any; label: string }> = {
   PENDING:     { color: '#D97706', bg: '#FFFBEB', icon: AlertCircle, label: 'Pending' },
-  APPROVED:    { color: PURPLE,    bg: '#F4F3FF', icon: CheckCircle,  label: 'Approved' },
+  APPROVED:    { color: PURPLE,    bg: '#E6F4F2', icon: CheckCircle,  label: 'Approved' },
   REJECTED:    { color: '#EF4444', bg: '#FEF2F2', icon: XCircle,      label: 'Rejected' },
   CHECKED_OUT: { color: '#F59E0B', bg: '#FFFBEB', icon: LogOut,       label: 'Out of Hostel' },
   COMPLETED:   { color: '#10B981', bg: '#ECFDF5', icon: CheckCircle,  label: 'Returned' },

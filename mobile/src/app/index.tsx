@@ -12,7 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import * as SecureStore from 'expo-secure-store';
 
 const { width, height } = Dimensions.get('window');
-const PURPLE = '#7F56D9';
+const PURPLE = '#246460';
 
 export default function SplashScreen() {
   const router = useRouter();

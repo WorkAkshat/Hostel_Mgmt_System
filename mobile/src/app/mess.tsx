@@ -22,9 +22,9 @@ import {
 
 const { width } = Dimensions.get('window');
 
-const PURPLE = '#7F56D9';
-const PURPLE_LIGHT = '#F4F3FF';
-const PURPLE_DARK = '#6941C6';
+const PURPLE = '#246460';
+const PURPLE_LIGHT = '#e6f4f2';
+const PURPLE_DARK = '#1b4240';
 
 const WEEKLY_MENU = {
   Monday:    { breakfast: 'Poha + Chai', lunch: 'Dal Tadka + Roti + Rice', snacks: 'Samosa + Tea', dinner: 'Paneer Butter Masala + Naan' },

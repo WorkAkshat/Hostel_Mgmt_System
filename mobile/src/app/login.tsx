@@ -15,8 +15,8 @@ import {
 import { TermsAcceptanceModal, hasAcceptedTerms } from '../../components/TermsAcceptanceModal';
 
 const { width } = Dimensions.get('window');
-const PURPLE = '#7F56D9';
-const PURPLE_DARK = '#6941C6';
+const PURPLE = '#246460';
+const PURPLE_DARK = '#1b4240';
 
 const InputField = ({
   id, label, value, onChange, placeholder, keyboard = 'default', secure = false, icon,

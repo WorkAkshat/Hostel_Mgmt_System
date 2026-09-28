@@ -13,7 +13,7 @@ import {
 } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
-const PURPLE = '#7F56D9';
+const PURPLE = '#246460';
 
 const REASONS = [
   'Academic reasons (proximity to library)',

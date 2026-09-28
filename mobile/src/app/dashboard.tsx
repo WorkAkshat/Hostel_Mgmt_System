@@ -34,9 +34,28 @@ import {
 import { getDailyQuote, getGreeting } from '../../utils/quotes';
 
 const { width, height } = Dimensions.get('window');
-const PURPLE = '#7F56D9';
-const PURPLE_LIGHT = '#F4F3FF';
-const PURPLE_DARK = '#6941C6';
+// ─── Hari Pushp PG Design Tokens ──────────────────────────────────────────
+const BRAND_TEAL = '#246460';          // Primary Brand Teal (Brand 700)
+const BRAND_TEAL_DARK = '#1b4240';     // Brand 900
+const BRAND_TEAL_DEEP = '#1f504d';     // Brand 800
+const BRAND_TEAL_MED = '#2b7a74';      // Brand 600
+const BRAND_TEAL_LIGHT = '#e6f4f2';    // Mint 100
+const BRAND_TEAL_SUBTLE = '#f0f8f7';   // Brand 50
+const BRAND_MINT_BG = '#f6faf9';       // Mint surface background
+const BRAND_MINT_CARD = '#e6f4f2';     // Mint card surface
+const BRAND_MINT_PILL = '#d5ecea';     // Mint pill
+const BRAND_GOLD = '#f9d77e';          // Sun 300 (Accent CTA)
+const BRAND_GOLD_DARK = '#3d2f06';     // Sun 900 text
+const BRAND_GOLD_BG = '#fefae9';       // Sun 50
+const BRAND_BORDER = '#e3ecea';        // Crisp card border
+const TEXT_DARK = '#1b2a29';           // Dark teal charcoal
+const TEXT_MUTED = '#52625f';          // Secondary text
+const TEXT_LIGHT = '#8a9895';          // Tertiary text
+
+// Aliases for unified styling across existing components
+const PURPLE = BRAND_TEAL;
+const PURPLE_LIGHT = BRAND_TEAL_LIGHT;
+const PURPLE_DARK = BRAND_TEAL_DARK;
 
 // ─── Animated entrance card ───────────────────────────────────────────────
 const AnimatedCard = ({ children, delay = 0, style }: any) => {
@@ -151,12 +170,12 @@ const FormModal = ({ visible, title, onClose, onSubmit, children }: any) => (
 );
 
 const WORKSPACE_OPTIONS = [
-  { num: 1, name: 'Rajken Enterprises', label: 'Floor 1 Workspace', sub: 'Hari Pushp Girls Hostel', icon: '🏠', color: '#7F56D9' },
+  { num: 1, name: 'Rajken Enterprises', label: 'Floor 1 Workspace', sub: 'Hari Pushp Girls Hostel', icon: '🏠', color: BRAND_TEAL },
   { num: 2, name: 'Vandana Enterprises', label: 'Floor 2 Workspace', sub: 'Vandana Girls Hostel', icon: '🏢', color: '#EC4899' },
   { num: 3, name: 'Pushpa Enterprises', label: 'Floor 3 Workspace', sub: 'Pushpa Girls Hostel', icon: '🏙️', color: '#06B6D4' },
   { num: 4, name: 'Harish Chandra Ent.', label: 'Floor 4 Workspace', sub: 'Harish Chandra Girls Hostel', icon: '🌿', color: '#10B981' },
   { num: 5, name: 'Ramesh Enterprises', label: 'Floor 5 & 6 Workspace', sub: 'Ramesh Girls Hostel', icon: '⭐', color: '#F59E0B' },
-  { num: 'combined', name: 'Consolidated View', label: 'All 5 Floors Combined', sub: 'Meenakshi Enterprises Catering', icon: '🌐', color: '#2563EB' },
+  { num: 'combined', name: 'Consolidated View', label: 'All 5 Floors Combined', sub: 'Meenakshi Enterprises Catering', icon: '🌐', color: BRAND_TEAL },
 ];
 
 const WorkspaceOptionCard = ({ item, isSelected, onPress }: any) => {
@@ -1289,41 +1308,41 @@ export default function DashboardScreen() {
         <TouchableOpacity
           style={{
             flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-            backgroundColor: '#F4F3FF', borderWidth: 1, borderColor: '#D9D6FE',
+            backgroundColor: BRAND_MINT_CARD, borderWidth: 1, borderColor: '#bce0db',
             borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 16,
           }}
           onPress={() => setWorkspaceModalVisible(true)}
           activeOpacity={0.7}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Building2 size={18} color="#7F56D9" />
-            <Text style={{ fontSize: 13, fontWeight: '800', color: '#6941C6' }}>{workspaceLabel}</Text>
+            <Building2 size={18} color={BRAND_TEAL} />
+            <Text style={{ fontSize: 13, fontWeight: '800', color: BRAND_TEAL_DARK }}>{workspaceLabel}</Text>
           </View>
-          <View style={{ backgroundColor: '#7F56D9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
-            <Text style={{ fontSize: 10, fontWeight: '700', color: '#FFFFFF' }}>Switch ▼</Text>
+          <View style={{ backgroundColor: BRAND_TEAL, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 8 }}>
+            <Text style={{ fontSize: 10, fontWeight: '800', color: '#FFFFFF' }}>Switch ▼</Text>
           </View>
         </TouchableOpacity>
 
         {/* Hero Grid */}
         <View style={styles.heroGrid}>
-          <StatHero icon={Users}      count={activeStudents.length}   label="Students"       color="#7F56D9" delay={0}   onPress={() => setActiveTab('Students')}   showArrow={false} />
-          <StatHero icon={Bed}        count={activeRooms.length}      label="Rooms"          color="#10B981" delay={60}  onPress={() => setActiveTab('Rooms')}      showArrow={false} />
-          <StatHero icon={UserCheck}  count={pendingApprovals.length} label="Approvals"      color="#F59E0B" delay={120} onPress={() => setActiveTab('Requests')}   sub={pendingApprovals.length > 0 ? 'Pending' : 'All Clear'} showArrow={false} />
-          <StatHero icon={Navigation}    count={pendingLeaves}           label="Leave Requests" color="#3B82F6" delay={180} onPress={() => setActiveTab('Requests')}   sub={pendingLeaves > 0 ? `${pendingLeaves} pending` : 'All clear'} showArrow={false} />
-          <StatHero icon={AlertCircle} count={openComplaints}         label="Open Issues"    color="#EF4444" delay={240} onPress={() => setActiveTab('Requests')}   sub={openComplaints > 0 ? 'Pending action' : 'All Clear'} showArrow={false} />
-          <StatHero icon={TrendingUp} count={`${occupancy}%`}         label="Occupancy"      color="#8B5CF6" delay={300} onPress={() => setActiveTab('Rooms')} showArrow={false} />
+          <StatHero icon={Users}       count={activeStudents.length}   label="Students"       color={BRAND_TEAL} delay={0}   onPress={() => setActiveTab('Students')}   showArrow={false} />
+          <StatHero icon={Bed}         count={activeRooms.length}      label="Rooms"          color="#10B981"    delay={60}  onPress={() => setActiveTab('Rooms')}      showArrow={false} />
+          <StatHero icon={UserCheck}   count={pendingApprovals.length} label="Approvals"      color="#D97706"    delay={120} onPress={() => setActiveTab('Requests')}   sub={pendingApprovals.length > 0 ? 'Pending' : 'All Clear'} showArrow={false} />
+          <StatHero icon={Navigation}  count={pendingLeaves}           label="Leave Requests" color="#0284C7"    delay={180} onPress={() => setActiveTab('Requests')}   sub={pendingLeaves > 0 ? `${pendingLeaves} pending` : 'All clear'} showArrow={false} />
+          <StatHero icon={AlertCircle} count={openComplaints}          label="Open Issues"    color="#EF4444"    delay={240} onPress={() => setActiveTab('Requests')}   sub={openComplaints > 0 ? 'Pending action' : 'All Clear'} showArrow={false} />
+          <StatHero icon={TrendingUp}  count={`${occupancy}%`}         label="Occupancy"      color={BRAND_TEAL_MED} delay={300} onPress={() => setActiveTab('Rooms')} showArrow={false} />
         </View>
 
         {/* Floor Directory & Company Setup Section */}
         <SH title="Floor & Company Directory" count={floorsList.length || 5} onAction={() => openFloorModal('combined')} actionLabel="Consolidated Report" />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 10, marginBottom: 20 }}>
           {[
-            { num: 1, name: 'Rajken Ent.', label: 'Floor 1', sub: 'Hari Pushp PG', color: '#7F56D9', icon: '🏠' },
+            { num: 1, name: 'Rajken Ent.', label: 'Floor 1', sub: 'Hari Pushp PG', color: BRAND_TEAL, icon: '🏠' },
             { num: 2, name: 'Vandana Ent.', label: 'Floor 2', sub: 'Vandana PG', color: '#EC4899', icon: '🏢' },
             { num: 3, name: 'Pushpa Ent.', label: 'Floor 3', sub: 'Pushpa PG', color: '#06B6D4', icon: '🏙️' },
             { num: 4, name: 'Harish Chandra', label: 'Floor 4', sub: 'Harish Chandra PG', color: '#10B981', icon: '🌿' },
             { num: 5, name: 'Ramesh Ent.', label: 'Floor 5&6', sub: 'Ramesh PG', color: '#F59E0B', icon: '⭐' },
-            { num: 'combined', name: 'Consolidated', label: 'All 5 Floors', sub: 'Meenakshi Catering', color: '#2563EB', icon: '🌐' },
+            { num: 'combined', name: 'Consolidated', label: 'All 5 Floors', sub: 'Meenakshi Catering', color: BRAND_TEAL, icon: '🌐' },
           ].map((item) => (
             <TouchableOpacity
               key={item.label}
@@ -1332,9 +1351,9 @@ export default function DashboardScreen() {
               activeOpacity={0.7}
             >
               <Text style={{ fontSize: 22, marginBottom: 6 }}>{item.icon}</Text>
-              <Text style={{ fontSize: 10, fontWeight: '700', color: '#9CA3AF', textTransform: 'uppercase' }}>{item.label}</Text>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#1F2937', marginTop: 2 }} numberOfLines={1}>{item.name}</Text>
-              <Text style={{ fontSize: 10, fontWeight: '500', color: '#6B7280', marginTop: 2 }} numberOfLines={1}>{item.sub}</Text>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: TEXT_LIGHT, textTransform: 'uppercase' }}>{item.label}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: TEXT_DARK, marginTop: 2 }} numberOfLines={1}>{item.name}</Text>
+              <Text style={{ fontSize: 10, fontWeight: '600', color: TEXT_MUTED, marginTop: 2 }} numberOfLines={1}>{item.sub}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -1343,23 +1362,23 @@ export default function DashboardScreen() {
         <SH title="Hostel Operations & Modules" count={7} />
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 4, gap: 10, marginBottom: 20 }}>
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#7F56D9' }]}
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: BRAND_TEAL }]}
             onPress={() => openFloorModal(selectedWorkspaceFloor)}
             activeOpacity={0.7}
           >
             <Text style={{ fontSize: 20, marginBottom: 4 }}>📊</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Financial Reports</Text>
-            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Floor PDF & Dues</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Financial Reports</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Floor PDF & Dues</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#F59E0B' }]}
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#D97706' }]}
             onPress={openDemandNotesModal}
             activeOpacity={0.7}
           >
             <Text style={{ fontSize: 20, marginBottom: 4 }}>🧾</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Demand Notes</Text>
-            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Electricity & Cycle</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Demand Notes</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Electricity & Cycle</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1368,48 +1387,48 @@ export default function DashboardScreen() {
             activeOpacity={0.7}
           >
             <Text style={{ fontSize: 20, marginBottom: 4 }}>🍽️</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Cook Dashboard</Text>
-            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Meal Opt-Out Counts</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Cook Dashboard</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Meal Opt-Out Counts</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#06B6D4' }]}
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: BRAND_TEAL_MED }]}
             onPress={openSuggestionsModal}
             activeOpacity={0.7}
           >
             <Text style={{ fontSize: 20, marginBottom: 4 }}>💬</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Suggestion Box</Text>
-            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Student Feedback</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Suggestion Box</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Student Feedback</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#3B82F6' }]}
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: BRAND_TEAL_DARK }]}
             onPress={() => openNightRoundModal(selectedWorkspaceFloor === 'combined' ? 1 : Number(selectedWorkspaceFloor))}
             activeOpacity={0.7}
           >
             <Text style={{ fontSize: 20, marginBottom: 4 }}>🌙</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Night Roll Call</Text>
-            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Attendance</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Night Roll Call</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Attendance</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#8B5CF6' }]}
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#5AADA5' }]}
             onPress={openGateLogsModal}
             activeOpacity={0.7}
           >
             <Text style={{ fontSize: 20, marginBottom: 4 }}>🚪</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Gate Entry Logs</Text>
-            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Biometric Entry/Exit</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Gate Entry Logs</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Biometric Entry/Exit</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#EC4899' }]}
+            style={[styles.listCard, { width: 150, padding: 14, borderLeftWidth: 4, borderLeftColor: '#E11D48' }]}
             onPress={() => setActiveTab('Visitors')}
             activeOpacity={0.7}
           >
             <Text style={{ fontSize: 20, marginBottom: 4 }}>🛡️</Text>
-            <Text style={{ fontSize: 12, fontWeight: '800', color: '#1F2937' }}>Visitor Passes</Text>
-            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>Guest Approvals</Text>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: TEXT_DARK }}>Visitor Passes</Text>
+            <Text style={{ fontSize: 10, color: TEXT_MUTED, marginTop: 2 }}>Guest Approvals</Text>
           </TouchableOpacity>
         </ScrollView>
 
@@ -4065,8 +4084,8 @@ export default function DashboardScreen() {
                   <View>
                     {/* Summary Metric Cards */}
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-                      <View style={[styles.roomSummaryBox, { borderTopColor: '#7F56D9' }]}>
-                        <Text style={[styles.roomSummaryCount, { color: '#7F56D9' }]}>{floorReport.summary?.totalStudents ?? floorReport.grandTotal?.totalStudents}</Text>
+                      <View style={[styles.roomSummaryBox, { borderTopColor: BRAND_TEAL }]}>
+                        <Text style={[styles.roomSummaryCount, { color: BRAND_TEAL }]}>{floorReport.summary?.totalStudents ?? floorReport.grandTotal?.totalStudents}</Text>
                         <Text style={styles.roomSummaryLabel}>Students</Text>
                       </View>
                       <View style={[styles.roomSummaryBox, { borderTopColor: '#2563EB' }]}>
@@ -4149,41 +4168,43 @@ export default function DashboardScreen() {
 //  STYLES
 // ══════════════════════════════════════════════════════════════════════════
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F2F7' },
+  container: { flex: 1, backgroundColor: BRAND_MINT_BG },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 80 },
 
   // ── Header
   header: {
-    backgroundColor: PURPLE,
+    backgroundColor: BRAND_TEAL,
     paddingTop: Platform.OS === 'ios' ? 56 : 36,
-    paddingBottom: 20,
+    paddingBottom: 22,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    shadowColor: PURPLE,
+    shadowColor: BRAND_TEAL_DARK,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 14,
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
     elevation: 8,
   },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    paddingHorizontal: 24,
+    paddingHorizontal: 22,
     marginBottom: 14,
   },
   greetingRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
   greetingEmoji: { fontSize: 22, marginRight: 8 },
-  headerGreeting: { fontSize: 14, color: 'rgba(255,255,255,0.85)', fontWeight: '700' },
-  headerGreetingSub: { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: '500', marginTop: 1 },
-  headerName: { fontSize: 28, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.5, marginBottom: 4 },
-  headerRole: { fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: '600' },
+  headerGreeting: { fontSize: 13, color: '#DCEFEC', fontWeight: '700' },
+  headerGreetingSub: { fontSize: 11, color: '#BCE0DB', fontWeight: '500', marginTop: 1 },
+  headerName: { fontSize: 26, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.5, marginBottom: 4 },
+  headerRole: { fontSize: 12, color: BRAND_GOLD, fontWeight: '800', letterSpacing: 0.3 },
   headerActions: { flexDirection: 'row', gap: 8 },
   headerIconBtn: {
     width: 42, height: 42, borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: 'rgba(255,255,255,0.18)',
     justifyContent: 'center', alignItems: 'center',
     position: 'relative',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
   },
   bellBadge: {
     position: 'absolute',
@@ -4192,12 +4213,12 @@ const styles = StyleSheet.create({
     minWidth: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: '#F04438',
+    backgroundColor: '#EF4444',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
     borderWidth: 2,
-    borderColor: '#7F56D9',
+    borderColor: BRAND_TEAL,
   },
   bellBadgeText: {
     fontSize: 9,
@@ -4208,14 +4229,16 @@ const styles = StyleSheet.create({
   quoteStrip: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginHorizontal: 24,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    marginHorizontal: 22,
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
-  quoteIcon: { fontSize: 18, color: 'rgba(255,255,255,0.4)', marginRight: 8, marginTop: -2 },
-  quoteText: { flex: 1, fontSize: 12, color: 'rgba(255,255,255,0.85)', fontWeight: '500', fontStyle: 'italic', lineHeight: 18 },
+  quoteIcon: { fontSize: 18, color: 'rgba(255,255,255,0.6)', marginRight: 8, marginTop: -2 },
+  quoteText: { flex: 1, fontSize: 12, color: '#FFFFFF', fontWeight: '500', fontStyle: 'italic', lineHeight: 18 },
 
   // ── Bottom Nav
   bottomNav: {
@@ -4230,9 +4253,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    shadowColor: '#000',
+    borderTopWidth: 1,
+    borderTopColor: BRAND_BORDER,
+    shadowColor: BRAND_TEAL_DARK,
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.06,
     shadowRadius: 12,
     elevation: 16,
   },
@@ -4242,19 +4267,19 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     justifyContent: 'center', alignItems: 'center',
   },
-  navIconWrapActive: { backgroundColor: PURPLE },
-  navLabel: { fontSize: 10, fontWeight: '600', color: '#9CA3AF', marginTop: 2 },
-  navLabelActive: { color: PURPLE, fontWeight: '700' },
+  navIconWrapActive: { backgroundColor: BRAND_TEAL },
+  navLabel: { fontSize: 10, fontWeight: '600', color: TEXT_LIGHT, marginTop: 2 },
+  navLabelActive: { color: BRAND_TEAL, fontWeight: '800' },
 
   // ── Content
-  scrollContent: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 24 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 22, paddingBottom: 24 },
 
   // ── Stat Hero Grid
   heroGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 22,
   },
   statHero: {
     width: (width - 52) / 3,
@@ -4262,9 +4287,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 14,
     marginBottom: 12,
-    shadowColor: '#101828',
+    borderWidth: 1,
+    borderColor: BRAND_BORDER,
+    shadowColor: BRAND_TEAL_DARK,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
   },
@@ -4273,9 +4300,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 10,
   },
-  statHeroCount: { fontSize: 22, fontWeight: '900', color: '#111827' },
-  statHeroLabel: { fontSize: 11, fontWeight: '700', color: '#374151', marginTop: 2 },
-  statHeroSub: { fontSize: 10, color: '#9CA3AF', fontWeight: '500', marginTop: 3 },
+  statHeroCount: { fontSize: 22, fontWeight: '900', color: TEXT_DARK },
+  statHeroLabel: { fontSize: 11, fontWeight: '800', color: TEXT_DARK, marginTop: 2 },
+  statHeroSub: { fontSize: 10, color: TEXT_MUTED, fontWeight: '600', marginTop: 3 },
   statHeroArrow: {
     width: 22, height: 22, borderRadius: 8,
     justifyContent: 'center', alignItems: 'center',
@@ -4287,24 +4314,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     marginBottom: 14, marginTop: 10,
   },
-  sectionTitle: { fontSize: 17, fontWeight: '800', color: '#111827', flex: 1 },
-  sectionAction: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: PURPLE_LIGHT },
-  sectionActionText: { fontSize: 12, fontWeight: '700', color: PURPLE },
+  sectionTitle: { fontSize: 17, fontWeight: '900', color: TEXT_DARK, flex: 1, letterSpacing: -0.2 },
+  sectionAction: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, backgroundColor: BRAND_MINT_CARD, borderWidth: 1, borderColor: '#bce0db' },
+  sectionActionText: { fontSize: 12, fontWeight: '800', color: BRAND_TEAL },
 
   // ── Cards
   listCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 18, padding: 18,
     marginBottom: 12,
-    shadowColor: '#101828',
+    borderWidth: 1,
+    borderColor: BRAND_BORDER,
+    shadowColor: BRAND_TEAL_DARK,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 2,
   },
-  cardPrimary: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  cardSecondary: { fontSize: 13, color: '#6B7280', fontWeight: '500', marginBottom: 4 },
-  cardTiny: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+  cardPrimary: { fontSize: 15, fontWeight: '800', color: TEXT_DARK, marginBottom: 4 },
+  cardSecondary: { fontSize: 13, color: TEXT_MUTED, fontWeight: '500', marginBottom: 4, lineHeight: 18 },
+  cardTiny: { fontSize: 12, color: TEXT_LIGHT, marginTop: 2, fontWeight: '500' },
   rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   inlineRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 },
 
@@ -4312,44 +4341,47 @@ const styles = StyleSheet.create({
   approvalCardInner: { flexDirection: 'row', alignItems: 'flex-start' },
   avatarCircle: {
     width: 48, height: 48, borderRadius: 14,
-    backgroundColor: PURPLE_LIGHT,
+    backgroundColor: BRAND_MINT_CARD,
     justifyContent: 'center', alignItems: 'center',
     marginRight: 14,
+    borderWidth: 1,
+    borderColor: '#bce0db',
   },
-  avatarText: { fontSize: 20, fontWeight: '900', color: PURPLE },
+  avatarText: { fontSize: 20, fontWeight: '900', color: BRAND_TEAL },
   statusDot: { width: 10, height: 10, borderRadius: 5, marginLeft: 8, marginTop: 8 },
   iconAction: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
 
   // ── Room hero card (student)
   roomHeroCard: {
-    backgroundColor: PURPLE,
+    backgroundColor: BRAND_TEAL,
     borderRadius: 22, padding: 22,
     marginBottom: 20,
     flexDirection: 'row', alignItems: 'center',
-    shadowColor: PURPLE, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 6,
+    shadowColor: BRAND_TEAL_DARK, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 6,
   },
-  roomHeroLabel: { fontSize: 11, fontWeight: '700', color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: 0.6 },
+  roomHeroLabel: { fontSize: 11, fontWeight: '800', color: '#DCEFEC', textTransform: 'uppercase', letterSpacing: 0.6 },
   roomHeroNumber: { fontSize: 30, fontWeight: '900', color: '#FFFFFF', marginTop: 2 },
-  roomHeroSub: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
+  roomHeroSub: { fontSize: 13, color: '#DCEFEC', marginTop: 2 },
   roomHeroTag: { marginTop: 10, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, alignSelf: 'flex-start' },
-  roomHeroTagText: { fontSize: 11, fontWeight: '700' },
+  roomHeroTagText: { fontSize: 11, fontWeight: '800' },
   roomHeroBtn: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 12, paddingVertical: 8,
     borderRadius: 12,
   },
-  roomHeroBtnText: { fontSize: 12, fontWeight: '700', color: PURPLE, marginRight: 2 },
+  roomHeroBtnText: { fontSize: 12, fontWeight: '800', color: BRAND_TEAL, marginRight: 2 },
 
   // ── Notice card
   noticeCard: {
     backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16,
     flexDirection: 'row', alignItems: 'center',
     marginBottom: 12,
-    shadowColor: '#101828', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+    borderWidth: 1, borderColor: BRAND_BORDER,
+    shadowColor: BRAND_TEAL_DARK, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
   },
   noticeEmoji: { fontSize: 26, marginRight: 14 },
-  noticeDate: { fontSize: 11, color: '#9CA3AF', fontWeight: '700' },
+  noticeDate: { fontSize: 11, color: TEXT_LIGHT, fontWeight: '700' },
 
   // ── Room summary row
   roomSummaryRow: {
@@ -4358,46 +4390,48 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   roomSummaryBox: {
-    flex: 1, marginHorizontal: 4,
+    flex: 1, marginHorizontal: 3,
     backgroundColor: '#FFFFFF',
     borderRadius: 14, padding: 12,
     alignItems: 'center',
-    borderTopWidth: 3,
-    shadowColor: '#101828', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+    borderTopWidth: 3.5,
+    borderWidth: 1, borderColor: BRAND_BORDER,
+    shadowColor: BRAND_TEAL_DARK, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
   },
   roomSummaryCount: { fontSize: 20, fontWeight: '900' },
-  roomSummaryLabel: { fontSize: 10, fontWeight: '600', color: '#9CA3AF', marginTop: 2 },
+  roomSummaryLabel: { fontSize: 10, fontWeight: '700', color: TEXT_LIGHT, marginTop: 2 },
 
   // ── Sub-tabs (for Requests)
   subTabRow: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundColor: BRAND_MINT_CARD,
+    borderRadius: 14,
     padding: 4,
     marginBottom: 16,
-    shadowColor: '#101828', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+    borderWidth: 1, borderColor: '#bce0db',
   },
   subTab: {
-    flex: 1, paddingVertical: 10,
-    borderRadius: 12, alignItems: 'center',
+    flex: 1, paddingVertical: 9,
+    borderRadius: 10, alignItems: 'center',
   },
-  subTabActive: { backgroundColor: PURPLE },
-  subTabText: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
-  subTabTextActive: { color: '#FFFFFF' },
+  subTabActive: { backgroundColor: BRAND_TEAL, shadowColor: BRAND_TEAL_DARK, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4, elevation: 2 },
+  subTabText: { fontSize: 11, fontWeight: '700', color: TEXT_MUTED },
+  subTabTextActive: { color: '#FFFFFF', fontWeight: '800' },
 
   // ── Search bar
   searchBar: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16, paddingHorizontal: 16,
-    height: 52, marginBottom: 16,
-    shadowColor: '#101828', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
+    borderRadius: 14, paddingHorizontal: 14,
+    height: 48, marginBottom: 14,
+    borderWidth: 1, borderColor: BRAND_BORDER,
+    shadowColor: BRAND_TEAL_DARK, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
-  searchInput: { flex: 1, fontSize: 14, color: '#1F2937', fontWeight: '500' },
+  searchInput: { flex: 1, fontSize: 13, color: TEXT_DARK, fontWeight: '600' },
 
   // ── Badges
-  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, alignSelf: 'flex-start' },
-  badgeText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.3 },
+  badge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' },
+  badgeText: { fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.4 },
 
   // ── Action buttons
   actionRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
@@ -4406,111 +4440,112 @@ const styles = StyleSheet.create({
     borderRadius: 12, flexDirection: 'row',
     justifyContent: 'center', alignItems: 'center',
   },
-  actionBtnText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
+  actionBtnText: { fontSize: 13, fontWeight: '800', color: '#FFFFFF' },
   btnGreen: { backgroundColor: '#10B981' },
   btnRed: { backgroundColor: '#EF4444' },
-  btnPurple: { backgroundColor: PURPLE },
+  btnPurple: { backgroundColor: BRAND_TEAL },
   primaryBtn: {
-    height: 54, backgroundColor: PURPLE,
+    height: 52, backgroundColor: BRAND_TEAL,
     borderRadius: 16, flexDirection: 'row',
     justifyContent: 'center', alignItems: 'center',
     marginBottom: 20,
-    shadowColor: PURPLE, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.28, shadowRadius: 10, elevation: 5,
+    shadowColor: BRAND_TEAL, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
   },
-  primaryBtnText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
+  primaryBtnText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },
 
   // ── Empty state
   emptyState: { alignItems: 'center', paddingVertical: 60 },
   emptyEmoji: { fontSize: 54, marginBottom: 14 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#374151' },
-  emptySub: { fontSize: 14, color: '#9CA3AF', marginTop: 6, textAlign: 'center', lineHeight: 22 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: TEXT_DARK },
+  emptySub: { fontSize: 14, color: TEXT_MUTED, marginTop: 6, textAlign: 'center', lineHeight: 22 },
 
   // ── Profile
   profileHero: {
-    backgroundColor: PURPLE, borderRadius: 24, padding: 28,
+    backgroundColor: BRAND_TEAL, borderRadius: 22, padding: 24,
     alignItems: 'center', marginBottom: 16,
-    shadowColor: PURPLE, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 5,
+    shadowColor: BRAND_TEAL_DARK, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.2, shadowRadius: 12, elevation: 4,
   },
   profileAvatar: {
-    width: 84, height: 84, borderRadius: 26,
+    width: 80, height: 80, borderRadius: 24,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center', alignItems: 'center',
-    marginBottom: 14,
-    borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)',
+    marginBottom: 12,
+    borderWidth: 3, borderColor: BRAND_GOLD,
   },
-  profileAvatarText: { fontSize: 34, fontWeight: '900', color: '#FFFFFF' },
-  profileName: { fontSize: 22, fontWeight: '800', color: '#FFFFFF', marginBottom: 6 },
-  profileEmail: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 4 },
+  profileAvatarText: { fontSize: 32, fontWeight: '900', color: '#FFFFFF' },
+  profileName: { fontSize: 22, fontWeight: '900', color: '#FFFFFF', marginBottom: 4 },
+  profileEmail: { fontSize: 13, color: '#DCEFEC', marginTop: 2, fontWeight: '500' },
   infoRow: {
     backgroundColor: '#FFFFFF', borderRadius: 16,
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 18, paddingVertical: 16,
     marginBottom: 10,
-    shadowColor: '#101828', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
+    borderWidth: 1, borderColor: BRAND_BORDER,
+    shadowColor: BRAND_TEAL_DARK, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1,
   },
-  infoLabel: { fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
-  infoValue: { fontSize: 14, fontWeight: '700', color: '#111827', maxWidth: '60%', textAlign: 'right' },
+  infoLabel: { fontSize: 13, fontWeight: '600', color: TEXT_MUTED },
+  infoValue: { fontSize: 14, fontWeight: '800', color: TEXT_DARK, maxWidth: '60%', textAlign: 'right' },
 
   // ── Form modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(14,39,38,0.55)', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 30, borderTopRightRadius: 30,
     paddingHorizontal: 24, paddingTop: 16, paddingBottom: 40,
     maxHeight: '92%',
   },
-  modalHandle: { width: 44, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#111827', textAlign: 'center', marginBottom: 20 },
+  modalHandle: { width: 44, height: 4, backgroundColor: '#d1dedc', borderRadius: 2, alignSelf: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, fontWeight: '900', color: TEXT_DARK, textAlign: 'center', marginBottom: 20 },
   modalActions: { flexDirection: 'row', marginTop: 20 },
-  formLabel: { fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 8, marginTop: 8 },
+  formLabel: { fontSize: 13, fontWeight: '800', color: TEXT_DARK, marginBottom: 8, marginTop: 8 },
   formInput: {
-    backgroundColor: '#F9FAFB', borderRadius: 14,
-    borderWidth: 1.5, borderColor: '#E5E7EB',
+    backgroundColor: BRAND_MINT_BG, borderRadius: 14,
+    borderWidth: 1.5, borderColor: BRAND_BORDER,
     paddingHorizontal: 14, height: 50,
     justifyContent: 'center', marginBottom: 6,
   },
-  formInputText: { fontSize: 14, color: '#1F2937', fontWeight: '500' },
+  formInputText: { fontSize: 14, color: TEXT_DARK, fontWeight: '600' },
 
   // ── Tag picker
   tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
-  tag: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB' },
-  tagActive: { borderColor: PURPLE, backgroundColor: PURPLE_LIGHT },
-  tagText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  tagTextActive: { color: PURPLE, fontWeight: '700' },
+  tag: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5, borderColor: BRAND_BORDER, backgroundColor: BRAND_MINT_BG },
+  tagActive: { borderColor: BRAND_TEAL, backgroundColor: BRAND_MINT_CARD },
+  tagText: { fontSize: 12, fontWeight: '700', color: TEXT_MUTED },
+  tagTextActive: { color: BRAND_TEAL, fontWeight: '800' },
 
   // Alert Modal styles
-  alertOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
-  alertBox: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, alignItems: 'center', width: '100%', maxWidth: 340, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 10 },
+  alertOverlay: { flex: 1, backgroundColor: 'rgba(14,39,38,0.6)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 30 },
+  alertBox: { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 24, alignItems: 'center', width: '100%', maxWidth: 340, shadowColor: BRAND_TEAL_DARK, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 10 },
   alertIconBox: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  alertTitleText: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 8, textAlign: 'center' },
-  alertMessageText: { fontSize: 14, color: '#4B5563', textAlign: 'center', lineHeight: 20, marginBottom: 20 },
+  alertTitleText: { fontSize: 18, fontWeight: '900', color: TEXT_DARK, marginBottom: 8, textAlign: 'center' },
+  alertMessageText: { fontSize: 14, color: TEXT_MUTED, textAlign: 'center', lineHeight: 20, marginBottom: 20, fontWeight: '500' },
   alertActionsRow: { flexDirection: 'row', width: '100%' },
   alertBtn: { height: 46, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
-  alertBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  alertBtnText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
 
   // Segment Tabs
-  segmentContainer: { flexDirection: 'row', backgroundColor: '#E5E7EB', borderRadius: 10, padding: 2, marginBottom: 14, marginTop: 4 },
-  segmentBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 8 },
-  segmentBtnActive: { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 2, elevation: 1 },
-  segmentBtnText: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-  segmentBtnTextActive: { color: PURPLE, fontWeight: '700' },
+  segmentContainer: { flexDirection: 'row', backgroundColor: BRAND_MINT_CARD, borderRadius: 12, padding: 3, marginBottom: 14, marginTop: 4, borderWidth: 1, borderColor: '#bce0db' },
+  segmentBtn: { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: 9 },
+  segmentBtnActive: { backgroundColor: BRAND_TEAL, shadowColor: BRAND_TEAL_DARK, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.15, shadowRadius: 2, elevation: 1 },
+  segmentBtnText: { fontSize: 13, fontWeight: '700', color: TEXT_MUTED },
+  segmentBtnTextActive: { color: '#FFFFFF', fontWeight: '800' },
 
   // Polls Styling
-  pollCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 14, shadowColor: '#101828', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
+  pollCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 14, borderWidth: 1, borderColor: BRAND_BORDER, shadowColor: BRAND_TEAL_DARK, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 4, elevation: 1 },
   pollHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
-  pollQuestion: { fontSize: 15, fontWeight: '700', color: '#111827', flex: 1, marginRight: 10 },
-  pollVotesCount: { fontSize: 11, fontWeight: '600', color: '#9CA3AF', marginTop: 10 },
-  pollVoteBtn: { backgroundColor: '#F4F3FF', borderWidth: 1.5, borderColor: '#E9E3FF', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 8, alignItems: 'center' },
-  pollVoteBtnText: { fontSize: 14, fontWeight: '700', color: PURPLE },
+  pollQuestion: { fontSize: 15, fontWeight: '800', color: TEXT_DARK, flex: 1, marginRight: 10 },
+  pollVotesCount: { fontSize: 11, fontWeight: '700', color: TEXT_LIGHT, marginTop: 10 },
+  pollVoteBtn: { backgroundColor: BRAND_MINT_CARD, borderWidth: 1.5, borderColor: '#bce0db', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16, marginBottom: 8, alignItems: 'center' },
+  pollVoteBtnText: { fontSize: 14, fontWeight: '800', color: BRAND_TEAL },
   pollResultRow: { marginTop: 10 },
   pollResultLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  pollResultOptionText: { fontSize: 13, fontWeight: '600', color: '#374151' },
-  pollResultPercentText: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
-  pollProgressBackground: { height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden' },
+  pollResultOptionText: { fontSize: 13, fontWeight: '700', color: TEXT_DARK },
+  pollResultPercentText: { fontSize: 12, fontWeight: '800', color: TEXT_MUTED },
+  pollProgressBackground: { height: 8, backgroundColor: '#E3ECEA', borderRadius: 4, overflow: 'hidden' },
   pollProgressFill: { height: '100%', borderRadius: 4 },
-  pollAdminActions: { flexDirection: 'row', marginTop: 14, borderTopWidth: 1, borderColor: '#F3F4F6', paddingTop: 12 },
+  pollAdminActions: { flexDirection: 'row', marginTop: 14, borderTopWidth: 1, borderColor: BRAND_BORDER, paddingTop: 12 },
   pollActionBtn: { flex: 1, height: 38, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-  pollActionBtnText: { fontSize: 12, fontWeight: '700' },
+  pollActionBtnText: { fontSize: 12, fontWeight: '800' },
 
   // Add Option Button in Creation Modal
   addOptionBtn: {
@@ -4519,16 +4554,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
     borderWidth: 1.5,
-    borderColor: '#E9E3FF',
-    backgroundColor: '#F4F3FF',
+    borderColor: '#bce0db',
+    backgroundColor: BRAND_MINT_CARD,
     borderRadius: 12,
     marginTop: 10,
     marginBottom: 20
   },
   addOptionBtnText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: PURPLE
+    fontWeight: '800',
+    color: BRAND_TEAL
   },
 
   // Offline banner styles
