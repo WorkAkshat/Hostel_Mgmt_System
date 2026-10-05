@@ -2,6 +2,7 @@ const express = require('express');
 const {
   getAllStaff,
   createStaff,
+  updateStaff,
   deleteStaff
 } = require('../controllers/staffController');
 const { protect, authorize } = require('../middleware/auth');
@@ -13,6 +14,7 @@ router.route('/')
   .post(protect, authorize('ADMIN'), createStaff);
 
 router.route('/:id')
+  .put(protect, authorize('ADMIN'), updateStaff)
   .delete(protect, authorize('ADMIN'), deleteStaff);
 
 module.exports = router;

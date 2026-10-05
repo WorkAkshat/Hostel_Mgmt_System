@@ -21,9 +21,17 @@ import Visitors from './pages/Visitors';
 import Staff from './pages/Staff';
 import Approvals from './pages/Approvals';
 import FloorDirectory from './pages/FloorDirectory';
-import ModulesView from './pages/ModulesView';
+import Reports from './pages/Reports';
+import StudentProfile from './pages/StudentProfile';
+import ReportsOverview from './pages/reports/ReportsOverview';
+import OccupancyReport from './pages/reports/OccupancyReport';
+import GateReport from './pages/reports/GateReport';
+import HelpdeskReport from './pages/reports/HelpdeskReport';
+import MessReport from './pages/reports/MessReport';
+import DemandNotes from './pages/DemandNotes';
 import TallyAccounting from './pages/TallyAccounting';
 import ActivityLog from './pages/ActivityLog';
+import Inventory from './pages/Inventory';
 import NightRollCall from './pages/NightRollCall';
 import CookDashboard from './pages/CookDashboard';
 import Suggestions from './pages/Suggestions';
@@ -158,6 +166,14 @@ const DashboardLayout = () => {
               </span>
             </div>
             <div className="w-full h-px bg-[var(--border-color)]"></div>
+            {user.role === 'STUDENT' && (
+              <button
+                onClick={() => { setShowProfileModal(false); navigate('/student/profile'); }}
+                className="btn-secondary w-full"
+              >
+                <User size={17} /> My profile
+              </button>
+            )}
             <button
               onClick={() => {
                 setShowProfileModal(false);
@@ -267,11 +283,16 @@ const App = () => {
             />
             <Route 
               path="/admin/reports" 
-              element={<PrivateRoute allowedRoles={['ADMIN']}><ModulesView defaultTab="reports" /></PrivateRoute>} 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><Reports /></PrivateRoute>} 
             />
+            <Route path="/admin/reports/overview" element={<PrivateRoute allowedRoles={['ADMIN']}><ReportsOverview /></PrivateRoute>} />
+            <Route path="/admin/reports/occupancy" element={<PrivateRoute allowedRoles={['ADMIN']}><OccupancyReport /></PrivateRoute>} />
+            <Route path="/admin/reports/gate" element={<PrivateRoute allowedRoles={['ADMIN']}><GateReport /></PrivateRoute>} />
+            <Route path="/admin/reports/helpdesk" element={<PrivateRoute allowedRoles={['ADMIN']}><HelpdeskReport /></PrivateRoute>} />
+            <Route path="/admin/reports/mess" element={<PrivateRoute allowedRoles={['ADMIN']}><MessReport /></PrivateRoute>} />
             <Route 
               path="/admin/demand-notes" 
-              element={<PrivateRoute allowedRoles={['ADMIN']}><ModulesView defaultTab="demand-notes" /></PrivateRoute>} 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><DemandNotes /></PrivateRoute>} 
             />
             <Route 
               path="/admin/cook-dashboard" 
@@ -293,6 +314,10 @@ const App = () => {
               path="/admin/activity-log" 
               element={<PrivateRoute allowedRoles={['ADMIN']}><ActivityLog /></PrivateRoute>} 
             />
+            <Route 
+              path="/admin/inventory" 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><Inventory /></PrivateRoute>} 
+            />
 
             {/* Student Routes */}
             <Route 
@@ -311,6 +336,7 @@ const App = () => {
               path="/student/fees" 
               element={<PrivateRoute allowedRoles={['STUDENT']}><Fees /></PrivateRoute>} 
             />
+            <Route path="/student/profile" element={<PrivateRoute allowedRoles={['STUDENT']}><StudentProfile /></PrivateRoute>} />
             <Route 
               path="/student/complaints" 
               element={<PrivateRoute allowedRoles={['STUDENT']}><Complaints /></PrivateRoute>} 

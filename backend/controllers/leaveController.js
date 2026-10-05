@@ -39,6 +39,7 @@ const createLeaveRequest = async (req, res) => {
 
     logActivity({ req, action: 'CREATE', module: 'LEAVE', description: `Applied for ${type || 'NIGHT_OUT'} leave: ${reason}`, targetId: leaveRequest.id, targetType: 'LeaveRequest' });
   } catch (error) {
+    console.error('[leaveController]', error);
     res.status(500).json({ message: 'Server error applying for leave' });
   }
 };
@@ -157,10 +158,10 @@ const updateLeaveRequestStatus = async (req, res) => {
 
     const updatedLeave = await prisma.leaveRequest.update({
       where: { id },
+      // Who decided is kept in the activity log (LeaveRequest has no approvedBy column)
       data: {
         status,
-        comments: comments || null,
-        approvedBy: req.user.name
+        comments: comments || null
       }
     });
 
@@ -188,6 +189,7 @@ const updateLeaveRequestStatus = async (req, res) => {
 
     logActivity({ req, action: status === 'APPROVED' ? 'APPROVE' : 'REJECT', module: 'LEAVE', description: `${status === 'APPROVED' ? 'Approved' : 'Rejected'} leave request (${leave.type})${comments ? ' — ' + comments : ''}`, targetId: id, targetType: 'LeaveRequest' });
   } catch (error) {
+    console.error('Error updating leave status:', error);
     res.status(500).json({ message: 'Server error updating status' });
   }
 };
@@ -231,7 +233,7 @@ const logCheckout = async (req, res) => {
         where: { id },
         data: {
           status: 'CHECKED_OUT',
-          checkOutTime: new Date()
+          checkoutTime: new Date()
         }
       });
     });
@@ -246,6 +248,7 @@ const logCheckout = async (req, res) => {
 
     logActivity({ req, action: 'CHECKOUT', module: 'LEAVE', description: `Student checked out (Gate exit) for leave ${leave.type}`, targetId: id, targetType: 'LeaveRequest' });
   } catch (error) {
+    console.error('[leaveController]', error);
     res.status(500).json({ message: 'Server error during gate check-out' });
   }
 };
@@ -281,7 +284,7 @@ const logCheckin = async (req, res) => {
         where: { id },
         data: {
           status: 'RETURNED',
-          checkInTime: new Date()
+          checkinTime: new Date()
         }
       });
     });
@@ -290,6 +293,7 @@ const logCheckin = async (req, res) => {
 
     logActivity({ req, action: 'CHECKIN', module: 'LEAVE', description: `Student returned (Gate check-in) from leave`, targetId: id, targetType: 'LeaveRequest' });
   } catch (error) {
+    console.error('[leaveController]', error);
     res.status(500).json({ message: 'Server error during gate check-in' });
   }
 };
@@ -341,7 +345,7 @@ const biometricVerifyGate = async (req, res) => {
           where: { id: activeLeave.id },
           data: {
             status: 'CHECKED_OUT',
-            checkOutTime: now
+            checkoutTime: now
           }
         })
       ]);
@@ -359,7 +363,7 @@ const biometricVerifyGate = async (req, res) => {
           studentId: student.id,
           status: 'CHECKED_OUT'
         },
-        orderBy: { checkOutTime: 'desc' }
+        orderBy: { checkoutTime: 'desc' }
       });
 
       if (!activeLeave) {
@@ -384,7 +388,7 @@ const biometricVerifyGate = async (req, res) => {
           where: { id: activeLeave.id },
           data: {
             status: 'RETURNED',
-            checkInTime: now
+            checkinTime: now
           }
         })
       ]);

@@ -41,33 +41,51 @@ const DemandNotePrint = ({ note, onClose }) => {
   if (!note) return null;
 
   const fNum = note.floorNumber || 1;
-  const company = COMPANY_CONFIG[fNum] || COMPANY_CONFIG[1];
+  // Prefer the server's company details; skip blank / placeholder values
+  const filled = (obj) => Object.fromEntries(Object.entries(obj || {}).filter(([, v]) => v && !String(v).startsWith('[')));
+  const base = filled(COMPANY_CONFIG[fNum] || COMPANY_CONFIG[1]);
+  const company = { ...base, ...filled(note.company) };
+  company.companyName = String(company.companyName || '').toUpperCase();
+  company.hostelName = String(company.hostelName || '').toUpperCase();
+  const caterer = { ...filled(CATERING), ...filled(note.catering) };
+  caterer.companyName = String(caterer.companyName || '').toUpperCase();
 
-  const [year, month] = (note.billingMonth || '2026-08').split('-');
+  const fmt = (d) => new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).replace(/ /g, '-');
+  const short = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const [year, month] = (note.billingMonth || '').split('-');
+  const cycleStart = note.cycleStart ? new Date(note.cycleStart) : new Date(Number(year), Number(month) - 1, 10);
+  const cycleEnd = note.cycleEnd ? new Date(note.cycleEnd) : new Date(Number(year), Number(month), 9);
+  const issued = note.createdAt ? new Date(note.createdAt) : new Date();
+  // Payable in advance by the 10th; notes issued later get five days
+  const due = new Date(Math.max(cycleStart.getTime(), issued.getTime() + 5 * 86400000));
+
   const nextYear = (parseInt(year, 10) + 1).toString().slice(-2);
-  const hostelNoteNo = note.noteNumber || `${company.notePrefix}/${year}-${nextYear}/${month}/042`;
-  const cateringNoteNo = `${CATERING.notePrefix}/${year}-${nextYear}/${month}/108`;
+  const hostelNoteNo = note.noteNumber || `${company.notePrefix}/${year}-${nextYear}/${month}`;
+  const cateringNoteNo = note.noteNumber ? note.noteNumber.replace(/^[A-Z]+/, caterer.notePrefix || 'ME') : `${caterer.notePrefix}/${year}-${nextYear}/${month}`;
 
-  const billingPeriodStr = `10 Aug - 10 Sep`;
-  const cycleFullStr = `10-Aug-${year} to 10-Sep-${year}`;
-  const issueDateStr = `05-Sep-${year}`;
-  const dueDateStr = `10-Sep-${year}`;
+  const billingPeriodStr = `${short(cycleStart)} - ${short(cycleEnd)}`;
+  const cycleFullStr = `${fmt(cycleStart)} to ${fmt(cycleEnd)}`;
+  const issueDateStr = fmt(issued);
+  const dueDateStr = fmt(due);
 
-  const studentName = note.student?.user?.name || 'Priya Sharma';
-  const fatherName = note.student?.fatherName || 'Rameshwar Sharma';
-  const rollNumber = note.student?.rollNumber || '108';
-  const roomNumber = note.student?.room?.roomNumber || '102';
-  const admissionId = `HP-${year}-${rollNumber}`;
+  const studentName = note.student?.user?.name || '—';
+  const fatherName = note.student?.fatherName || '';
+  const rollNumber = note.student?.rollNumber || '—';
+  const roomNumber = note.student?.room?.roomNumber || '—';
+  const bedId = String(note.student?.bedId || '');
+  const bed = bedId ? ` - ${/^bed/i.test(bedId) ? bedId : `Bed ${bedId.split('-').pop()}`}` : '';
+  const admissionId = rollNumber;
 
-  const hostelFee = note.hostelFee || 8000;
-  const elecUnits = note.electricityUnits || 45;
-  const elecRate = note.electricityRate || 12.0;
-  const elecAmt = note.electricityAmount || elecUnits * elecRate;
-  const prevReading = note.prevReading || 1210;
-  const currReading = note.currReading || prevReading + elecUnits;
+  const hostelFee = note.hostelFee || 0;
+  const elecUnits = note.electricityUnits || 0;
+  const elecRate = note.electricityRate || 0;
+  const elecAmt = note.electricityAmount || 0;
+  const hasReadings = note.prevReading != null && note.currReading != null;
 
-  const hostelNetPayable = hostelFee + elecAmt;
-  const messNetPayable = note.messFee || 3000;
+  const hostelNetPayable = hostelFee + elecAmt + (note.otherCharges || 0);
+  const messNetPayable = note.messFee || 0;
+  const isPaid = note.status === 'PAID';
+  const paidStr = isPaid && note.paidAt ? fmt(note.paidAt) : '';
 
   const handlePrint = () => {
     const printContent = document.getElementById('demand-note-print-content');
@@ -108,9 +126,9 @@ const DemandNotePrint = ({ note, onClose }) => {
       </div>
 
       <div className="my-1 text-[10px]">
-        <div>SAN (संस्था आधार नंबर) : {company.san}</div>
-        <div>Udyam Reg. No.          : {company.udyamRegNo}</div>
-        <div>Proprietor Name         : {company.proprietorName}</div>
+        {company.san && <div>SAN (संस्था आधार नंबर) : {company.san}</div>}
+        {company.udyamRegNo && <div>Udyam Reg. No.          : {company.udyamRegNo}</div>}
+        {company.proprietorName && <div>Proprietor Name         : {company.proprietorName}</div>}
       </div>
 
       <div className="text-center font-bold my-2">
@@ -141,8 +159,8 @@ const DemandNotePrint = ({ note, onClose }) => {
               <td>Admission ID : {admissionId}</td>
             </tr>
             <tr>
-              <td>Father's Name : श्री {fatherName}</td>
-              <td>Room / Bed No: {roomNumber} - Bed A</td>
+              <td>{fatherName && <>Father's Name : श्री {fatherName}</>}</td>
+              <td>Room / Bed No: {roomNumber}{bed}</td>
             </tr>
             <tr>
               <td>Floor         : {company.floorLabel}</td>
@@ -175,8 +193,8 @@ const DemandNotePrint = ({ note, onClose }) => {
             </tr>
             <tr>
               <td>2.</td>
-              <td>Electricity Consumption Charges<br /><span className="text-[9px]">(Previous: {prevReading} | Current: {currReading})</span></td>
-              <td>Sub-Meter Units: {elecUnits}<br /><span className="text-[9px]">Rate: ₹{elecRate.toFixed(2)}/unit</span></td>
+              <td>Electricity Consumption Charges<br /><span className="text-[9px]">{hasReadings ? `(Previous: ${note.prevReading} | Current: ${note.currReading})` : '(Your share of the room sub-meter)'}</span></td>
+              <td>Sub-Meter Units: {elecUnits}<br /><span className="text-[9px]">Rate: ₹{Number(elecRate).toFixed(2)}/unit</span></td>
               <td className="text-right font-bold">{elecAmt.toLocaleString('en-IN')}.00</td>
             </tr>
           </tbody>
@@ -204,24 +222,13 @@ const DemandNotePrint = ({ note, onClose }) => {
         (Amount in Words: {numberToWords(hostelNetPayable)})
       </div>
 
-      <div className="border-t border-black pt-1.5 mt-2">
-        <div className="flex justify-between items-start text-[9.5px]">
-          <div>
-            <div className="font-bold text-[10px]">PAYMENT DETAILS & QR CODE:</div>
-            <div>Bank Name : [Bank Details Will Be Added]</div>
-            <div>A/C No    : XXXXXXXXXXXXXXXX</div>
-            <div>IFSC Code : XXXXX000XXXX</div>
-            <div>UPI ID    : {company.notePrefix.toLowerCase()}@upi</div>
-          </div>
-          <div className="border border-black p-1.5 text-center w-36">
-            <div className="font-bold text-[9px]">[ Scan & Pay via UPI ]</div>
-            <div className="border border-black my-1 py-3 text-[8px] bg-gray-50">
-              [ DYNAMIC QR ]<br />
-              Auto-fills Net<br />
-              Payable Amount
-            </div>
-          </div>
-        </div>
+      <div className="border-t border-black pt-1.5 mt-2 text-[9.5px]">
+        <div className="font-bold text-[10px]">PAYMENT:</div>
+        {isPaid ? (
+          <div className="font-bold">*** PAID{paidStr ? ` ON ${paidStr}` : ''} — THANK YOU ***</div>
+        ) : (
+          <div>Pay at the hostel office by cash, UPI or bank transfer on or before {dueDateStr}. Keep your transaction reference / receipt.</div>
+        )}
       </div>
 
       <div className="border-t border-black pt-1.5 mt-2 text-[9.5px]">
@@ -243,17 +250,17 @@ const DemandNotePrint = ({ note, onClose }) => {
     <div className="receipt-box border border-black p-4 font-mono text-[11px] leading-tight text-black bg-white mb-6">
       <div className="text-center font-bold">
         ========================================================================================<br />
-        <div className="text-[14px] tracking-wider my-0.5">{CATERING.companyName}</div>
+        <div className="text-[14px] tracking-wider my-0.5">{caterer.companyName}</div>
         <div className="text-[11px] font-normal">{CATERING.subtitle}</div>
-        <div className="text-[9.5px] font-normal">{CATERING.address}</div>
+        <div className="text-[9.5px] font-normal">{caterer.address}</div>
         ========================================================================================
       </div>
 
       <div className="my-1 text-[10px]">
-        <div>SAN (संस्था आधार नंबर) : {CATERING.san}</div>
-        <div>Udyam Reg. No.          : {CATERING.udyamRegNo}</div>
-        <div>FSSAI Registration No.  : {CATERING.fssai}</div>
-        <div>Proprietor / Operator   : {CATERING.proprietorName}</div>
+        {caterer.san && <div>SAN (संस्था आधार नंबर) : {caterer.san}</div>}
+        {caterer.udyamRegNo && <div>Udyam Reg. No.          : {caterer.udyamRegNo}</div>}
+        {caterer.fssai && <div>FSSAI Registration No.  : {caterer.fssai}</div>}
+        {caterer.proprietorName && <div>Proprietor / Operator   : {caterer.proprietorName}</div>}
       </div>
 
       <div className="text-center font-bold my-2">
@@ -284,8 +291,8 @@ const DemandNotePrint = ({ note, onClose }) => {
               <td>Admission ID : {admissionId}</td>
             </tr>
             <tr>
-              <td>Father's Name : श्री {fatherName}</td>
-              <td>Room / Bed No: {roomNumber} - Bed A</td>
+              <td>{fatherName && <>Father's Name : श्री {fatherName}</>}</td>
+              <td>Room / Bed No: {roomNumber}{bed}</td>
             </tr>
             <tr>
               <td>Floor         : {company.floorLabel}</td>
@@ -338,34 +345,23 @@ const DemandNotePrint = ({ note, onClose }) => {
         (Amount in Words: {numberToWords(messNetPayable)})
       </div>
 
-      <div className="border-t border-black pt-1.5 mt-2">
-        <div className="flex justify-between items-start text-[9.5px]">
-          <div>
-            <div className="font-bold text-[10px]">PAYMENT DETAILS & QR CODE:</div>
-            <div>Bank Name : [Bank Details Will Be Added]</div>
-            <div>A/C No    : XXXXXXXXXXXXXXXX</div>
-            <div>IFSC Code : XXXXX000XXXX</div>
-            <div>UPI ID    : meenakshicatering@upi</div>
-          </div>
-          <div className="border border-black p-1.5 text-center w-36">
-            <div className="font-bold text-[9px]">[ Scan & Pay via UPI ]</div>
-            <div className="border border-black my-1 py-3 text-[8px] bg-gray-50">
-              [ DYNAMIC QR ]<br />
-              Auto-fills<br />
-              ₹ {messNetPayable.toLocaleString('en-IN')}.00
-            </div>
-          </div>
-        </div>
+      <div className="border-t border-black pt-1.5 mt-2 text-[9.5px]">
+        <div className="font-bold text-[10px]">PAYMENT:</div>
+        {isPaid ? (
+          <div className="font-bold">*** PAID{paidStr ? ` ON ${paidStr}` : ''} — THANK YOU ***</div>
+        ) : (
+          <div>Pay at the hostel office by cash, UPI or bank transfer on or before {dueDateStr}. Keep your transaction reference / receipt.</div>
+        )}
       </div>
 
       <div className="border-t border-black pt-1.5 mt-2 text-[9.5px]">
         <div className="font-bold text-[10px]">TERMS & CONDITIONS:</div>
-        <div>1. Catering fees are directly payable to Meenakshi Enterprises for mess and food operations.</div>
+        <div>1. Catering fees are directly payable to {caterer.companyName} for mess and food operations.</div>
         <div>2. Meal Opt-out adjustments (if applicable as per hostel policy) will be reflected in subsequent cycle.</div>
       </div>
 
       <div className="text-right mt-6 text-[10px]">
-        <div className="font-bold">For MEENAKSHI ENTERPRISES</div>
+        <div className="font-bold">For {caterer.companyName}</div>
         <div className="text-[9px]">(Authorized Signatory / Digital Seal)</div>
         ========================================================================================
       </div>
@@ -373,67 +369,46 @@ const DemandNotePrint = ({ note, onClose }) => {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[9500] flex items-center justify-center bg-[#1b2a29]/45 p-2 sm:p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
         {/* Header Toolbar */}
-        <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shadow-md">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500 flex items-center justify-center font-bold text-white">🧾</div>
-            <div>
-              <h3 className="font-bold text-base tracking-wide text-white">Demand Note Invoice Preview</h3>
-              <p className="text-xs text-slate-300">Resident: {studentName} ({company.companyName})</p>
-            </div>
+        <div className="bg-mint-50 border-b border-[var(--border-color)] px-5 py-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="font-bold text-[16px] m-0">Demand note</h3>
+            <p className="text-[12px] text-[var(--text-secondary)] m-0 truncate">{studentName} · {company.companyName}</p>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Tab Selector */}
-            <div className="flex bg-slate-800 p-1 rounded-xl border border-slate-700">
-              <button
-                onClick={() => setActiveReceiptTab('HOSTEL')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeReceiptTab === 'HOSTEL' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <Building2 size={13} />
-                <span>Hostel Fee</span>
-              </button>
-
-              <button
-                onClick={() => setActiveReceiptTab('CATERING')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeReceiptTab === 'CATERING' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <UtensilsCrossed size={13} />
-                <span>Catering (Meenakshi)</span>
-              </button>
-
-              <button
-                onClick={() => setActiveReceiptTab('BOTH')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeReceiptTab === 'BOTH' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <span>Print Both (2 Pages)</span>
-              </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex p-1 rounded-xl bg-white border border-[var(--border-color)]" role="tablist">
+              {[
+                { key: 'HOSTEL', label: 'Hostel fee', icon: Building2 },
+                { key: 'CATERING', label: 'Catering', icon: UtensilsCrossed },
+                { key: 'BOTH', label: 'Both' },
+              ].map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={activeReceiptTab === key}
+                  onClick={() => setActiveReceiptTab(key)}
+                  className={`flex items-center gap-1.5 px-3 h-8 rounded-lg text-[12px] font-semibold border-none cursor-pointer transition-colors ${
+                    activeReceiptTab === key ? 'bg-sun-300 text-sun-900' : 'bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  {Icon && <Icon size={13} />} {label}
+                </button>
+              ))}
             </div>
-
-            <button
-              onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black rounded-xl transition-all shadow-md"
-            >
-              <Printer size={15} />
-              <span>Print Official Invoice</span>
+            <button onClick={handlePrint} className="btn-primary h-10">
+              <Printer size={15} /> Print
             </button>
-
-            <button onClick={onClose} className="p-2 text-slate-400 hover:text-white transition-colors">
-              <X size={20} />
+            <button onClick={onClose} aria-label="Close" className="w-10 h-10 rounded-xl bg-white border border-[var(--border-color)] flex items-center justify-center cursor-pointer text-[var(--text-secondary)] hover:bg-mint-100">
+              <X size={18} />
             </button>
           </div>
         </div>
 
         {/* Scrollable Receipt Body */}
-        <div className="flex-1 overflow-auto p-6 bg-slate-100">
+        <div className="flex-1 overflow-auto p-4 sm:p-6 bg-[var(--bg-primary)]">
           <div id="demand-note-print-content" className="max-w-3xl mx-auto">
             {(activeReceiptTab === 'HOSTEL' || activeReceiptTab === 'BOTH') && renderHostelReceipt()}
             {(activeReceiptTab === 'CATERING' || activeReceiptTab === 'BOTH') && renderCateringReceipt()}

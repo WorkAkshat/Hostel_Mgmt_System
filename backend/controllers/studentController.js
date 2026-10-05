@@ -438,6 +438,9 @@ const createProfileRequest = async (req, res) => {
     }
 
     const requests = loadFile(PROFILE_REQS_PATH);
+    if (requests.some(r => r.studentId === student.id && r.status === 'PENDING')) {
+      return res.status(400).json({ message: 'You already have a change request waiting for the warden.' });
+    }
     const newReq = {
       id: `req-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       studentId: student.id,
@@ -463,6 +466,25 @@ const createProfileRequest = async (req, res) => {
   } catch (error) {
     console.error('Error creating profile request:', error);
     res.status(500).json({ message: 'Server error saving profile edit request' });
+  }
+};
+
+// @desc    The logged-in student's own change requests (all statuses)
+// @route   GET /api/v1/students/profile-requests/mine
+// @access  Private (Student)
+const getMyProfileRequests = async (req, res) => {
+  try {
+    const student = await prisma.student.findFirst({ where: { userId: req.user.id } });
+    if (!student) {
+      return res.status(404).json({ message: 'Student profile not found' });
+    }
+    const mine = loadFile(PROFILE_REQS_PATH)
+      .filter(r => r.studentId === student.id)
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json(mine);
+  } catch (error) {
+    console.error('Error fetching my profile requests:', error);
+    res.status(500).json({ message: 'Server error fetching your requests' });
   }
 };
 
@@ -509,6 +531,7 @@ const approveProfileRequest = async (req, res) => {
     });
 
     profileReq.status = 'APPROVED';
+    profileReq.decidedAt = new Date().toISOString();
     requests[reqIndex] = profileReq;
     saveFile(PROFILE_REQS_PATH, requests);
 
@@ -532,6 +555,7 @@ const rejectProfileRequest = async (req, res) => {
 
     const profileReq = requests[reqIndex];
     profileReq.status = 'REJECTED';
+    profileReq.decidedAt = new Date().toISOString();
     requests[reqIndex] = profileReq;
     saveFile(PROFILE_REQS_PATH, requests);
 
@@ -643,6 +667,13 @@ const getStudentDocuments = async (req, res) => {
   const { studentId } = req.params;
 
   try {
+    // Students may only see their own documents
+    if (req.user.role !== 'ADMIN') {
+      const self = await prisma.student.findFirst({ where: { userId: req.user.id }, select: { id: true } });
+      if (!self || self.id !== studentId) {
+        return res.status(403).json({ message: 'Not authorized to view these documents' });
+      }
+    }
     const docs = loadFile(DOCUMENTS_PATH);
     const studentDocs = docs.filter(d => d.studentId === studentId);
     res.json(studentDocs);
@@ -659,6 +690,7 @@ module.exports = {
   updateStudent,
   deleteStudent,
   createProfileRequest,
+  getMyProfileRequests,
   getPendingProfileRequests,
   approveProfileRequest,
   rejectProfileRequest,

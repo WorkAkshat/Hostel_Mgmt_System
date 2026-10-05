@@ -89,7 +89,7 @@ const syncAccountingReceipts = async () => {
     const existing = await prisma.voucher.findUnique({ where: { voucherNo } });
     if (!existing) {
       const floor = inv.student?.room?.floorNumber || inv.floorNumber || 1;
-      const company = inv.companyName || firmNames[floor] || 'Hari Pushp PG';
+      const company = inv.companyName || firmNames[floor] || 'Hari Pushp Tower';
       const studentName = inv.student?.user?.name || 'Student';
       const rollNo = inv.student?.rollNumber || '';
       const roomNo = inv.student?.room?.roomNumber || '';
@@ -171,7 +171,7 @@ const syncAccountingReceipts = async () => {
     const existing = await prisma.voucher.findUnique({ where: { voucherNo } });
     if (!existing) {
       const floor = dn.student?.room?.floorNumber || dn.floorNumber || 1;
-      const company = dn.companyName || firmNames[floor] || 'Hari Pushp PG';
+      const company = dn.companyName || firmNames[floor] || 'Hari Pushp Tower';
       const studentName = dn.student?.user?.name || 'Student';
       const rollNo = dn.student?.rollNumber || '';
       const roomNo = dn.student?.room?.roomNumber || '';

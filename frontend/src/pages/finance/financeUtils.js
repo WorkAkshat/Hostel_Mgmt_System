@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react';
 import { Banknote, Landmark, ScrollText, Smartphone } from 'lucide-react';
 import { demandNotes as demandNotesApi } from '../../utils/api';
 
+// Motion variants for tile grids
+export const rise = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } };
+export const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
+
 export const PAYMENT_METHODS = [
   { value: 'CASH', label: 'Cash', icon: Banknote, refLabel: 'Receipt book no.', refHint: 'Optional' },
   { value: 'UPI', label: 'UPI', icon: Smartphone, refLabel: 'UPI transaction ID', refHint: '12-digit UTR from the payment app' },
@@ -53,25 +57,6 @@ export const monthLabel = (key, opts = { month: 'long', year: 'numeric' }) => {
   if (!key) return '';
   const [y, m] = key.split('-').map(Number);
   return new Date(y, m - 1, 1).toLocaleDateString('en-IN', opts);
-};
-
-export const invoiceNumber = (inv) =>
-  `INV/${monthKey(inv.createdAt).replace('-', '')}/${String(inv.id).slice(0, 6).toUpperCase()}`;
-
-export const numberToWords = (num) => {
-  const n = Math.round(Number(num) || 0);
-  if (n === 0) return 'Zero Rupees Only';
-  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
-  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
-  const convert = (x) => {
-    if (x < 20) return ones[x];
-    if (x < 100) return tens[Math.floor(x / 10)] + (x % 10 ? ` ${ones[x % 10]}` : '');
-    if (x < 1000) return `${ones[Math.floor(x / 100)]} Hundred${x % 100 ? ` ${convert(x % 100)}` : ''}`;
-    if (x < 100000) return `${convert(Math.floor(x / 1000))} Thousand${x % 1000 ? ` ${convert(x % 1000)}` : ''}`;
-    if (x < 10000000) return `${convert(Math.floor(x / 100000))} Lakh${x % 100000 ? ` ${convert(x % 100000)}` : ''}`;
-    return `${convert(Math.floor(x / 10000000))} Crore${x % 10000000 ? ` ${convert(x % 10000000)}` : ''}`;
-  };
-  return `${convert(n)} Rupees Only`;
 };
 
 // Company details per floor + fee structure, fetched once per session

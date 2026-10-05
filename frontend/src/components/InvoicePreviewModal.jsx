@@ -49,7 +49,7 @@ const COMPANY_CONFIG = {
   },
 };
 const DEFAULT_COMPANY = {
-  companyName: 'Hari Pushp PG',
+  companyName: 'Hari Pushp Tower',
   hostelName: 'Hari Pushp Girls Hostel',
   address: 'Hari Pushp Tower, Plot No. 10, Gayatri Nagar B, Maharani Farm, Durgapura, Jaipur, Rajasthan – 302018',
   proprietorName: 'Management',

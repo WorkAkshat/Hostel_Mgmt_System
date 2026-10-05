@@ -306,7 +306,7 @@ export const downloadPendingStudentsPDF = (pendingUsers = []) => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
     doc.setTextColor(138, 152, 149);
-    doc.text('Hari Pushp PG Girls Hostel &bull; Confidential &bull; For Internal Administrative & Warden Use Only', 14, pageHeight - 6);
+    doc.text('Hari Pushp Tower Girls Hostel &bull; Confidential &bull; For Internal Administrative & Warden Use Only', 14, pageHeight - 6);
     doc.text(`Page ${i} of ${totalPages}`, pageWidth - 14, pageHeight - 6, { align: 'right' });
   }
 

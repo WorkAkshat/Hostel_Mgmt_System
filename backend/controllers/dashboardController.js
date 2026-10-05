@@ -294,6 +294,7 @@ const getDashboard = async (req, res) => {
           id: student.id,
           name: student.user.name,
           email: student.user.email,
+          avatar: student.user.avatar || student.profilePic || null,
           rollNumber: student.rollNumber,
           phoneNumber: student.phoneNumber,
           parentContact: student.parentContact,
@@ -302,8 +303,8 @@ const getDashboard = async (req, res) => {
             id: student.room.id,
             roomNumber: student.room.roomNumber,
             block: student.room.block,
-            floor: student.room.floor,
-            sharingType: student.room.sharingType,
+            floorNumber: student.room.floorNumber,
+            sharingType: student.room.sharingType || student.room.capacity,
             isAc: student.room.isAc
           } : null
         },

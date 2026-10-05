@@ -18,3 +18,6 @@ export const updateStatus = async (id, status) => {
     body: JSON.stringify({ status })
   });
 };
+
+// The logged-in student's own suggestions with their status
+export const getMine = async () => client('/suggestions/mine');

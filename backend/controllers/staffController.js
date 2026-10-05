@@ -13,12 +13,16 @@ const getAllStaff = async (req, res) => {
       include: {
         user: {
           select: {
+            id: true,
             name: true,
             email: true,
-            role: true
+            role: true,
+            avatar: true,
+            createdAt: true
           }
         }
-      }
+      },
+      orderBy: { user: { name: 'asc' } }
     });
     res.json(staff);
   } catch (error) {
@@ -110,8 +114,50 @@ const deleteStaff = async (req, res) => {
   }
 };
 
+// @desc    Update a staff member's details (Warden only)
+// @route   PUT /api/staff/:id
+// @access  Private (Admin/Warden only)
+const updateStaff = async (req, res) => {
+  const { id } = req.params;
+  const { name, department, designation, phoneNumber } = req.body || {};
+
+  if (name !== undefined && !String(name).trim()) {
+    return res.status(400).json({ message: 'Name cannot be empty' });
+  }
+
+  try {
+    const staff = await prisma.staff.findUnique({ where: { id } });
+    if (!staff) {
+      return res.status(404).json({ message: 'Staff member not found' });
+    }
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (name !== undefined) {
+        await tx.user.update({ where: { id: staff.userId }, data: { name: String(name).trim() } });
+      }
+      const data = {};
+      if (department) data.department = department;
+      if (designation) data.designation = String(designation).trim();
+      if (phoneNumber) data.phoneNumber = String(phoneNumber).trim();
+      return tx.staff.update({
+        where: { id },
+        data,
+        include: { user: { select: { id: true, name: true, email: true, role: true, avatar: true, createdAt: true } } }
+      });
+    });
+
+    res.json(updated);
+
+    logActivity({ req, action: 'UPDATE', module: 'STAFF', description: `Updated staff ${updated.user.name} (${updated.department} - ${updated.designation})`, targetId: id, targetType: 'Staff' });
+  } catch (error) {
+    console.error('Error updating staff:', error);
+    res.status(500).json({ message: 'Server error updating staff entry' });
+  }
+};
+
 module.exports = {
   getAllStaff,
   createStaff,
+  updateStaff,
   deleteStaff
 };

@@ -10,20 +10,12 @@ import ProgressBar from '../components/ui/ProgressBar';
 import AnimatedNumber from '../components/ui/AnimatedNumber';
 import FilterChips from '../components/ui/FilterChips';
 import { ROOM_STATUS } from './rooms/RoomDrawer';
+import DownloadMenu from '../components/ui/DownloadMenu';
+import { downloadCsv } from '../utils/format';
+import { exportFloorResidents, exportFloorSummary, exportResidents, exportRooms } from '../utils/exports';
 
 const rupees = (n) => `₹${Math.round(n || 0).toLocaleString('en-IN')}`;
 const thisMonth = () => new Date().toISOString().slice(0, 7);
-
-const downloadCsv = (filename, header, rows) => {
-  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const csv = [header.map(esc).join(','), ...rows.map((r) => r.map(esc).join(','))].join('\n');
-  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-};
 
 const Panel = ({ children, className = '' }) => (
   <div className={`bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] ${className}`}>{children}</div>
@@ -88,7 +80,8 @@ const ResidentsTab = ({ detail }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <label className="relative">
+      <div className="flex gap-2">
+      <label className="relative flex-1">
         <span className="sr-only">Search residents</span>
         <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] pointer-events-none" />
         <input className="form-input pl-10 pr-9 bg-white" placeholder="Search name, roll no., phone or college" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -98,6 +91,11 @@ const ResidentsTab = ({ detail }) => {
           </button>
         )}
       </label>
+      <DownloadMenu
+        label="Download"
+        options={[{ key: 'floor-residents', label: 'Residents of this floor', hint: 'Room, bed, phone and parent contact', run: () => exportFloorResidents(detail) }]}
+      />
+      </div>
 
       {rooms.length === 0 ? (
         <Panel className="p-10 text-center text-[14px] text-[var(--text-secondary)]">
@@ -368,11 +366,20 @@ export default function FloorDirectory() {
   if (!selected) {
     return (
       <div className="flex flex-col gap-5">
-        <div>
-          <h1 className="page-title">Floor directory</h1>
-          <p className="page-subtitle">
-            {loading ? 'Loading floors…' : `${floors.length} floors · ${totals.rooms} rooms · ${totals.residents} residents · ${totals.free} free beds`}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <h1 className="page-title">Floor directory</h1>
+            <p className="page-subtitle">
+              {loading ? 'Loading floors…' : `${floors.length} floors · ${totals.rooms} rooms · ${totals.residents} residents · ${totals.free} free beds`}
+            </p>
+          </div>
+          <DownloadMenu
+            options={[
+              { key: 'summary', label: 'Floor summary', hint: 'Rooms, beds, residents and occupancy per floor', run: () => exportFloorSummary(floors) },
+              { key: 'residents', label: 'All residents', hint: 'Everyone with room, bed and contacts', run: () => exportResidents(null) },
+              { key: 'rooms', label: 'All rooms & beds', hint: 'Every room with status and residents', run: () => exportRooms(null) },
+            ]}
+          />
         </div>
 
         {error ? (

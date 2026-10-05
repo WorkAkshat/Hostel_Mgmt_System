@@ -1,99 +1,87 @@
-import { Stack, useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { AuthProvider } from '../../context/AuthContext';
-import { LanguageProvider } from '../../context/LanguageContext';
-import { NotificationProvider } from '../../context/NotificationContext';
+import { useEffect } from 'react';
+import { View } from 'react-native';
+import { Stack, usePathname } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import * as Notifications from 'expo-notifications';
-import type { NotificationType } from '../../context/NotificationContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  useFonts, PlusJakartaSans_400Regular, PlusJakartaSans_500Medium, PlusJakartaSans_600SemiBold, PlusJakartaSans_700Bold, PlusJakartaSans_800ExtraBold,
+} from '@expo-google-fonts/plus-jakarta-sans';
+import { AuthProvider, useAuth } from '../lib/auth';
+import { queryClient, useAppFocusRefetch } from '../lib/query';
+import { trackPath } from '../lib/nav';
+import { ToastProvider } from '../ui/feedback';
+import { colors } from '../ui/theme';
+import OfflineBanner from '../features/OfflineBanner';
 
-// ─── Global notification handler — show banner + sound when app is foregrounded ──
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 1000 * 60 * 5,
-      refetchOnWindowFocus: true,
-    },
-  },
-});
-
-// ─── Tab lookup from notification data.type ──────────────────────────────────
-const TYPE_TO_TAB: Record<string, string> = {
-  NOTICE:       'Notices',
-  POLL:         'Notices',
-  LEAVE:        'Leaves',
-  LEAVE_STATUS: 'Leaves',
-  COMPLAINT:    'Complaints',
-  INFO:         'Home',
-};
-
-// ─── Root Layout ──────────────────────────────────────────────────────────────
-export default function RootLayout() {
-  const router = useRouter();
-  // Guard: don't call router before the navigator tree has mounted
-  const mounted = useRef(false);
+function Navigator() {
+  const { user, ready } = useAuth();
+  useAppFocusRefetch();
+  trackPath(usePathname());
 
   useEffect(() => {
-    mounted.current = true;
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
 
-    // 1. App launched FROM notification tap (killed state).
-    //    setTimeout(0) defers resolution until after the first render cycle,
-    //    preventing the "state update on unmounted component" warning from expo-router.
-    const timer = setTimeout(() => {
-      Notifications.getLastNotificationResponseAsync().then(response => {
-        if (!mounted.current) return;
-        if (response?.notification) {
-          const data = response.notification.request.content.data ?? {};
-          const tab = TYPE_TO_TAB[(data.type as string) ?? ''] ?? 'Home';
-          router.replace({ pathname: '/dashboard', params: { tab } } as any);
-        }
-      });
-    }, 0);
+  if (!ready) return <View style={{ flex: 1, backgroundColor: colors.mint200 }} />;
 
-    // 2. Notification tapped while app is backgrounded (live listener)
-    const sub = Notifications.addNotificationResponseReceivedListener(response => {
-      if (!mounted.current) return;
-      const data = response.notification.request.content.data ?? {};
-      const tab = TYPE_TO_TAB[(data.type as string) ?? ''] ?? 'Home';
-      router.push({ pathname: '/dashboard', params: { tab } } as any);
-    });
+  const role = user?.role;
+  return (
+    <>
+      <OfflineBanner />
+      <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right', animationDuration: 260, freezeOnBlur: true, gestureEnabled: true, contentStyle: { backgroundColor: colors.bg } }}>
+        <Stack.Screen name="index" />
+        <Stack.Protected guard={!user}>
+          <Stack.Screen name="login" options={{ animation: 'fade' }} />
+        </Stack.Protected>
+        <Stack.Protected guard={role === 'STUDENT'}>
+          <Stack.Screen name="student" />
+          <Stack.Screen name="profile" />
+        </Stack.Protected>
+        <Stack.Protected guard={role === 'ADMIN'}>
+          <Stack.Screen name="warden" />
+          <Stack.Screen name="manage" />
+        </Stack.Protected>
+        <Stack.Protected guard={role === 'STAFF'}>
+          <Stack.Screen name="staff" />
+        </Stack.Protected>
+        <Stack.Protected guard={!!user}>
+          <Stack.Screen name="helpdesk" />
+          <Stack.Screen name="suggestions" />
+          <Stack.Screen name="notices" />
+          <Stack.Screen name="notifications" />
+        </Stack.Protected>
+      </Stack>
+    </>
+  );
+}
 
-    return () => {
-      mounted.current = false;
-      clearTimeout(timer);
-      sub.remove();
-    };
-  }, []);
+export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    'PJS-400': PlusJakartaSans_400Regular,
+    'PJS-500': PlusJakartaSans_500Medium,
+    'PJS-600': PlusJakartaSans_600SemiBold,
+    'PJS-700': PlusJakartaSans_700Bold,
+    'PJS-800': PlusJakartaSans_800ExtraBold,
+  });
+  if (!fontsLoaded) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AuthProvider>
-          <NotificationProvider>
-            <StatusBar style="light" />
-            <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="login" />
-              <Stack.Screen name="dashboard" />
-              <Stack.Screen name="mess" />
-              <Stack.Screen name="room-change" />
-              <Stack.Screen name="gate-history" />
-            </Stack>
-          </NotificationProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <ToastProvider>
+              <StatusBar style="dark" />
+              <Navigator />
+            </ToastProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Hari Pushp PG",
+    "name": "Hari Pushp Tower",
     "slug": "hari-pushp-pg",
     "version": "1.0.0",
     "runtimeVersion": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "haripushppg",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.haripushppg.app",
       "icon": "./assets/images/icon.png",
@@ -15,7 +15,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#7F56D9",
+        "backgroundColor": "#D5ECEA",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -38,7 +38,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#7F56D9",
+          "backgroundColor": "#D5ECEA",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 100
         }
@@ -48,11 +48,12 @@
         "expo-notifications",
         {
           "icon": "./assets/images/icon.png",
-          "color": "#7F56D9",
+          "color": "#2B7A74",
           "sounds": [],
           "mode": "production"
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "extra": {
       "router": {},
@@ -61,7 +62,7 @@
       }
     },
     "experiments": {
-      "typedRoutes": true,
+      "typedRoutes": false,
       "reactCompiler": true
     },
     "owner": "akshat29032903"

@@ -16,3 +16,6 @@ export const remove = (id) => {
     method: 'DELETE'
   });
 };
+
+// data: { name, department, designation, phoneNumber }
+export const update = (id, data) => client(`/staff/${id}`, { method: 'PUT', body: data });

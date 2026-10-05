@@ -41,6 +41,27 @@ const createSuggestion = async (req, res) => {
   }
 };
 
+// @desc    Suggestions sent by the logged-in student, with their status
+// @route   GET /api/v1/suggestions/mine
+// @access  Private (Student)
+const getMySuggestions = async (req, res) => {
+  try {
+    const student = await prisma.student.findUnique({ where: { userId: req.user.id } });
+    if (!student) {
+      return res.status(404).json({ message: 'Student profile not found.' });
+    }
+    const suggestions = await prisma.suggestion.findMany({
+      where: { studentId: student.id },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
+    res.json(suggestions);
+  } catch (error) {
+    console.error('Error fetching my suggestions:', error);
+    res.status(500).json({ message: 'Server error fetching your suggestions.' });
+  }
+};
+
 // @desc    Get all suggestions (Admin view)
 // @route   GET /api/v1/suggestions
 // @access  Private (Admin / Staff)
@@ -102,6 +123,7 @@ const updateStatus = async (req, res) => {
 
 module.exports = {
   createSuggestion,
+  getMySuggestions,
   getSuggestions,
   updateStatus
 };

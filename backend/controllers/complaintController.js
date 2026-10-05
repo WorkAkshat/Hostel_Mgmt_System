@@ -36,6 +36,7 @@ const createComplaint = async (req, res) => {
 
     logActivity({ req, action: 'CREATE', module: 'COMPLAINT', description: `Filed complaint: ${category} — ${description.substring(0, 80)}`, targetId: complaint.id, targetType: 'Complaint' });
   } catch (error) {
+    console.error('[complaintController]', error);
     res.status(500).json({ message: 'Server error filing complaint' });
   }
 };
@@ -145,6 +146,7 @@ const updateComplaint = async (req, res) => {
 
     logActivity({ req, action: 'UPDATE', module: 'COMPLAINT', description: `Updated complaint status to ${status} (${complaint.category})`, targetId: id, targetType: 'Complaint' });
   } catch (error) {
+    console.error('[complaintController]', error);
     res.status(500).json({ message: 'Server error updating ticket' });
   }
 };

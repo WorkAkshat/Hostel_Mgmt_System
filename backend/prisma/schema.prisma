@@ -72,6 +72,7 @@ model Student {
   visitors         Visitor[]
   mealOptOuts      MealOptOut[]
   demandNotes      DemandNote[]
+  paymentClaims    PaymentClaim[]
   nightAttendances NightAttendance[]
   messAttendance   MessAttendance[]
   suggestions      Suggestion[]
@@ -340,4 +341,64 @@ model ActivityLog {
   metadata    String?          // JSON string for extra details
   ipAddress   String?
   createdAt   DateTime @default(now())
+}
+
+// ─── Stock / inventory ───────────────────────────────────────
+// FIXED_ASSET: furniture, solar plant, lift… · INVENTORY: gym machines, appliances…
+// CONSUMABLE: kitchen groceries, cleaning supplies… (stock goes in and gets used up)
+model InventoryItem {
+  id           String          @id @default(uuid())
+  name         String
+  category     String          // "FIXED_ASSET", "INVENTORY", "CONSUMABLE"
+  location     String?         // "Room 101", "Kitchen", "Terrace", "Gym"…
+  floorNumber  Int?
+  unit         String          @default("pcs") // pcs, kg, L, packet…
+  quantity     Float           @default(0)     // current stock / count
+  minQuantity  Float?          // consumables: warn when stock falls to this
+  unitCost     Float?          // latest purchase price per unit
+  condition    String          @default("GOOD") // "GOOD", "NEEDS_REPAIR", "DAMAGED", "DISPOSED"
+  purchaseDate DateTime?
+  notes        String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  movements    StockMovement[]
+}
+
+model StockMovement {
+  id        String        @id @default(uuid())
+  itemId    String
+  item      InventoryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  type      String        // "IN" (bought / received), "OUT" (used / issued), "ADJUST" (physical count)
+  quantity  Float         // IN/OUT: how many; ADJUST: the counted stock
+  unitCost  Float?
+  note      String?
+  date      DateTime      @default(now())
+  byName    String?
+  createdAt DateTime      @default(now())
+}
+
+// ─── Student says "I have paid" (UPI / bank) → warden confirms ───
+model PaymentClaim {
+  id         String    @id @default(uuid())
+  studentId  String
+  student    Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  billKind   String    // "INVOICE", "NOTE"
+  billId     String
+  amount     Float
+  method     String    // "UPI", "BANK", "CASH"
+  reference  String    @default("")
+  paidOn     DateTime
+  note       String?
+  status     String    @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  reason     String?   // why it was rejected
+  decidedBy  String?
+  decidedAt  DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+// Small key → JSON settings (hostel payment details per floor…)
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

@@ -7,6 +7,7 @@ import { Field } from '../../components/ui/FormField';
 import { EmptyPanel, ErrorPanel, PageHeader, SkeletonList } from '../../components/ui/PageStates';
 import { LEAVE_STATUS, LEAVE_TYPES } from '../../config/hostel';
 import { daysSpan, fmtDateTime, plural, toLocalInput } from '../../utils/format';
+import useLiveRefresh from '../../hooks/useLiveRefresh';
 
 const TYPES = [
   { value: 'NIGHT_OUT', icon: Moon, label: 'Night out', hint: 'Staying out locally' },
@@ -63,6 +64,7 @@ const StudentLeaves = () => {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   const set = (key, value) => { setForm((f) => ({ ...f, [key]: value })); setFormError(null); };
 

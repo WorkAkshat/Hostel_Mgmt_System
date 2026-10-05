@@ -18,7 +18,7 @@ const createNotice = async (req, res) => {
         title,
         content,
         category: category ? String(category).toUpperCase() : 'GENERAL',
-        target: target || 'ALL',
+        target: ['ALL', 'STUDENTS', 'STAFF'].includes(target) ? target : 'ALL',
         postedBy: req.user?.name || req.user?.email || 'Dr. Shalini Sharma'
       }
     });
@@ -45,6 +45,9 @@ const getAllNotices = async (req, res) => {
   try {
     // Optional ?category=MESS filter
     const where = req.query.category ? { category: String(req.query.category).toUpperCase() } : {};
+    // Residents see notices for everyone or for students; staff see everyone / staff
+    if (req.user?.role === 'STUDENT') where.target = { in: ['ALL', 'STUDENTS'] };
+    if (req.user?.role === 'STAFF') where.target = { in: ['ALL', 'STAFF'] };
     const notices = await prisma.notice.findMany({
       where,
       orderBy: {

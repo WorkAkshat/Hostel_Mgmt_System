@@ -5,6 +5,7 @@ import {
   fees as feesApi, demandNotes as demandNotesApi, students as studentsApi,
 } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
+import useLiveRefresh from '../hooks/useLiveRefresh';
 import { useToast } from '../components/ui/Toast';
 import {
   ArrowLeft, Calendar, Check, CheckCircle, CreditCard, Download,
@@ -100,8 +101,8 @@ const Fees = () => {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [payForm, setPayForm] = useState({ cardName: '', cardNumber: '4111 2222 3333 4444', expiry: '12/28', cvv: '123' });
 
-  const fetchInvoices = useCallback(async () => {
-    setLoading(true);
+  const fetchInvoices = useCallback(async (quiet) => {
+    if (!quiet) setLoading(true);
     try {
       let feeList = [], demandList = [];
       try {
@@ -120,6 +121,9 @@ const Fees = () => {
       setLoading(false);
     }
   }, [user.role]);
+
+  // Stay in step with payments recorded by the warden / bills raised meanwhile
+  useLiveRefresh(() => fetchInvoices(true));
 
   useEffect(() => {
     fetchInvoices();

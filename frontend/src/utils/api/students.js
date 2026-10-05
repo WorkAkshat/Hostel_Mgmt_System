@@ -45,3 +45,12 @@ export const getStudentDocuments = (studentId) => client(`/students/documents/${
 
 export const verifyDocument = (id, status) =>
   client(`/students/documents/${id}/verify`, { method: 'POST', body: { status } });
+
+// ── Student self-service ──
+// data: any of { phoneNumber, fatherName, parentContact, permanentAddress, state, pincode, coachingCollege }
+export const requestProfileChange = (data) => client('/students/profile-requests', { method: 'POST', body: data });
+
+export const getMyProfileRequests = () => client('/students/profile-requests/mine');
+
+// data: { docType: 'AADHAAR' | 'PAN' | 'PASSPORT', documentNumber }
+export const uploadDocument = (data) => client('/students/documents/upload', { method: 'POST', body: data });

@@ -12,6 +12,7 @@ import WeeklyMenu from './WeeklyMenu';
 import MessNotices from './MessNotices';
 import { MEAL_ICONS } from './MessAdmin';
 import { dayName, isoDate, mealState, normalizeMenu } from './menuUtils';
+import useLiveRefresh from '../../hooks/useLiveRefresh';
 
 const MessStudent = () => {
   const toast = useToast();
@@ -47,6 +48,7 @@ const MessStudent = () => {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   const date = useMemo(() => {
     const d = new Date();

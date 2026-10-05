@@ -6,6 +6,7 @@ import { Bell, Megaphone, LogOut, ChevronDown, Menu, Search, CheckCheck, UserChe
 import { getSearchablePages, getInitials, ROLE_LABELS } from '../config/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SIDEBAR_COLLAPSED, SIDEBAR_EXPANDED } from './Sidebar';
+import { adminExtraNotifications, studentNotifications } from '../utils/notifications';
 
 const noticeToNotification = (n) => ({
   id: `notice-${n.id}`,
@@ -66,12 +67,13 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
         const list = [];
 
         if (user.role === 'ADMIN') {
-          const [pendingUsers, leavesList, complaintsList, visitorsList, noticesList] = await Promise.all([
+          const [pendingUsers, leavesList, complaintsList, visitorsList, noticesList, extras] = await Promise.all([
             authApi.getPending().catch(() => []),
             leavesApi.getAll().catch(() => []),
             complaintsApi.getAll().catch(() => []),
             visitorsApi.getAll().catch(() => []),
-            api('/notices').catch(() => [])
+            api('/notices').catch(() => []),
+            adminExtraNotifications().catch(() => [])
           ]);
 
           if (pendingUsers && pendingUsers.length > 0) {
@@ -129,6 +131,15 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
             });
           }
 
+          list.push(...extras);
+          (noticesList || []).forEach(n => list.push(noticeToNotification(n)));
+        } else if (user.role === 'STUDENT') {
+          // Warden decisions on this student's leaves, complaints, bills and ideas
+          const [mine, noticesList] = await Promise.all([
+            studentNotifications(user).catch(() => []),
+            api('/notices').catch(() => [])
+          ]);
+          list.push(...mine);
           (noticesList || []).forEach(n => list.push(noticeToNotification(n)));
         } else {
           const noticesList = await api('/notices').catch(() => []);
@@ -192,7 +203,7 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
           <Menu size={20} />
         </button>
 
-        <span className="md:hidden text-[15px] font-bold text-[var(--text-primary)] truncate">Hari Pushp PG</span>
+        <span className="md:hidden text-[15px] font-bold text-[var(--text-primary)] truncate">Hari Pushp Tower</span>
 
         <div ref={searchRef} className="relative hidden md:block w-full max-w-[380px]">
           <div className="flex items-center gap-2 h-10 rounded-xl bg-[var(--bg-primary)] border border-[var(--border-color)] px-3 focus-within:border-brand-400 focus-within:bg-white transition-colors">
@@ -358,6 +369,15 @@ const Header = ({ isCollapsed, onMenuToggle }) => {
                 <p className="text-sm font-semibold truncate m-0">{user.name}</p>
                 <p className="text-[12px] text-[var(--text-tertiary)] truncate mt-0.5 mb-0">{user.email}</p>
               </div>
+              {user.role === 'STUDENT' && (
+                <button
+                  onClick={() => { setShowProfileDropdown(false); navigate('/student/profile'); }}
+                  className="flex items-center gap-3 w-full px-3 py-2.5 bg-transparent border-none rounded-lg cursor-pointer text-[14px] text-left transition-colors hover:bg-mint-50 font-medium"
+                >
+                  <UserCheck size={16} className="text-brand-600" />
+                  My profile
+                </button>
+              )}
               <button
                 onClick={() => {
                   logout();

@@ -111,6 +111,7 @@ const loginUser = async (req, res) => {
     // Log successful login
     logActivity({ req, userId: user.id, userName: user.name, userRole: user.role, action: 'LOGIN', module: 'AUTH', description: `${user.name} (${user.role}) logged in`, targetId: user.id, targetType: 'User' });
   } catch (error) {
+    console.error('[authController]', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 };
@@ -314,6 +315,7 @@ const registerUser = async (req, res) => {
     // Log registration
     logActivity({ req, userId: newUser.id, userName: name, userRole: pendingRole, action: 'REGISTER', module: 'AUTH', description: `${name} registered as ${role} (pending approval)`, targetId: newUser.id, targetType: 'User' });
   } catch (error) {
+    console.error('[authController]', error);
     res.status(500).json({ message: 'Server error during registration.' });
   }
 };
@@ -723,7 +725,7 @@ const updatePushToken = async (req, res) => {
 const testPushNotification = async (req, res) => {
   const { broadcastPushNotification } = require('../services/pushService');
   const { title, body } = req.body;
-  const pushTitle = title || '📢 Hari Pushp PG Alert';
+  const pushTitle = title || '📢 Hari Pushp Tower Alert';
   const pushBody = body || 'High-priority alert! New updates available in your hostel dashboard.';
 
   try {
@@ -780,8 +782,8 @@ const forgotPassword = async (req, res) => {
     try {
       await sendMail({
         to: user.email,
-        subject: 'Hari Pushp PG — Password Reset Verification Code',
-        text: `Hello ${user.name},\n\nYour password reset verification code is: ${resetCode}\n\nThis code will expire in 60 minutes.\n\nIf you did not request this, please ignore this message.\n\nRegards,\nHari Pushp PG Administration`,
+        subject: 'Hari Pushp Tower — Password Reset Verification Code',
+        text: `Hello ${user.name},\n\nYour password reset verification code is: ${resetCode}\n\nThis code will expire in 60 minutes.\n\nIf you did not request this, please ignore this message.\n\nRegards,\nHari Pushp Tower Administration`,
         html: buildResetPasswordEmail({ name: user.name, resetCode })
       });
     } catch (mailError) {

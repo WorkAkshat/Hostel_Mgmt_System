@@ -11,7 +11,9 @@ import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { Field, digitsOnly } from '../components/ui/FormField';
 import { useToast } from '../components/ui/Toast';
 import { EmptyPanel, ErrorPanel, PageHeader, SearchBox, SkeletonList } from '../components/ui/PageStates';
+import AnnouncementsPanel from '../components/AnnouncementsPanel';
 import { duration, fmtDateTime, fmtTime } from '../utils/format';
+import useLiveRefresh from '../hooks/useLiveRefresh';
 
 const RELATIONS = ['Father', 'Mother', 'Brother', 'Sister', 'Guardian', 'Relative', 'Friend'];
 
@@ -159,6 +161,7 @@ const Visitors = () => {
       setLoading(false);
     }
   }, []);
+  useLiveRefresh(load);
 
   useEffect(() => {
     load();
@@ -207,6 +210,8 @@ const Visitors = () => {
         <button className="btn-secondary h-11" onClick={() => { setLoading(true); load(); }} aria-label="Refresh"><RefreshCw size={15} className={loading ? 'animate-spin' : ''} /></button>
         <button className="btn-primary h-11" onClick={() => setFormOpen(true)}><UserPlus size={17} /> Check in visitor</button>
       </PageHeader>
+
+      <AnnouncementsPanel limit={2} />
 
       <div className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-4 flex flex-col gap-3">
         <SearchBox value={search} onChange={setSearch} placeholder="Search visitor, phone, resident or room" />

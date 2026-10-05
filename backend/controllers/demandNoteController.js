@@ -14,7 +14,7 @@ const currentMonth = () => {
 // A billing cycle runs from the 10th of the month to the 9th of the next month
 const billingCycle = (billingMonth) => {
   const [y, m] = billingMonth.split('-').map(Number);
-  return { cycleStart: new Date(y, m - 1, 10), cycleEnd: new Date(y, m, 9, 23, 59, 59) };
+  return { cycleStart: new Date(y, m - 1, 10), cycleEnd: new Date(y, m, 9) };
 };
 
 // @desc    Generate 10-to-10 Demand Notes for a billing month
@@ -82,6 +82,13 @@ const generateDemandNotes = async (req, res) => {
       if (!sequenceCounts[companyInfo.notePrefix]) sequenceCounts[companyInfo.notePrefix] = 0;
       sequenceCounts[companyInfo.notePrefix] += 1;
       const noteNumber = generateDemandNoteNumber(companyInfo.notePrefix, billingMonth, sequenceCounts[companyInfo.notePrefix]);
+
+      // Notes that are already paid are left exactly as they were billed
+      const existing = await prisma.demandNote.findUnique({
+        where: { studentId_billingMonth: { studentId: student.id, billingMonth } },
+        select: { status: true }
+      });
+      if (existing?.status === 'PAID') continue;
 
       const demandNote = await prisma.demandNote.upsert({
         where: {
@@ -173,6 +180,8 @@ const getDemandNotes = async (req, res) => {
       if (student) {
         where.studentId = student.id;
       }
+      // Residents see a note once the warden has sent it (drafts stay with the office)
+      if (!status) where.status = { in: ['SENT', 'PAID'] };
     } else {
       const reqFloor = floorNumber || req.user?.assignedFloor;
       if (reqFloor) {
@@ -193,14 +202,27 @@ const getDemandNotes = async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
 
-    const enriched = demandNotes.map((note, index) => {
+    // Stable note numbers: position within the note's month + floor, oldest first
+    const groups = [...new Set(demandNotes.map((n) => `${n.billingMonth}|${n.floorNumber || 1}`))];
+    const sequence = {};
+    for (const key of groups) {
+      const [billingMonth, floor] = key.split('|');
+      const ids = await prisma.demandNote.findMany({
+        where: { billingMonth, floorNumber: parseInt(floor, 10) },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+        select: { id: true }
+      });
+      ids.forEach((row, i) => { sequence[row.id] = i + 1; });
+    }
+
+    const enriched = demandNotes.map((note) => {
       const fNum = note.floorNumber || 1;
       const companyInfo = COMPANY_CONFIG[fNum] || COMPANY_CONFIG[1];
       const cateringInfo = COMPANY_CONFIG.catering;
 
       return {
         ...note,
-        noteNumber: generateDemandNoteNumber(companyInfo.notePrefix, note.billingMonth, index + 1),
+        noteNumber: generateDemandNoteNumber(companyInfo.notePrefix, note.billingMonth, sequence[note.id] || 1),
         amountInWords: numberToWords(note.totalAmount),
         company: companyInfo,
         catering: cateringInfo,
@@ -278,7 +300,33 @@ const markPaid = async (req, res) => {
   }
 };
 
+// @desc    Send demand notes to residents (draft → SENT). Either specific ids, or every
+//          draft for a month (and floor). Paid notes are never touched.
+// @route   POST /api/v1/demand-notes/send   body: { ids?: string[], month?: 'YYYY-MM', floorNumber? }
+// @access  Private (Admin / Warden)
+const sendDemandNotes = async (req, res) => {
+  try {
+    const { ids, month, floorNumber } = req.body || {};
+    const where = { status: 'PENDING' };
+    if (Array.isArray(ids) && ids.length) where.id = { in: ids.map(String) };
+    else if (month && /^\d{4}-(0[1-9]|1[0-2])$/.test(month)) where.billingMonth = month;
+    else return res.status(400).json({ message: 'Choose the notes or the month to send' });
+    const floor = req.user.assignedFloor || (floorNumber && floorNumber !== 'all' ? parseInt(floorNumber, 10) : null);
+    if (floor) where.floorNumber = floor;
+
+    const result = await prisma.demandNote.updateMany({ where, data: { status: 'SENT', sentAt: new Date() } });
+    res.json({ message: result.count ? `Sent ${result.count} demand note${result.count === 1 ? '' : 's'} to residents` : 'Nothing new to send', count: result.count });
+    if (result.count) {
+      logActivity({ req, action: 'UPDATE', module: 'FEE', description: `Sent ${result.count} demand note(s) to residents${where.billingMonth ? ` for ${where.billingMonth}` : ''}${floor ? ` · floor ${floor}` : ''}`, metadata: { count: result.count, month: where.billingMonth, floor } });
+    }
+  } catch (error) {
+    console.error('Error sending demand notes:', error);
+    res.status(500).json({ message: 'Server error sending demand notes' });
+  }
+};
+
 module.exports = {
+  sendDemandNotes,
   generateDemandNotes,
   getDemandNotes,
   getCompanyConfig,
