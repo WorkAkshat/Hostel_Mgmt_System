@@ -82,6 +82,7 @@ const getFloorStudents = async (req, res) => {
           include: {
             user: { select: { name: true, email: true } },
             invoices: {
+              where: { kind: 'FEE' },
               orderBy: { createdAt: 'desc' },
               take: 1,
               select: { amount: true, status: true, dueDate: true },
@@ -167,6 +168,7 @@ const getFloorReport = async (req, res) => {
             user: { select: { name: true, email: true } },
             invoices: {
               where: {
+                kind: 'FEE',
                 createdAt: {
                   gte: monthStart,
                   lt: nextMonth,

@@ -4,6 +4,8 @@ const { logActivity } = require('../utils/activityLogger');
 const { COMPANY_CONFIG, FEE_STRUCTURE } = require('../config/companyConfig');
 
 const PAYMENT_METHODS = ['CASH', 'UPI', 'BANK', 'CHEQUE'];
+const CHARGE_CATEGORIES = ['FINE', 'DAMAGE', 'DEPOSIT', 'LATE_FEE', 'EXTRA', 'ADVANCE', 'OTHER'];
+const CHARGE_LABELS = { FINE: 'Fine', DAMAGE: 'Damage', DEPOSIT: 'Security deposit', LATE_FEE: 'Late fee', EXTRA: 'Extra service', ADVANCE: 'Advance payment', OTHER: 'Other' };
 
 // Floor + billing company for a student's room, stored on the invoice
 const billingEntity = (room) => {
@@ -186,7 +188,7 @@ const payInvoice = async (req, res) => {
 
     const updatedInvoice = await prisma.invoice.update({
       where: { id },
-      data: { status: 'PAID', paidAt }
+      data: { status: 'PAID', paidAt, payMethod: method, payReference: String(reference || '').trim() || null }
     });
 
     res.json(updatedInvoice);
@@ -245,6 +247,7 @@ const generateMonthlyBillingRun = async () => {
     const existingInvoice = await prisma.invoice.findFirst({
       where: {
         studentId: student.id,
+        kind: 'FEE',
         createdAt: {
           gte: startOfMonth,
           lte: endOfMonth
@@ -325,6 +328,27 @@ const updateInvoice = async (req, res) => {
       return res.status(400).json({ message: 'Cannot edit a paid invoice' });
     }
 
+    // A one-off charge has no rent / mess split: edit its amount, title, note or due date
+    if (invoice.kind === 'CHARGE') {
+      const { amount, title, note } = req.body || {};
+      const data = {};
+      if (amount !== undefined) {
+        const a = Math.round(parseFloat(amount) * 100) / 100;
+        if (!(a > 0) || a > 1000000) return res.status(400).json({ message: 'Amount must be between ₹1 and ₹10,00,000.' });
+        data.amount = a;
+      }
+      if (title !== undefined) {
+        const t = String(title).trim();
+        if (t.length < 2 || t.length > 80) return res.status(400).json({ message: 'Write what this charge is for (2–80 characters).' });
+        data.title = t;
+      }
+      if (note !== undefined) data.note = String(note).trim().slice(0, 300) || null;
+      if (dueDate) data.dueDate = new Date(dueDate);
+      const updated = await prisma.invoice.update({ where: { id }, data, include: { student: { include: { user: { select: { name: true } }, room: true } } } });
+      logActivity({ req, action: 'UPDATE', module: 'FEE', description: `Edited charge “${updated.title}” for ${invoice.student.user.name}: ₹${updated.amount}`, targetId: id, targetType: 'Invoice' });
+      return res.json(updated);
+    }
+
     const data = {};
 
     // Accept individual components and recompute total
@@ -374,7 +398,99 @@ const updateInvoice = async (req, res) => {
   }
 };
 
+// @desc    Ask a resident for money (fine, damage, deposit…) or record money they paid
+//          that isn't for a bill. With paid=true it is saved as already paid, with a receipt.
+// @route   POST /api/invoices/charge
+// @access  Private (Admin only)
+const createCharge = async (req, res) => {
+  const { studentId, category = 'OTHER', title, amount, dueDate, note, paid, method = 'CASH', reference = '', paidOn } = req.body || {};
+
+  if (!studentId) return res.status(400).json({ message: 'Choose the resident.' });
+  if (!CHARGE_CATEGORIES.includes(category)) return res.status(400).json({ message: 'Choose what kind of charge this is.' });
+  const a = Math.round(parseFloat(amount) * 100) / 100;
+  if (!(a > 0) || a > 1000000) return res.status(400).json({ message: 'Enter an amount between ₹1 and ₹10,00,000.' });
+  const t = String(title || CHARGE_LABELS[category]).trim();
+  if (t.length < 2 || t.length > 80) return res.status(400).json({ message: 'Write what this is for (2–80 characters).' });
+  const ref = String(reference || '').trim();
+
+  let due = dueDate ? new Date(dueDate) : new Date(Date.now() + 7 * 86400000);
+  if (Number.isNaN(due.getTime())) return res.status(400).json({ message: 'The due date is not valid.' });
+
+  let paidAt = null;
+  if (paid) {
+    if (!PAYMENT_METHODS.includes(method)) return res.status(400).json({ message: `Payment method must be one of ${PAYMENT_METHODS.join(', ')}` });
+    if (method !== 'CASH' && ref.length < 4) return res.status(400).json({ message: 'Enter the transaction / cheque reference so the payment can be traced.' });
+    paidAt = paidOn ? new Date(paidOn) : new Date();
+    if (Number.isNaN(paidAt.getTime()) || paidAt > new Date(Date.now() + 86400000)) return res.status(400).json({ message: 'Payment date cannot be in the future.' });
+    due = paidAt;
+  }
+
+  try {
+    const student = await prisma.student.findUnique({ where: { id: studentId }, include: { room: true, user: { select: { name: true } } } });
+    if (!student) return res.status(404).json({ message: 'Resident not found.' });
+
+    const invoice = await prisma.invoice.create({
+      data: {
+        studentId: student.id,
+        kind: 'CHARGE',
+        category,
+        title: t,
+        note: String(note || '').trim().slice(0, 300) || null,
+        amount: a,
+        dueDate: due,
+        status: paid ? 'PAID' : 'UNPAID',
+        paidAt,
+        payMethod: paid ? method : null,
+        payReference: paid ? ref || null : null,
+        ...billingEntity(student.room),
+      },
+      include: { student: { include: { user: { select: { name: true } }, room: true } } },
+    });
+
+    res.status(201).json(invoice);
+
+    if (paid) {
+      const { syncAccountingReceipts } = require('./accountingController');
+      syncAccountingReceipts().catch((err) => console.error('Failed to sync charge receipt:', err));
+    }
+    logActivity({
+      req,
+      action: paid ? 'PAYMENT' : 'CREATE',
+      module: 'FEE',
+      description: paid
+        ? `Recorded ₹${a} from ${student.user.name} for “${t}” via ${method}${ref ? ` (ref ${ref})` : ''}`
+        : `Asked ${student.user.name} to pay ₹${a} for “${t}”`,
+      targetId: invoice.id,
+      targetType: 'Invoice',
+    });
+  } catch (error) {
+    console.error('Error creating charge:', error);
+    res.status(500).json({ message: 'Server error saving the charge' });
+  }
+};
+
+// @desc    Cancel a charge raised by mistake (only while unpaid)
+// @route   DELETE /api/invoices/:id
+// @access  Private (Admin only)
+const deleteCharge = async (req, res) => {
+  try {
+    const invoice = await prisma.invoice.findUnique({ where: { id: req.params.id }, include: { student: { include: { user: { select: { name: true } } } } } });
+    if (!invoice) return res.status(404).json({ message: 'Bill not found.' });
+    if (invoice.kind !== 'CHARGE') return res.status(400).json({ message: 'Only extra charges can be cancelled. Edit a monthly fee bill instead.' });
+    if (invoice.status === 'PAID') return res.status(400).json({ message: 'This charge is already paid and cannot be cancelled.' });
+    await prisma.paymentClaim.deleteMany({ where: { billKind: 'INVOICE', billId: invoice.id } });
+    await prisma.invoice.delete({ where: { id: invoice.id } });
+    res.json({ success: true, message: 'Charge cancelled.' });
+    logActivity({ req, action: 'DELETE', module: 'FEE', description: `Cancelled charge “${invoice.title}” (₹${invoice.amount}) for ${invoice.student.user.name}`, targetId: invoice.id, targetType: 'Invoice' });
+  } catch (error) {
+    console.error('Error cancelling charge:', error);
+    res.status(500).json({ message: 'Server error cancelling the charge' });
+  }
+};
+
 module.exports = {
+  createCharge,
+  deleteCharge,
   createInvoice,
   getAllInvoices,
   getMyInvoices,

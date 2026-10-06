@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { Platform, StatusBar as RNStatusBar, View } from 'react-native';
 import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -53,6 +53,7 @@ function Navigator() {
           <Stack.Screen name="helpdesk" />
           <Stack.Screen name="suggestions" />
           <Stack.Screen name="notices" />
+          <Stack.Screen name="polls" />
           <Stack.Screen name="notifications" />
         </Stack.Protected>
       </Stack>
@@ -76,7 +77,9 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <ToastProvider>
-              <StatusBar style="dark" />
+              {/* Always show the clock / battery with dark icons over the app's light header */}
+              <StatusBar style="dark" hidden={false} />
+              {Platform.OS === 'android' && <RNStatusBar translucent backgroundColor="transparent" />}
               <Navigator />
             </ToastProvider>
           </AuthProvider>

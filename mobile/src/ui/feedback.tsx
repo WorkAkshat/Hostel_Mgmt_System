@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useCallback, useContext, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StatusBar as RNStatusBar, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CircleAlert, CircleCheck, Info, RefreshCw, type LucideIcon } from 'lucide-react-native';
@@ -31,7 +31,7 @@ export const ToastProvider = ({ children }: { children: ReactNode }) => {
   return (
     <ToastCtx.Provider value={api}>
       {children}
-      <View pointerEvents="none" style={[styles.toastWrap, { top: insets.top + 8 }]}>
+      <View pointerEvents="none" style={[styles.toastWrap, { top: Math.max(insets.top, Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 24 : 0) + 8 }]}>
         {items.map((t) => {
           const L = look[t.kind];
           return (

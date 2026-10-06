@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Banknote, CircleCheck, Landmark, ScrollText, Smartphone } from 'lucide-react-native';
+import { Banknote, CircleCheck, Landmark, ScrollText, Smartphone, XCircle } from 'lucide-react-native';
 import type { Payment, PayMethod } from '../api';
 import { rupees } from '../lib/format';
 import { colors } from '../ui/theme';
@@ -18,11 +18,12 @@ const METHODS = [
 ];
 
 // Warden records money received against a bill
-export default function RecordPayment({ bill, onClose, onSave }: { bill: { title: string; subtitle?: string; amount: number } | null; onClose: () => void; onSave: (p: Payment) => Promise<unknown> }) {
+export default function RecordPayment({ bill, onClose, onSave, onCancelCharge }: { bill: { title: string; subtitle?: string; amount: number } | null; onClose: () => void; onSave: (p: Payment) => Promise<unknown>; onCancelCharge?: () => Promise<unknown> }) {
   const [method, setMethod] = useState('CASH');
   const [ref, setRef] = useState('');
   const [date, setDate] = useState<Date | null>(new Date());
   const [busy, setBusy] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -56,6 +57,10 @@ export default function RecordPayment({ bill, onClose, onSave }: { bill: { title
       <Field label="Received on" required><DateTimeField label="Received on" value={date} onChange={setDate} withTime={false} /></Field>
       <Row gap={6}><T v="caption" c={colors.text3}>The resident gets the receipt in their app right away.</T></Row>
       {error && <ErrorBox message={error} />}
+      {onCancelCharge && (
+        <Button title="Cancel this charge" icon={XCircle} kind="ghost" small loading={cancelling}
+          onPress={async () => { setCancelling(true); try { await onCancelCharge(); } catch (e: any) { setError(e.message); } finally { setCancelling(false); } }} />
+      )}
     </Sheet>
   );
 }

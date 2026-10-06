@@ -160,6 +160,12 @@ model Invoice {
   paidAt          DateTime?
   floorNumber     Int?      // 1-5
   companyName     String?   // "Rajken Enterprises", "Vandana Enterprises", etc.
+  kind            String    @default("FEE") // FEE = monthly rent + mess bill; CHARGE = anything else the warden asks for
+  category        String?   // CHARGE only: FINE | DAMAGE | DEPOSIT | LATE_FEE | EXTRA | ADVANCE | OTHER
+  title           String?   // CHARGE only: what it is for, e.g. "Broken chair"
+  note            String?   // CHARGE only: more detail shown to the resident
+  payMethod       String?   // how it was paid (CASH, UPI, BANK, CHEQUE, ONLINE)
+  payReference    String?   // UTR / cheque / receipt number
   createdAt       DateTime  @default(now())
 }
 
@@ -276,6 +282,9 @@ model Poll {
   question    String
   options     String     // JSON array string
   isActive    Boolean    @default(true)
+  target      String     @default("ALL") // ALL | STUDENTS | STAFF
+  endsAt      DateTime?  // voting closes on its own after this
+  anonymous   Boolean    @default(false) // hide who voted, even from the warden
   createdById String
   createdAt   DateTime   @default(now())
   votes       PollVote[]
@@ -289,6 +298,7 @@ model PollVote {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   option    String
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@unique([pollId, userId])
 }

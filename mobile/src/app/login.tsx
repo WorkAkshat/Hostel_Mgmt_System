@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTopInset } from '../ui/safe';
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOut, LinearTransition } from 'react-native-reanimated';
 import { Building2, Eye, EyeOff, KeyRound, Lock, ShieldCheck } from 'lucide-react-native';
 import { useAuth } from '../lib/auth';
@@ -16,6 +17,7 @@ import { API_URL } from '../../config';
 
 export default function Login() {
   const insets = useSafeAreaInsets();
+  const top = useTopInset();
   const { login } = useAuth();
   // While the keyboard is open the big welcome block shrinks to one line,
   // so the email and password boxes stay above the keyboard.
@@ -77,7 +79,7 @@ Server: ${API_URL.replace('/api/v1', '')}` : err.message || 'Could not sign in.'
       <LinearGradient colors={gradients.login} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       <View pointerEvents="none" style={[styles.blob, { top: -80, right: -60, width: 240, height: 240 }]} />
       <View pointerEvents="none" style={[styles.blob, { bottom: -100, left: -80, width: 280, height: 280 }]} />
-      <ScrollView ref={scroll} contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + (kb ? 12 : 24), paddingBottom: (kb ? kbHeight : insets.bottom) + 24 }} keyboardShouldPersistTaps="handled">
+      <ScrollView ref={scroll} contentContainerStyle={{ flexGrow: 1, paddingTop: top + (kb ? 12 : 24), paddingBottom: (kb ? kbHeight : insets.bottom) + 24 }} keyboardShouldPersistTaps="handled">
         {kb ? (
           <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)} style={styles.mini}>
             <LinearGradient colors={gradients.brand} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.miniLogo}><Building2 size={18} color={colors.white} /></LinearGradient>

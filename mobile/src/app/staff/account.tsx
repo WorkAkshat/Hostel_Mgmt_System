@@ -1,4 +1,4 @@
-import { DoorOpen, Megaphone, Wrench } from 'lucide-react-native';
+import { DoorOpen, Megaphone, Vote, Wrench } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
 import { Appear, Screen } from '../../ui/layout';
 import { Menu, MenuItem } from '../../ui/blocks';
@@ -17,6 +17,7 @@ export default function StaffAccount() {
         <Menu title="Work">
           <MenuItem icon={DoorOpen} tone="mint" title="Gate desk" sub="Exits, returns and visitors" onPress={() => go('/staff')} />
           <MenuItem icon={Megaphone} tone="sun" title="Announcements" sub="News from the warden" onPress={() => go('/notices')} />
+          <MenuItem icon={Vote} tone="lilac" title="Polls" sub="Vote on hostel questions" onPress={() => go('/polls')} />
           <MenuItem icon={Wrench} tone="peach" title="Report a problem" sub="Broken lock, light, CCTV…" onPress={() => go({ pathname: '/helpdesk', params: { new: '1' } })} />
         </Menu>
       </Appear>

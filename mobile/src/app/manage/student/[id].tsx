@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { CalendarDays, ChevronDown, Download, CircleCheck, HandCoins, MessageCircle, Phone, Receipt, Share2, UserRound, Wrench } from 'lucide-react-native';
-import { demandNotesApi, studentsApi } from '../../../api';
+import { CalendarDays, ChevronDown, Download, CircleCheck, HandCoins, Plus, MessageCircle, Phone, Receipt, Share2, UserRound, Wrench } from 'lucide-react-native';
+import { demandNotesApi, feesApi, studentsApi } from '../../../api';
 import { useData } from '../../../lib/query';
 import { call, whatsapp } from '../../../lib/contact';
 import { fmtDate, fmtDateTime, plural, rupees, timeAgo } from '../../../lib/format';
@@ -13,6 +13,8 @@ import { ErrorBox, Loading, useToast } from '../../../ui/feedback';
 import { Appear, ListRow, Screen, Section } from '../../../ui/layout';
 import { Hero, HeroPill, onHero } from '../../../ui/blocks';
 import RecordPayment from '../../../features/RecordPayment';
+import ChargeSheet, { type ChargeMode } from '../../../features/ChargeSheet';
+import { useQueryClient } from '@tanstack/react-query';
 import { dueLabel, shareBillPdf, useAllBills, useRecordBill, type Bill } from '../../../features/dues';
 
 const Info = ({ k, v }: { k: string; v?: string | null }) => (
@@ -34,6 +36,8 @@ export default function StudentDetail() {
   const [paying, setPaying] = useState<Bill | null>(null);
   const [sharing, setSharing] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  const [charging, setCharging] = useState<ChargeMode | null>(null);
+  const qc = useQueryClient();
 
   if (error) return <Screen title="Resident" back tabBar={false}><ErrorBox message={(error as Error).message} onRetry={refetch} /></Screen>;
   if (isLoading || !s) return <Screen title="Resident" back tabBar={false}><Loading rows={4} h={110} /></Screen>;
@@ -125,6 +129,13 @@ export default function StudentDetail() {
         )}
       </Appear>
 
+      <Appear i={1}>
+        <Row gap={10}>
+          <Button title="Ask for money" icon={Plus} kind="secondary" onPress={() => setCharging('ask')} style={{ flex: 1 }} />
+          <Button title="Add payment" icon={HandCoins} kind="secondary" onPress={() => setCharging('paid')} style={{ flex: 1 }} />
+        </Row>
+      </Appear>
+
       {/* Bill history */}
       <Appear i={2}>
         <Section title="Payment history">
@@ -198,9 +209,17 @@ export default function StudentDetail() {
         </Section>
       )}
 
+      <ChargeSheet open={!!charging} mode={charging || 'ask'} onClose={() => setCharging(null)} student={{ id: s.id, name: s.user?.name, room: s.room?.roomNumber }} />
+
       <RecordPayment
         bill={paying && { title: `${paying.title} · ${s.user?.name}`, subtitle: `${paying.number} · ${dueLabel(paying)}`, amount: paying.amount }}
         onClose={() => setPaying(null)}
+        onCancelCharge={paying?.charge ? async () => {
+          await feesApi.cancelCharge(paying.id);
+          await qc.invalidateQueries({ queryKey: ['invoices'] });
+          toast.success('Charge cancelled', `${paying.title} removed from ${s.user?.name}'s bills.`);
+          setPaying(null);
+        } : undefined}
         onSave={async (p) => {
           if (!paying) return;
           await record(paying, p);

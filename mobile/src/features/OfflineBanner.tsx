@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet } from 'react-native';
+import { Platform, StatusBar as RNStatusBar, StyleSheet } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,7 +22,7 @@ export default function OfflineBanner() {
   }, []);
   if (!offline) return null;
   return (
-    <Animated.View entering={FadeInUp} exiting={FadeOutUp} style={[styles.bar, { paddingTop: insets.top + 6 }]}>
+    <Animated.View entering={FadeInUp} exiting={FadeOutUp} style={[styles.bar, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 24 : 0) + 6 }]}>
       <WifiOff size={15} color={colors.white} />
       <T v="caption" w="semibold" c={colors.white}>No internet — showing the last saved data</T>
     </Animated.View>

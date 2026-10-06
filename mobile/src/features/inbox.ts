@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  CalendarCheck, CalendarX, CircleCheck, FileText, IdCard, Lightbulb, Megaphone, Receipt, UserCheck, UserPen, Wallet, Wrench, type LucideIcon,
+  CalendarCheck, CalendarX, CircleCheck, FileText, IdCard, Lightbulb, Megaphone, Receipt, UserCheck, UserPen, Vote, Wallet, Wrench, type LucideIcon,
 } from 'lucide-react-native';
-import { authApi, complaintsApi, demandNotesApi, feesApi, leavesApi, noticesApi, paymentsApi, studentsApi, suggestionsApi, visitorsApi } from '../api';
+import { authApi, complaintsApi, demandNotesApi, feesApi, leavesApi, noticesApi, paymentsApi, pollsApi, studentsApi, suggestionsApi, visitorsApi } from '../api';
 import { asList } from '../api/client';
 import { useData } from '../lib/query';
 import { storage, KEYS } from '../lib/storage';
@@ -25,6 +25,8 @@ const studentItems = async (user: User): Promise<InboxItem[]> => {
     suggestionsApi.mine().catch(() => []), studentsApi.myProfileRequests().catch(() => []), sid ? studentsApi.studentDocuments(sid).catch(() => []) : [], noticesApi.all().catch(() => []),
     paymentsApi.myClaims().catch(() => []),
   ]);
+  const out0: InboxItem[] = [];
+  pollItems(await pollsApi.all().catch(() => []), out0);
   const out: InboxItem[] = [];
   asList(leaves).filter((l: any) => ['APPROVED', 'REJECTED'].includes(l.status) && recent(l.startDate || l.createdAt)).forEach((l: any) => {
     const ok = l.status === 'APPROVED';
@@ -36,7 +38,7 @@ const studentItems = async (user: User): Promise<InboxItem[]> => {
   });
   asList(invoices).forEach((i: any) => {
     if (i.status === 'PAID') { if (recent(i.paidAt)) out.push({ id: `invoice-${i.id}-PAID`, title: 'Payment recorded', message: `${rupees(i.amount)} received`, href: '/student/bills', icon: Receipt, tone: 'success', time: fmtDate(i.paidAt) }); }
-    else out.push({ id: `invoice-${i.id}`, title: 'New fee bill', message: `${rupees(i.amount)} due by ${fmtDate(i.dueDate)}`, href: '/student/bills', icon: Wallet, tone: 'warning', time: fmtDate(i.createdAt) });
+    else out.push({ id: `invoice-${i.id}`, title: i.kind === 'CHARGE' ? `Payment request: ${i.title || 'charge'}` : 'New fee bill', message: `${rupees(i.amount)} due by ${fmtDate(i.dueDate)}${i.kind === 'CHARGE' && i.note ? ` — ${i.note}` : ''}`, href: '/student/bills', icon: Wallet, tone: 'warning', time: fmtDate(i.createdAt) });
   });
   asList(notes).forEach((n: any) => {
     if (n.status === 'PAID') { if (recent(n.paidAt)) out.push({ id: `note-${n.id}-PAID`, title: 'Payment recorded', message: `Demand note ${n.billingMonth} — ${rupees(n.totalAmount)}`, href: '/student/bills', icon: Receipt, tone: 'success', time: fmtDate(n.paidAt) }); }
@@ -57,6 +59,19 @@ const studentItems = async (user: User): Promise<InboxItem[]> => {
     const ok = c.status === 'APPROVED';
     out.push({ id: `claim-${c.id}-${c.status}`, title: ok ? 'Payment confirmed' : 'Payment not confirmed', message: ok ? `${rupees(c.amount)} via ${c.method} — receipt ready` : `${rupees(c.amount)} — “${c.reason || 'Please check with the office'}”`, href: '/student/bills', icon: ok ? Receipt : Wallet, tone: ok ? 'success' : 'danger', time: fmtDate(c.decidedAt || c.createdAt) });
   });
+  asList(notices).slice(0, 10).forEach((n: any) => out.push({ id: `notice-${n.id}`, title: n.title, message: n.content, href: '/notices', icon: Megaphone, tone: 'mint', time: fmtDate(n.createdAt) }));
+  return [...out0, ...out];
+};
+
+// Open polls you haven't voted in yet
+const pollItems = (polls: unknown, out: InboxItem[]) => {
+  asList(polls).filter((p: any) => p.isActive && !p.userHasVoted).forEach((p: any) => out.push({ id: `poll-${p.id}`, title: 'New poll — your vote counts', message: p.question, href: '/polls', icon: Vote, tone: 'lilac', time: fmtDate(p.createdAt) }));
+};
+
+const staffItems = async (): Promise<InboxItem[]> => {
+  const [polls, notices] = await Promise.all([pollsApi.all().catch(() => []), noticesApi.all().catch(() => [])]);
+  const out: InboxItem[] = [];
+  pollItems(polls, out);
   asList(notices).slice(0, 10).forEach((n: any) => out.push({ id: `notice-${n.id}`, title: n.title, message: n.content, href: '/notices', icon: Megaphone, tone: 'mint', time: fmtDate(n.createdAt) }));
   return out;
 };
@@ -84,7 +99,7 @@ const wardenItems = async (): Promise<InboxItem[]> => {
 };
 
 export const useInbox = (user: User | null) => {
-  const { data, refetch, isLoading } = useData(['inbox', user?.id], () => (user?.role === 'STUDENT' ? studentItems(user) : user?.role === 'ADMIN' ? wardenItems() : Promise.resolve([] as InboxItem[])), { enabled: !!user });
+  const { data, refetch, isLoading } = useData(['inbox', user?.id], () => (user?.role === 'STUDENT' ? studentItems(user) : user?.role === 'ADMIN' ? wardenItems() : staffItems()), { enabled: !!user });
   const [read, setRead] = useState<string[]>([]);
   useEffect(() => {
     storage.get(KEYS.readNotifications).then((v) => setRead(v ? JSON.parse(v) : []));

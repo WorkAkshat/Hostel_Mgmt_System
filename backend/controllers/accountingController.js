@@ -17,6 +17,7 @@ const STANDARD_ACCOUNT_HEADS = [
   { code: 'REV-HOSTEL',        name: 'Hostel Accommodation Income',        group: 'INCOME',    category: 'DIRECT' },
   { code: 'REV-MESS',          name: 'Mess & Catering Income',             group: 'INCOME',    category: 'DIRECT' },
   { code: 'REV-ELEC',          name: 'Electricity Charges Reimbursement',  group: 'INCOME',    category: 'DIRECT' },
+  { code: 'REV-OTHER',         name: 'Other Charges from Residents',       group: 'INCOME',    category: 'INDIRECT' },
   { code: 'EXP-ELEC-UTIL',     name: 'Electricity Utility Bill (State)',   group: 'EXPENSE',   category: 'DIRECT' },
   { code: 'EXP-MESS-PAYMENT',  name: 'Meenakshi Catering Payment',         group: 'EXPENSE',   category: 'DIRECT' },
   { code: 'EXP-MAINT',         name: 'Hostel Repairs & Maintenance',       group: 'EXPENSE',   category: 'INDIRECT' },
@@ -95,6 +96,29 @@ const syncAccountingReceipts = async () => {
       const roomNo = inv.student?.room?.roomNumber || '';
 
       const totalAmt = parseFloat(inv.amount) || 0;
+
+      // Fine / damage / deposit etc.: one credit line, no rent / mess split
+      if (inv.kind === 'CHARGE') {
+        const head = await prisma.accountHead.findUnique({ where: { code: inv.category === 'DEPOSIT' ? 'LIAB-SECURITY' : 'REV-OTHER' } });
+        if (!head) continue;
+        const voucher = await prisma.voucher.create({
+          data: {
+            voucherNo,
+            voucherType: 'RECEIPT',
+            date: inv.paidAt || inv.createdAt || new Date(),
+            floorNumber: floor,
+            companyName: company,
+            narration: `${inv.title || 'Charge'} – ${studentName} (${rollNo}) – Room ${roomNo}`,
+            amount: totalAmt,
+            createdBy: 'system@hms.local'
+          }
+        });
+        await prisma.voucherEntry.create({ data: { voucherId: voucher.id, accountHeadId: drBankHead.id, type: 'DEBIT', amount: totalAmt } });
+        await prisma.voucherEntry.create({ data: { voucherId: voucher.id, accountHeadId: head.id, type: 'CREDIT', amount: totalAmt } });
+        syncedInvoices++;
+        continue;
+      }
+
       let rentAmt = inv.rentAmount !== null && inv.rentAmount !== undefined ? parseFloat(inv.rentAmount) : null;
       let messAmt = inv.messAmount !== null && inv.messAmount !== undefined ? parseFloat(inv.messAmount) : null;
       let elecAmt = inv.electricityAmount !== null && inv.electricityAmount !== undefined ? parseFloat(inv.electricityAmount) : null;
@@ -509,7 +533,7 @@ const getStudentLedger = async (req, res) => {
       entries.push({
         date: inv.createdAt,
         voucherNo: invNo,
-        particulars: `Fee Invoice Raised – ${invNo}${breakdownStr ? ` (${breakdownStr})` : ''}`,
+        particulars: inv.kind === 'CHARGE' ? `Charge – ${inv.title || 'Other'} – ${invNo}` : `Fee Invoice Raised – ${invNo}${breakdownStr ? ` (${breakdownStr})` : ''}`,
         debit: parseFloat(inv.amount) || 0,
         credit: 0,
         type: 'INVOICE',

@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { demandNotesApi, feesApi, type Payment } from '../api';
+import { demandNotesApi, feesApi, type ChargeCategory, type Payment } from '../api';
 import { asList } from '../api/client';
 import { useData } from '../lib/query';
 import { fmtDate, monthKey, monthLabel } from '../lib/format';
@@ -13,6 +13,7 @@ export type Bill = {
   key: string;
   id: string;
   kind: 'invoice' | 'note';
+  charge?: boolean; // a one-off charge (fine, deposit…) rather than the monthly fee
   studentId: string;
   student: any;
   title: string;
@@ -28,17 +29,48 @@ export type Bill = {
 
 const short = (m: string) => monthLabel(m).replace(/^(\w{3})\w*/, '$1');
 
+// Extra charges the warden can raise on one resident
+export const CHARGE_TYPES: { value: ChargeCategory; label: string; title: string; ask: boolean; paid: boolean }[] = [
+  { value: 'FINE', label: 'Fine', title: 'Fine', ask: true, paid: true },
+  { value: 'DAMAGE', label: 'Damage', title: 'Damage to hostel property', ask: true, paid: true },
+  { value: 'DEPOSIT', label: 'Deposit', title: 'Security deposit', ask: true, paid: true },
+  { value: 'LATE_FEE', label: 'Late fee', title: 'Late payment fee', ask: true, paid: true },
+  { value: 'EXTRA', label: 'Extra service', title: 'Extra service', ask: true, paid: true },
+  { value: 'ADVANCE', label: 'Advance', title: 'Advance payment', ask: false, paid: true },
+  { value: 'OTHER', label: 'Other', title: '', ask: true, paid: true },
+];
+
+// How a fee bill or an extra charge reads on screen and on the PDF
+export const invoiceView = (i: any) => {
+  const charge = i.kind === 'CHARGE';
+  return {
+    charge,
+    title: charge ? i.title || 'Charge' : `Fee bill · ${short(monthKey(new Date(i.createdAt)))}`,
+    number: `${charge ? 'CHG' : 'INV'}/${String(i.id).slice(0, 6).toUpperCase()}`,
+    lines: charge
+      ? [{ label: i.title || 'Charge', detail: i.note || undefined, amount: Number(i.amount) || 0 }]
+      : i.rentAmount != null || i.messAmount != null
+        ? [{ label: 'Room rent', amount: i.rentAmount || 0 }, { label: 'Mess & catering', amount: i.messAmount || 0 }, ...(i.electricityAmount ? [{ label: 'Electricity', amount: i.electricityAmount }] : [])]
+        : [{ label: 'Hostel fee', amount: Number(i.amount) || 0 }],
+  };
+};
+
+// Heading on the PDF
+export const docTitle = (kind: 'invoice' | 'note', paid: boolean, charge?: boolean) =>
+  kind === 'note' ? (paid ? 'Demand note · paid' : 'Demand note') : charge ? (paid ? 'Payment receipt' : 'Payment request') : paid ? 'Fee receipt' : 'Fee bill';
+
 export const toBills = (invoices: unknown, notes: unknown): Bill[] => [
-  ...asList(invoices).map((i: any): Bill => ({
-    key: `i-${i.id}`, id: i.id, kind: 'invoice', studentId: i.studentId, student: i.student,
-    title: `Fee bill · ${short(monthKey(new Date(i.createdAt)))}`, number: `INV/${String(i.id).slice(0, 6).toUpperCase()}`,
-    amount: Number(i.amount) || 0, due: i.dueDate, paidAt: i.paidAt, state: billState(i.status, i.dueDate) as Bill['state'],
-    floor: i.floorNumber || i.student?.room?.floorNumber,
-    lines: i.rentAmount != null || i.messAmount != null
-      ? [{ label: 'Room rent', amount: i.rentAmount || 0 }, { label: 'Mess & catering', amount: i.messAmount || 0 }, ...(i.electricityAmount ? [{ label: 'Electricity', amount: i.electricityAmount }] : [])]
-      : [{ label: 'Hostel fee', amount: Number(i.amount) || 0 }],
-    raw: i,
-  })),
+  ...asList(invoices).map((i: any): Bill => {
+    const v = invoiceView(i);
+    return {
+      key: `i-${i.id}`, id: i.id, kind: 'invoice', studentId: i.studentId, student: i.student, charge: v.charge,
+      title: v.title, number: v.number,
+      amount: Number(i.amount) || 0, due: i.dueDate, paidAt: i.paidAt, state: billState(i.status, i.dueDate) as Bill['state'],
+      floor: i.floorNumber || i.student?.room?.floorNumber,
+      lines: v.lines,
+      raw: i,
+    };
+  }),
   ...asList(notes).map((n: any): Bill => {
     const due = noteDueDate(n);
     return {
@@ -97,7 +129,7 @@ export const useRecordBill = () => {
 
 // Bill / receipt PDF for a resident
 export const shareBillPdf = (b: Bill, company: any, resident: { name: string; roll?: string; room?: string }, mode: 'share' | 'download' = 'share') => (mode === 'download' ? downloadBill : shareBill)({
-  title: b.kind === 'note' ? (b.state === 'paid' ? 'Demand note · paid' : 'Demand note') : b.state === 'paid' ? 'Fee receipt' : 'Fee bill',
+  title: docTitle(b.kind, b.state === 'paid', b.charge),
   number: b.number,
   company: b.raw.company || company,
   resident,

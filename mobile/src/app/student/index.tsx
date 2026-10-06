@@ -136,7 +136,7 @@ export default function StudentHome() {
       </Appear>
 
       {/* Poll */}
-      {openPoll && <Appear i={3}><Section title="Poll"><PollCard poll={openPoll} /></Section></Appear>}
+      {openPoll && <Appear i={3}><Section title="Poll" action="All polls" onAction={() => go('/polls')}><PollCard poll={openPoll} /></Section></Appear>}
 
 
     </Screen>

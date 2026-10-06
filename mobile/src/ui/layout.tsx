@@ -8,6 +8,7 @@ import { goBack } from '../lib/nav';
 import { colors, shadow, Tone, tones } from './theme';
 import { IconTile, Press, T } from './primitives';
 import { revealFocusedInput, useInputFocus, useKeyboardTop } from './keyboard';
+import { useTopInset } from './safe';
 
 // Page shell: safe-area header, scrollable body and pull-to-refresh.
 // The header turns white with a soft divider once the page is scrolled.
@@ -15,6 +16,7 @@ export const Screen = ({
   title, subtitle, back, left, right, children, onRefresh, scroll = true, padded = true, tabBar = true, tint = !back,
 }: { title?: string; subtitle?: string; back?: boolean; left?: ReactNode; right?: ReactNode; children: ReactNode; onRefresh?: () => Promise<unknown>; scroll?: boolean; padded?: boolean; tabBar?: boolean; tint?: boolean }) => {
   const insets = useSafeAreaInsets();
+  const top = useTopInset();
   const [refreshing, setRefreshing] = useState(false);
   const y = useSharedValue(0);
   const scrollY = useRef(0);
@@ -43,7 +45,7 @@ export const Screen = ({
     try { await onRefresh(); } finally { setRefreshing(false); }
   };
   const header = (title || back || right) ? (
-    <Animated.View style={[styles.headerWrap, { paddingTop: insets.top + 8 }, headerAnim]}>
+    <Animated.View style={[styles.headerWrap, { paddingTop: top + 12 }, headerAnim]}>
       <View style={styles.header}>
         {back && (
           <Press onPress={goBack} hitSlop={10} scaleTo={0.9} accessibilityRole="button" accessibilityLabel="Back" style={styles.back}>
@@ -58,7 +60,7 @@ export const Screen = ({
         {right ? <View style={styles.right}>{right}</View> : null}
       </View>
     </Animated.View>
-  ) : <View style={{ height: insets.top }} />;
+  ) : <View style={{ height: top + 8 }} />;
 
   const body = { paddingHorizontal: padded ? 16 : 0, paddingTop: 6, paddingBottom: covered ? covered + 24 : (tabBar ? 104 : 32) + insets.bottom, gap: 12, width: '100%' as const, maxWidth: 760, alignSelf: 'center' as const };
 

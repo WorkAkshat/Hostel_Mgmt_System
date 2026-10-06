@@ -102,8 +102,9 @@ export const noticesApi = {
 
 export const pollsApi = {
   all: () => api('/polls'),
-  create: (question: string, options: string[]) => api('/polls', { method: 'POST', body: { question, options } }),
+  create: (data: { question: string; options: string[]; target?: 'ALL' | 'STUDENTS' | 'STAFF'; endsAt?: string | null; anonymous?: boolean }) => api('/polls', { method: 'POST', body: data }),
   vote: (id: string, option: string) => api(`/polls/${id}/vote`, { method: 'POST', body: { option } }),
+  unvote: (id: string) => api(`/polls/${id}/vote`, { method: 'DELETE' }),
   toggle: (id: string) => api(`/polls/${id}/toggle`, { method: 'PUT' }),
   remove: (id: string) => api(`/polls/${id}`, { method: 'DELETE' }),
 };
@@ -112,7 +113,12 @@ export const feesApi = {
   all: () => api('/invoices'),
   mine: () => api('/invoices/my-invoices'),
   recordPayment: (id: string, payment: Payment) => api(`/invoices/${id}/pay`, { method: 'PUT', body: payment }),
+  // Ask a resident for money (fine, damage, deposit…) — or, with paid: true, record money they gave
+  charge: (data: { studentId: string; category: ChargeCategory; title: string; amount: number; dueDate?: string; note?: string; paid?: boolean; method?: PayMethod; reference?: string; paidOn?: string }) =>
+    api('/invoices/charge', { method: 'POST', body: data }),
+  cancelCharge: (id: string) => api(`/invoices/${id}`, { method: 'DELETE' }),
 };
+export type ChargeCategory = 'FINE' | 'DAMAGE' | 'DEPOSIT' | 'LATE_FEE' | 'EXTRA' | 'ADVANCE' | 'OTHER';
 
 export const demandNotesApi = {
   all: (params: { month?: string; floorNumber?: string | number } = {}) => api(`/demand-notes${q(params)}`),

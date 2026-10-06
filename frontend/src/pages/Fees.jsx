@@ -25,7 +25,13 @@ const StatusBadge = ({ status }) => (
 );
 
 /* ─── Breakdown mini pills ───────────────────────────────────────────── */
-const BreakdownPills = ({ bd }) => (
+const BreakdownPills = ({ bd }) => (bd.charge ? (
+  <div className="flex flex-wrap gap-1.5 mt-2">
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-lilac-50 text-lilac-700 border border-lilac-100">
+      🧾 {bd.charge}
+    </span>
+  </div>
+) : (
   <div className="flex flex-wrap gap-1.5 mt-2">
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-brand-50 text-brand-700 border border-brand-100">
       🏠 Rent ₹{bd.rent.toLocaleString('en-IN')}
@@ -39,7 +45,7 @@ const BreakdownPills = ({ bd }) => (
       </span>
     )}
   </div>
-);
+));
 
 /* ─── Main Component ─────────────────────────────────────────────────── */
 const Fees = () => {

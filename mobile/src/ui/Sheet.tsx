@@ -1,12 +1,12 @@
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
 import { colors, radius } from './theme';
 import { IconButton, T } from './primitives';
 import { revealFocusedInput, useInputFocus, useKeyboardTop } from './keyboard';
+import { useTopInset } from './safe';
 
 // Bottom sheet built on Modal: slides up, closes on backdrop tap or the X.
 // With the keyboard open it sits right on top of the keyboard, never runs under the
@@ -16,6 +16,7 @@ export const Sheet = ({
 }: { open: boolean; onClose: () => void; title?: string; subtitle?: string; children: ReactNode; footer?: ReactNode; maxHeight?: number }) => {
   const { height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const top = useTopInset();
   const [visible, setVisible] = useState(open);
   const y = useSharedValue(height);
   const fade = useSharedValue(0);
@@ -51,13 +52,11 @@ export const Sheet = ({
 
   // Only the part of the screen the keyboard really covers needs room
   const covered = kbTop != null ? Math.max(0, bottom - kbTop) : 0;
-  const roomAbove = (kbTop != null ? Math.min(kbTop, bottom) : bottom) - insets.top - 12;
+  const roomAbove = (kbTop != null ? Math.min(kbTop, bottom) : bottom) - top - 12;
   const sheetMax = Math.max(220, Math.min(height * maxHeight, roomAbove));
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      {/* White status-bar icons over the dark backdrop, so the time / battery stay visible */}
-      {visible && <StatusBar style="light" />}
       <View ref={root} onLayout={measure} style={{ flex: 1 }}>
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
           <Pressable style={{ flex: 1 }} onPress={onClose} accessibilityLabel="Close" />

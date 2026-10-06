@@ -1,4 +1,11 @@
 export const rupees = (n: unknown) => `₹${Math.round(Number(n) || 0).toLocaleString('en-IN')}`;
+// Short form for tight tiles: ₹950, ₹24.5k, ₹1.2L
+export const rupeesShort = (n: unknown) => {
+  const v = Math.round(Number(n) || 0);
+  if (Math.abs(v) >= 100000) return `₹${(v / 100000).toFixed(v >= 1000000 ? 0 : 1).replace(/\.0$/, '')}L`;
+  if (Math.abs(v) >= 10000) return `₹${(v / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  return rupees(v);
+};
 
 export const fmtDate = (v: unknown, opts: Intl.DateTimeFormatOptions = {}) =>
   v ? new Date(v as string).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', ...opts }) : '';

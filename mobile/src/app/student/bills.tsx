@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { Building2, CircleCheck, Download, Info, Receipt, ScrollText, Share2, Wallet, Zap } from 'lucide-react-native';
+import { Building2, CircleCheck, Download, HandCoins, Info, Receipt, ScrollText, Share2, Wallet, Zap } from 'lucide-react-native';
 import { dashboardApi, demandNotesApi, feesApi, paymentsApi } from '../../api';
 import { asList } from '../../api/client';
 import { useAuth } from '../../lib/auth';
 import { useData } from '../../lib/query';
-import { fmtDate, monthKey, monthLabel, plural, rupees } from '../../lib/format';
+import { fmtDate, monthKey, monthLabel, plural, rupees, rupeesShort } from '../../lib/format';
 import { BILL_STATUS, billState, noteDueDate, priceFor } from '../../lib/hostel';
 import { colors } from '../../ui/theme';
 import { Badge, Button, Card, Chips, Divider, IconTile, Row, T } from '../../ui/primitives';
@@ -15,6 +15,7 @@ import { Hero, HeroCells, onHero } from '../../ui/blocks';
 import { Sheet } from '../../ui/Sheet';
 import { downloadBill, shareBill, type BillDoc } from '../../features/receipt';
 import PayBill from '../../features/PayBill';
+import { docTitle, invoiceView } from '../../features/dues';
 
 const STEPS = [
   { t: 'Open the bill', d: 'Tap any unpaid bill below — scan its QR with GPay / PhonePe / Paytm, or use the bank details.' },
@@ -40,17 +41,18 @@ export default function StudentBills() {
 
   const room = dash.data?.profile?.room;
   const bills = useMemo(() => [
-    ...asList(inv.data).map((i: any) => ({
-      id: i.id, kind: 'invoice', raw: i, number: `INV/${String(i.id).slice(0, 6).toUpperCase()}`, title: `Fee bill · ${monthLabel(monthKey(new Date(i.createdAt))).replace(/^(\w{3})\w*/, '$1')}`, amount: i.amount, due: i.dueDate, paidAt: i.paidAt, state: billState(i.status, i.dueDate),
-      lines: i.rentAmount != null || i.messAmount != null
-        ? [{ label: 'Room rent', amount: i.rentAmount || 0 }, { label: 'Mess & catering', amount: i.messAmount || 0 }, ...(i.electricityAmount ? [{ label: 'Electricity', amount: i.electricityAmount }] : [])]
-        : [{ label: 'Hostel fee', amount: i.amount }],
-      floor: i.floorNumber || i.student?.room?.floorNumber,
-    })),
+    ...asList(inv.data).map((i: any) => {
+      const v = invoiceView(i);
+      return {
+        id: i.id, kind: 'invoice', raw: i, number: v.number, title: v.title, charge: v.charge, amount: i.amount, due: i.dueDate, paidAt: i.paidAt, state: billState(i.status, i.dueDate),
+        lines: v.lines,
+        floor: i.floorNumber || i.student?.room?.floorNumber,
+      };
+    }),
     ...asList(notes.data).map((n: any) => {
       const due = noteDueDate(n);
       return {
-        id: n.id, kind: 'note', raw: n, title: `Demand note · ${monthLabel(monthKey(new Date(n.cycleStart))).replace(/^(\w{3})\w*/, '$1')}`, period: `${fmtDate(n.cycleStart)} – ${fmtDate(n.cycleEnd)}`, amount: n.totalAmount, due, paidAt: n.paidAt, state: billState(n.status, due),
+        id: n.id, kind: 'note', charge: false, raw: n, title: `Demand note · ${monthLabel(monthKey(new Date(n.cycleStart))).replace(/^(\w{3})\w*/, '$1')}`, period: `${fmtDate(n.cycleStart)} – ${fmtDate(n.cycleEnd)}`, amount: n.totalAmount, due, paidAt: n.paidAt, state: billState(n.status, due),
         lines: [
           { label: 'Hostel accommodation', amount: n.hostelFee },
           { label: 'Electricity', detail: n.electricityUnits ? `${n.electricityUnits} units × ₹${n.electricityRate} (your share)` : undefined, amount: n.electricityAmount },
@@ -73,7 +75,7 @@ export default function StudentBills() {
     try {
       const company = b.company || config.data?.companies?.[b.floor];
       const doc: BillDoc = {
-        title: b.kind === 'note' ? 'Demand note' : b.state === 'paid' ? 'Fee receipt' : 'Fee bill',
+        title: docTitle(b.kind, b.state === 'paid', b.charge),
         number: b.number || `INV/${String(b.id).slice(0, 6).toUpperCase()}`,
         company,
         resident: { name: user?.name || '', roll: user?.studentDetails?.rollNumber, room: room?.roomNumber },
@@ -111,7 +113,7 @@ export default function StudentBills() {
               {open.length ? <Wallet size={24} color={colors.white} /> : <CircleCheck size={24} color={colors.white} />}
             </View>
           </Row>
-          {fee && <HeroCells items={[{ k: 'Room rent', v: rupees(fee.roomRent) }, { k: 'Catering', v: rupees(fee.messFee) }, { k: 'Monthly', v: rupees(fee.total) }]} />}
+          {fee && <HeroCells items={[{ k: 'Rent', v: rupeesShort(fee.roomRent) }, { k: 'Mess', v: rupeesShort(fee.messFee) }, { k: 'Monthly', v: rupeesShort(fee.total) }]} />}
         </Hero>
       </Appear>
 
@@ -122,7 +124,7 @@ export default function StudentBills() {
       ) : shown.map((b, i) => (
         <Appear key={`${b.kind}-${b.id}`} i={i}>
           <ListRow
-            icon={b.kind === 'note' ? (b.raw.electricityAmount ? Zap : Building2) : ScrollText}
+            icon={b.kind === 'note' ? (b.raw.electricityAmount ? Zap : Building2) : b.charge ? HandCoins : ScrollText}
             tone={b.state === 'paid' ? 'success' : b.state === 'overdue' ? 'peach' : 'sun'}
             title={b.title}
             sub={b.state === 'paid' ? `Paid ${fmtDate(b.paidAt, { year: 'numeric' })}` : `Due ${fmtDate(b.due, { year: 'numeric' })}`}
@@ -155,6 +157,7 @@ export default function StudentBills() {
       >
         {viewing && (
           <Card padded={false}>
+            {viewing.charge && <View style={{ padding: 14, paddingBottom: 0 }}><T v="caption" c={colors.text3}>Extra charge from the hostel office</T></View>}
             {viewing.lines.map((l: any, i: number) => (
               <View key={l.label} style={[{ flexDirection: 'row', padding: 14, gap: 10 }, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}>
                 <View style={{ flex: 1 }}><T v="small" w="semibold">{l.label}</T>{l.detail ? <T v="caption" c={colors.text3}>{l.detail}</T> : null}</View>

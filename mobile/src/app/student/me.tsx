@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, Lightbulb, Megaphone, Receipt, UserRound, UtensilsCrossed, Wrench } from 'lucide-react-native';
+import { Bell, CalendarDays, Lightbulb, Megaphone, Receipt, UserRound, UtensilsCrossed, Vote, Wrench } from 'lucide-react-native';
 import { dashboardApi } from '../../api';
 import { useAuth } from '../../lib/auth';
 import { useData } from '../../lib/query';
@@ -48,7 +48,8 @@ export default function StudentMe() {
           <MenuItem icon={Bell} tone="sun" title="Notifications" sub="Leave, bill and complaint updates" right={unread ? <Badge label={`${unread} new`} tone="danger" /> : undefined} onPress={() => go('/notifications')} />
           <MenuItem icon={Wrench} tone="peach" title="Complaints" sub="Report a problem in your room" onPress={() => go('/helpdesk')} />
           <MenuItem icon={Lightbulb} tone="lilac" title="Suggestions" sub="Ideas to make the hostel better" onPress={() => go('/suggestions')} />
-          <MenuItem icon={Megaphone} tone="mint" title="Announcements" sub="News and polls from the warden" onPress={() => go('/notices')} />
+          <MenuItem icon={Megaphone} tone="mint" title="Announcements" sub="News from the warden" onPress={() => go('/notices')} />
+          <MenuItem icon={Vote} tone="lilac" title="Polls" sub="Vote on hostel questions" onPress={() => go('/polls')} />
         </Menu>
       </Appear>
 

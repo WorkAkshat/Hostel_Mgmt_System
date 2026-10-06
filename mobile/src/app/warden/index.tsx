@@ -1,18 +1,19 @@
 import { StyleSheet, View } from 'react-native';
 import {
-  Boxes, CalendarCheck, CircleCheck, QrCode, CalendarX, ChartColumn, ClipboardList, Contact, DoorOpen, Gauge, HandCoins, IdCard, Megaphone, Moon, NotebookPen, UserCheck, UserPen, UtensilsCrossed, Wallet, Wrench,
+  Boxes, CalendarCheck, CircleCheck, QrCode, CalendarX, ChartColumn, ClipboardList, Contact, DoorOpen, Gauge, HandCoins, IdCard, Megaphone, Moon, NotebookPen, Vote, UserCheck, UserPen, UtensilsCrossed, Wallet, Wrench,
 } from 'lucide-react-native';
-import { authApi, complaintsApi, floorsApi, leavesApi, noticesApi, paymentsApi, reportsApi, studentsApi, visitorsApi } from '../../api';
+import { authApi, complaintsApi, floorsApi, leavesApi, noticesApi, paymentsApi, pollsApi, reportsApi, studentsApi, visitorsApi } from '../../api';
 import { asList } from '../../api/client';
 import { useAuth } from '../../lib/auth';
 import { useData, useRefreshAll } from '../../lib/query';
-import { firstName, greeting, monthKey, plural, rupees, timeAgo } from '../../lib/format';
+import { firstName, greeting, monthKey, plural, rupees, rupeesShort, timeAgo } from '../../lib/format';
 import { colors } from '../../ui/theme';
 import { Avatar, Card, IconTile, Press, Progress, Row, Skeleton, T } from '../../ui/primitives';
 import { useAllBills } from '../../features/dues';
 import { Appear, Grid, ListRow, Screen, Section, Stat } from '../../ui/layout';
 import { Hero, HeroCells, QuickActions, onHero } from '../../ui/blocks';
 import Bell from '../../features/Bell';
+import { PollTeaser } from '../../features/PollCard';
 import { FloorChips, onFloor, useFloor, useFloors } from '../../features/floor';
 import { go } from '../../lib/nav';
 
@@ -30,6 +31,8 @@ export default function WardenHome() {
   const docs = useData(['documents', 'PENDING'], () => studentsApi.documents('PENDING'));
   const pays = useData(['payment-claims', 'PENDING'], () => paymentsApi.claims('PENDING'));
   const notices = useData(['notices'], () => noticesApi.all());
+  const polls = useData(['polls'], pollsApi.all);
+  const livePoll = asList(polls.data).find((p: any) => p.isActive);
   const payDetails = useData(['payment-settings'], paymentsApi.settings, { interval: false });
   const floorsWithoutUpi = payDetails.data ? floors.filter((x: any) => !payDetails.data?.[String(x.floorNumber)]?.upiId).length : 0;
   const complaints = useData(['complaints'], complaintsApi.all);
@@ -56,14 +59,14 @@ export default function WardenHome() {
   const overdueStudents = new Set(unpaidBills.filter((b) => b.state === 'overdue').map((b) => b.studentId)).size;
 
   const attention = [
-    { n: asList(regs.data).length, icon: UserCheck, tone: 'danger' as const, title: 'New registrations', sub: 'Approve and give a room', go: '/warden/requests?tab=registrations' },
-    { n: floorsWithoutUpi, icon: QrCode, tone: 'mint' as const, title: 'Add UPI for the bill QR', sub: 'Residents can only pay at the office until then', go: '/manage/payment-settings' },
+    { n: asList(regs.data).length, icon: UserCheck, tone: 'danger' as const, title: 'New joiners', sub: 'Approve and give a room', go: '/warden/requests?tab=registrations' },
+    { n: floorsWithoutUpi, icon: QrCode, tone: 'mint' as const, title: 'Add UPI for bills', sub: 'So residents can pay in the app', go: '/manage/payment-settings' },
     { n: asList(pays.data).length, icon: HandCoins, tone: 'sun' as const, title: 'Payments to confirm', sub: 'Residents paid by UPI / bank', go: '/warden/requests?tab=payments' },
     { n: pendingLeaves, icon: CalendarCheck, tone: 'warning' as const, title: 'Leave requests', sub: 'Waiting for your decision', go: '/warden/requests' },
     { n: overdue, icon: CalendarX, tone: 'danger' as const, title: 'Past return time', sub: 'Out longer than approved', go: '/warden/gate' },
     { n: asList(reqs.data).filter((r: any) => r.status === 'PENDING').length, icon: UserPen, tone: 'warning' as const, title: 'Profile changes', sub: 'Students asked to update details', go: '/warden/requests?tab=profile' },
     { n: asList(docs.data).length, icon: IdCard, tone: 'mint' as const, title: 'ID documents', sub: 'To verify', go: '/warden/requests?tab=documents' },
-    { n: openComplaints, icon: Wrench, tone: 'peach' as const, title: 'Open complaints', sub: 'Not resolved yet', go: '/helpdesk' },
+    { n: openComplaints, icon: Wrench, tone: 'peach' as const, title: 'Complaints', sub: 'Not resolved yet', go: '/helpdesk' },
   ].filter((a) => a.n > 0);
 
   return (
@@ -87,9 +90,9 @@ export default function WardenHome() {
             <Progress value={occ.occupied} max={occ.beds || 1} color={colors.sun300} track="rgba(255,255,255,0.22)" />
           ) : null}
           <HeroCells items={[
-            { k: 'Beds taken', v: occ ? `${occ.occupied}/${occ.beds}` : '—', onPress: () => go('/warden/residents?tab=rooms') },
+            { k: 'Beds', v: occ ? `${occ.occupied}/${occ.beds}` : '—', onPress: () => go('/warden/residents?tab=rooms') },
             { k: 'Out now', v: String(outNow.length), onPress: () => go('/warden/gate?tab=out') },
-            { k: 'Collected', v: feeSum ? rupees(feeSum.got) : '—', onPress: () => go('/manage/fees') },
+            { k: 'Collected', v: feeSum ? rupeesShort(feeSum.got) : '—', onPress: () => go('/manage/fees') },
           ]} />
         </Hero>
       </Appear>
@@ -135,6 +138,13 @@ export default function WardenHome() {
       </Appear>
 
       <Appear i={3}>
+        <Section title="Polls" action={livePoll ? 'All polls' : 'New'} onAction={() => go(livePoll ? '/polls' : { pathname: '/polls', params: { new: '1' } })}>
+          {livePoll ? <PollTeaser poll={livePoll} onPress={() => go('/polls')} />
+            : <ListRow icon={Vote} tone="lilac" title="Ask everyone a question" sub="Food, timings, events — residents and staff vote in the app" onPress={() => go({ pathname: '/polls', params: { new: '1' } })} />}
+        </Section>
+      </Appear>
+
+      <Appear i={4}>
         <Section title="Quick actions">
           <QuickActions items={[
             { icon: Moon, tone: 'lilac', label: 'Roll call', onPress: () => go('/manage/roll-call') },
@@ -143,7 +153,7 @@ export default function WardenHome() {
             { icon: Megaphone, tone: 'mint', label: 'Announce', onPress: () => go({ pathname: '/notices', params: { new: '1' } }) },
             { icon: UtensilsCrossed, tone: 'peach', label: 'Kitchen', onPress: () => go('/manage/mess') },
             { icon: NotebookPen, tone: 'lilac', label: 'Expense', onPress: () => go('/manage/expenses') },
-            { icon: ChartColumn, tone: 'mint', label: 'Reports', onPress: () => go('/manage/reports') },
+            { icon: Vote, tone: 'mint', label: 'Poll', onPress: () => go({ pathname: '/polls', params: { new: '1' } }) },
             { icon: Boxes, tone: 'sun', label: 'Stock', onPress: () => go('/manage/inventory') },
           ]} />
         </Section>

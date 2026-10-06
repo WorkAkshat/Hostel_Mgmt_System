@@ -1,16 +1,18 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
-import { CircleCheck, Phone } from 'lucide-react-native';
+import { CircleCheck, Phone, Plus } from 'lucide-react-native';
 import { rupees, plural } from '../../lib/format';
 import { call } from '../../lib/contact';
 import { go } from '../../lib/nav';
 import { colors } from '../../ui/theme';
-import { Avatar, Badge, Chips, IconButton, T } from '../../ui/primitives';
+import { Avatar, Badge, Button, Chips, IconButton, T } from '../../ui/primitives';
 import { SearchInput } from '../../ui/form';
 import { Empty, ErrorBox, Loading } from '../../ui/feedback';
 import { Appear, ListRow, Screen } from '../../ui/layout';
 import { FloorChips, onFloor, useFloor } from '../../features/floor';
 import { useAllBills } from '../../features/dues';
+import ChargeSheet from '../../features/ChargeSheet';
 
 // Everyone who owes money, one row per resident (fee bills + demand notes together).
 // Tap a resident to see their bills and record a payment.
@@ -19,6 +21,9 @@ export default function PendingDues() {
   const { bills, isLoading, error, refetch } = useAllBills();
   const [filter, setFilter] = useState<'all' | 'overdue'>('all');
   const [q, setQ] = useState('');
+  const [charging, setCharging] = useState(false);
+  const params = useLocalSearchParams<{ charge?: string }>();
+  useEffect(() => { if (params.charge) { setCharging(true); router.setParams({ charge: undefined }); } }, [params.charge]);
 
   const people = useMemo(() => {
     const map: Record<string, { student: any; total: number; overdue: number; count: number; oldest: string | Date }> = {};
@@ -39,7 +44,8 @@ export default function PendingDues() {
   const shown = (filter === 'overdue' ? late : people).filter((p) => !s || [p.student?.user?.name, p.student?.rollNumber, p.student?.room?.roomNumber].some((v) => v && String(v).toLowerCase().includes(s)));
 
   return (
-    <Screen title="Pending dues" subtitle="Fee bills and demand notes" back tabBar={false} onRefresh={refetch}>
+    <Screen title="Pending dues" subtitle="Fee bills and demand notes" back tabBar={false} onRefresh={refetch}
+      right={<Button title="Charge" icon={Plus} small onPress={() => setCharging(true)} />}>
       <FloorChips />
       <View style={styles.strip}>
         {[{ k: 'Total due', v: rupees(total), c: colors.sun900 }, { k: 'Residents', v: String(people.length), c: colors.sun900 }, { k: 'Overdue', v: rupees(overdueTotal), c: overdueTotal ? colors.danger : colors.sun900 }].map((x, i) => (
@@ -72,6 +78,7 @@ export default function PendingDues() {
           />
         </Appear>
       ))}
+      <ChargeSheet open={charging} onClose={() => setCharging(false)} />
     </Screen>
   );
 }

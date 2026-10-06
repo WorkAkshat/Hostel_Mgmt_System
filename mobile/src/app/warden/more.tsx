@@ -1,4 +1,4 @@
-import { Boxes, QrCode, Wallet, Activity, ChartColumn, Contact, Gauge, HandCoins, Lightbulb, Megaphone, Moon, NotebookPen, UtensilsCrossed, Wrench } from 'lucide-react-native';
+import { Boxes, CirclePlus, QrCode, Vote, Wallet, Activity, ChartColumn, Contact, Gauge, HandCoins, Lightbulb, Megaphone, Moon, NotebookPen, UtensilsCrossed, Wrench } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
 import { Appear, Screen } from '../../ui/layout';
 import { Menu, MenuItem } from '../../ui/blocks';
@@ -13,13 +13,15 @@ const GROUPS = [
       { icon: Moon, tone: 'lilac' as const, title: 'Night roll call', sub: 'Mark present, absent or on leave', go: '/manage/roll-call' },
       { icon: UtensilsCrossed, tone: 'peach' as const, title: 'Mess & kitchen', sub: 'Plates to cook, skipped meals, menu', go: '/manage/mess' },
       { icon: Wrench, tone: 'peach' as const, title: 'Complaints', sub: 'Update status and reply', go: '/helpdesk' },
-      { icon: Megaphone, tone: 'mint' as const, title: 'Announcements', sub: 'Tell residents & staff, run polls', go: '/notices' },
+      { icon: Megaphone, tone: 'mint' as const, title: 'Announcements', sub: 'Tell residents & staff', go: '/notices' },
+      { icon: Vote, tone: 'lilac' as const, title: 'Polls', sub: 'Ask anything, everyone votes', go: '/polls' },
       { icon: Lightbulb, tone: 'sun' as const, title: 'Suggestions', sub: 'Ideas from students', go: '/suggestions' },
     ],
   },
   {
     title: 'Money',
     items: [
+      { icon: CirclePlus, tone: 'sun' as const, title: 'Ask for money / add payment', sub: 'Fine, damage, deposit, advance…', go: '/manage/dues?charge=1' },
       { icon: QrCode, tone: 'mint' as const, title: 'Payment details', sub: 'UPI ID & bank for the QR on bills', go: '/manage/payment-settings' },
       { icon: Wallet, tone: 'sun' as const, title: 'Pending dues', sub: 'Who owes money · collect in one tap', go: '/manage/dues' },
       { icon: HandCoins, tone: 'sun' as const, title: 'Fees & payments', sub: 'Record cash, UPI or bank payments', go: '/manage/fees' },

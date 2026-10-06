@@ -138,7 +138,7 @@ const approveClaim = async (req, res) => {
     if (!bill) return res.status(404).json({ message: 'The bill no longer exists' });
     const paidAt = claim.paidOn > new Date() ? new Date() : claim.paidOn;
     if (bill.status !== 'PAID') {
-      if (claim.billKind === 'INVOICE') await prisma.invoice.update({ where: { id: bill.id }, data: { status: 'PAID', paidAt } });
+      if (claim.billKind === 'INVOICE') await prisma.invoice.update({ where: { id: bill.id }, data: { status: 'PAID', paidAt, payMethod: claim.method, payReference: claim.reference || null } });
       else await prisma.demandNote.update({ where: { id: bill.id }, data: { status: 'PAID', paidAt } });
     }
     const updated = await prisma.paymentClaim.update({ where: { id: claim.id }, data: { status: 'APPROVED', decidedBy: req.user.name, decidedAt: new Date() } });
