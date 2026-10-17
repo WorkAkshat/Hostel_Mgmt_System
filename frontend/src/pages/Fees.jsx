@@ -12,6 +12,7 @@ import {
   Pencil, Plus, Receipt, RefreshCw, Send, ShieldAlert, X,
 } from 'lucide-react';
 import CustomModal from '../components/CustomModal';
+import RecordPaymentModal from './finance/RecordPaymentModal';
 import DemandNotePrint from '../components/DemandNotePrint';
 import InvoicePreviewModal, { getBreakdown } from '../components/InvoicePreviewModal';
 import Avatar from '../components/ui/Avatar';
@@ -104,8 +105,6 @@ const Fees = () => {
 
   // Dispatch all
   const [dispatchLoading, setDispatchLoading] = useState(false);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [payForm, setPayForm] = useState({ cardName: '', cardNumber: '4111 2222 3333 4444', expiry: '12/28', cvv: '123' });
 
   const fetchInvoices = useCallback(async (quiet) => {
     if (!quiet) setLoading(true);
@@ -241,19 +240,12 @@ const Fees = () => {
     }
   };
 
-  const handlePay = async (e) => {
-    e.preventDefault();
-    setPaymentLoading(true);
-    try {
-      await feesApi.pay(selectedInvoice.id);
-      toast.success('Payment recorded!', 'Invoice marked as paid.');
-      setPayModalOpen(false);
-      fetchInvoices();
-    } catch (e) {
-      toast.error('Payment failed', e.message);
-    } finally {
-      setPaymentLoading(false);
-    }
+  // Warden records money received (cash / UPI / bank / cheque)
+  const handlePay = async (payment) => {
+    await feesApi.pay(selectedInvoice.id, payment);
+    toast.success('Payment recorded', `₹${Number(selectedInvoice.amount).toLocaleString('en-IN')} marked as paid.`);
+    setPayModalOpen(false);
+    fetchInvoices();
   };
 
   const FeePresets = [9000, 11000, 12000, 13000, 14000, 16000];
@@ -479,12 +471,12 @@ const Fees = () => {
                                 <Pencil size={13} />
                               </button>
                             )}
-                            {inv.status !== 'PAID' && (
+                            {user.role === 'ADMIN' && inv.status !== 'PAID' && !inv.isDemandNote && (
                               <button
                                 className="h-8 px-3 rounded-lg btn-primary text-[12px]"
-                                onClick={() => { setSelectedInvoice(inv); setPayForm(f => ({ ...f, cardName: user.name })); setPayModalOpen(true); }}
+                                onClick={() => { setSelectedInvoice(inv); setPayModalOpen(true); }}
                               >
-                                <CreditCard size={13} /> Pay
+                                <CreditCard size={13} /> Record
                               </button>
                             )}
                             {inv.status === 'PAID' && (
@@ -560,10 +552,13 @@ const Fees = () => {
                           <Pencil size={14} />
                         </button>
                       )}
-                      {inv.status !== 'PAID' && (
-                        <button className="btn-primary flex-1 h-9 text-[12px]" onClick={() => { setSelectedInvoice(inv); setPayForm(f => ({ ...f, cardName: user.name })); setPayModalOpen(true); }}>
-                          <CreditCard size={13} /> Pay Now
+                      {user.role === 'ADMIN' && inv.status !== 'PAID' && !inv.isDemandNote && (
+                        <button className="btn-primary flex-1 h-9 text-[12px]" onClick={() => { setSelectedInvoice(inv); setPayModalOpen(true); }}>
+                          <CreditCard size={13} /> Record payment
                         </button>
+                      )}
+                      {user.role !== 'ADMIN' && inv.status !== 'PAID' && (
+                        <span className="flex-1 text-[11px] text-[var(--text-tertiary)] self-center">Pay by UPI in the app, or at the office</span>
                       )}
                     </div>
                   </div>
@@ -754,49 +749,16 @@ const Fees = () => {
       </CustomModal>
 
       {/* ─── Pay Modal (Student) ─── */}
-      <CustomModal isOpen={payModalOpen} onClose={() => setPayModalOpen(false)} title="Pay Invoice">
-        {selectedInvoice && (
-          <div className="mb-4 p-4 rounded-xl bg-mint-50 border border-brand-100">
-            <div className="text-[11px] text-[var(--text-tertiary)] uppercase font-bold tracking-wide mb-2">Invoice Summary</div>
-            <div className="flex justify-between items-center">
-              <span className="text-[13px] text-[var(--text-secondary)]">Total due</span>
-              <span className="text-[22px] font-bold text-brand-700">₹{Number(selectedInvoice.amount).toLocaleString('en-IN')}</span>
-            </div>
-            <BreakdownPills bd={getBreakdown(selectedInvoice)} />
-          </div>
-        )}
-        <form onSubmit={handlePay} className="flex flex-col gap-4">
-          <div>
-            <label className="form-label">Cardholder Name</label>
-            <input type="text" className="form-input" required value={payForm.cardName}
-              onChange={e => setPayForm(f => ({ ...f, cardName: e.target.value }))} />
-          </div>
-          <div>
-            <label className="form-label">Card Number</label>
-            <input type="text" className="form-input font-mono" required value={payForm.cardNumber}
-              onChange={e => setPayForm(f => ({ ...f, cardNumber: e.target.value }))} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="form-label">Expiry</label>
-              <input type="text" className="form-input" placeholder="MM/YY" required value={payForm.expiry}
-                onChange={e => setPayForm(f => ({ ...f, expiry: e.target.value }))} />
-            </div>
-            <div>
-              <label className="form-label">CVV</label>
-              <input type="password" className="form-input" placeholder="•••" required value={payForm.cvv}
-                onChange={e => setPayForm(f => ({ ...f, cvv: e.target.value }))} />
-            </div>
-          </div>
-          <p className="text-[11px] text-[var(--text-tertiary)] m-0">This is a secure mock payment sandbox for demo purposes.</p>
-          <div className="flex gap-3 justify-end pt-2 border-t border-[var(--border-color)]">
-            <button type="button" className="btn-secondary" onClick={() => setPayModalOpen(false)}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={paymentLoading}>
-              {paymentLoading ? 'Processing…' : `Pay ₹${Number(selectedInvoice?.amount || 0).toLocaleString('en-IN')}`}
-            </button>
-          </div>
-        </form>
-      </CustomModal>
+      <RecordPaymentModal
+        open={payModalOpen && Boolean(selectedInvoice)}
+        bill={selectedInvoice && {
+          title: selectedInvoice.kind === 'CHARGE' ? `${selectedInvoice.title || 'Charge'} · ${selectedInvoice.student?.user?.name || ''}` : selectedInvoice.student?.user?.name,
+          subtitle: `#INV-${String(selectedInvoice.id).split('-')[0].toUpperCase()} · Room ${selectedInvoice.student?.room?.roomNumber || '—'}`,
+          amount: selectedInvoice.amount,
+        }}
+        onClose={() => setPayModalOpen(false)}
+        onSubmit={handlePay}
+      />
 
       {/* Invoice Preview Modal */}
       {invoicePreview && (

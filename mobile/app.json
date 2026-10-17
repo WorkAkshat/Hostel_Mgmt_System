@@ -22,11 +22,8 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.haripushppg.app",
-      "googleServicesFile": "./google-services.json",
       "permissions": [
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.VIBRATE"
       ]
     },
     "web": {
@@ -44,27 +41,18 @@
         }
       ],
       "expo-secure-store",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/icon.png",
-          "color": "#2B7A74",
-          "sounds": [],
-          "mode": "production"
-        }
-      ],
       "expo-sharing"
     ],
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "14df0893-9fa5-4606-998d-a5280bb2a498"
+        "projectId": "1ebb6621-0a7f-46b7-85ff-44349e99c326"
       }
     },
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": true
     },
-    "owner": "akshat29032903"
+    "owner": "kritikagupta2909"
   }
 }

@@ -32,9 +32,10 @@ router.route('/:id')
   .put(protect, authorize('ADMIN'), updateInvoice)
   .delete(protect, authorize('ADMIN'), deleteCharge);
 
-// Both ADMIN and STUDENT can mark payment (student pays online)
+// Warden records money received. Residents use "I have paid" (/payments/claims),
+// which the warden confirms — a resident can never mark their own bill paid.
 router.route('/:id/pay')
-  .put(protect, payInvoice);
+  .put(protect, authorize('ADMIN'), payInvoice);
 
 module.exports = router;
 
