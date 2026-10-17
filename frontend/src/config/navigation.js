@@ -10,6 +10,9 @@ import {
   Contact,
   Receipt,
   ShieldCheck,
+  ChartColumn,
+  UserRound,
+  Boxes,
 } from 'lucide-react';
 
 // Single source of truth for every role's navigation.
@@ -68,7 +71,17 @@ const NAVIGATION = {
             { path: '/admin/fees', name: 'Fees & Invoices' },
             { path: '/admin/demand-notes', name: 'Demand Notes' },
             { path: '/admin/tally', name: 'Tally Ledger' },
-            { path: '/admin/reports', name: 'Reports' },
+          ],
+        },
+        {
+          name: 'Reports', icon: ChartColumn,
+          tabs: [
+            { path: '/admin/reports/overview', name: 'Overview' },
+            { path: '/admin/reports', name: 'Fee collection' },
+            { path: '/admin/reports/occupancy', name: 'Occupancy' },
+            { path: '/admin/reports/gate', name: 'Leaves & Gate' },
+            { path: '/admin/reports/helpdesk', name: 'Helpdesk' },
+            { path: '/admin/reports/mess', name: 'Mess' },
           ],
         },
       ],
@@ -76,6 +89,7 @@ const NAVIGATION = {
     {
       label: 'Admin',
       items: [
+        { name: 'Stock register', icon: Boxes, path: '/admin/inventory' },
         { name: 'Staff', icon: Contact, path: '/admin/staff' },
         { name: 'Activity Log', icon: Activity, path: '/admin/activity-log' },
       ],
@@ -96,6 +110,7 @@ const NAVIGATION = {
           ],
         },
         { name: 'My Invoices', icon: Receipt, path: '/student/fees' },
+        { name: 'My Profile', icon: UserRound, path: '/student/profile' },
       ],
     },
   ],

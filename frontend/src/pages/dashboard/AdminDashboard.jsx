@@ -36,6 +36,7 @@ import {
   leaves as leavesApi,
 } from '../../utils/api';
 import AnimatedNumber from '../../components/ui/AnimatedNumber';
+import AnnouncementsPanel from '../../components/AnnouncementsPanel';
 import ProgressBar from '../../components/ui/ProgressBar';
 import DonutRing from '../../components/ui/DonutRing';
 import HostelIllustration from '../../components/ui/HostelIllustration';
@@ -383,7 +384,7 @@ const AdminDashboard = () => {
                       {selectedFloor.company && <span className="text-brand-700"> · {selectedFloor.company}</span>}
                     </>
                   ) : (
-                    <>All floors <span className="text-brand-700">· Hari Pushp PG</span></>
+                    <>All floors <span className="text-brand-700">· Hari Pushp Tower</span></>
                   )}
                 </h1>
                 <p className="text-[14px] text-[var(--text-secondary)] mt-1 mb-0">
@@ -469,6 +470,9 @@ const AdminDashboard = () => {
           ))}
         </ul>
       </Card>
+
+      {/* Announcements — post to residents, staff or everyone */}
+      <AnnouncementsPanel admin className="md:col-span-2 xl:col-span-12" />
 
       {/* Key numbers */}
       <div className="md:col-span-2 xl:col-span-12 grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-5">

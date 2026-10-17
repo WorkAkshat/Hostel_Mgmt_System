@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import AnimatedNumber from '../../components/ui/AnimatedNumber';
 import { rupees } from '../../utils/format';
+import { rise } from './financeUtils';
 
 const TONES = {
   mint: { card: 'bg-mint-100 border-mint-200', chip: 'bg-white text-brand-700' },
@@ -10,11 +11,9 @@ const TONES = {
   white: { card: 'bg-white border-[var(--border-color)]', chip: 'bg-mint-50 text-brand-700' },
 };
 
-export const rise = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } };
-export const stagger = { hidden: {}, show: { transition: { staggerChildren: 0.06 } } };
 
 // Money / count tile. Clicking it (when onClick is set) applies the matching filter.
-const SummaryTile = ({ icon: Icon, tone = 'white', label, value, money = true, caption, onClick, active, children }) => {
+const SummaryTile = ({ icon: Icon, tone = 'white', label, value, money = true, unit = '', caption, onClick, active, children }) => {
   const Tag = onClick ? motion.button : motion.div;
   return (
     <Tag
@@ -32,7 +31,7 @@ const SummaryTile = ({ icon: Icon, tone = 'white', label, value, money = true, c
       </span>
       <span className="relative block text-[13px] font-medium text-[var(--text-secondary)]">{label}</span>
       <span className="relative block text-[22px] sm:text-[26px] font-bold leading-tight tracking-tight text-[var(--text-primary)] mt-0.5">
-        <AnimatedNumber value={value} format={money ? rupees : undefined} />
+        <AnimatedNumber value={value} format={money ? rupees : unit ? (n) => `${Math.round(n).toLocaleString('en-IN')}${unit}` : undefined} />
       </span>
       {caption && <span className="relative block mt-1.5 text-[12px] text-[var(--text-secondary)]">{caption}</span>}
       {children}

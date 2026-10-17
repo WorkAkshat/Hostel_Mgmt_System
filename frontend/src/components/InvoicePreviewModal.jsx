@@ -49,7 +49,7 @@ const COMPANY_CONFIG = {
   },
 };
 const DEFAULT_COMPANY = {
-  companyName: 'Hari Pushp PG',
+  companyName: 'Hari Pushp Tower',
   hostelName: 'Hari Pushp Girls Hostel',
   address: 'Hari Pushp Tower, Plot No. 10, Gayatri Nagar B, Maharani Farm, Durgapura, Jaipur, Rajasthan – 302018',
   proprietorName: 'Management',
@@ -61,6 +61,11 @@ const getCompany = (floorNumber) => COMPANY_CONFIG[floorNumber] || DEFAULT_COMPA
 /* ─── Breakdown helper ─────────────────────────────────────────────── */
 const getBreakdown = (invoice = {}) => {
   const total = Number(invoice.amount) || 0;
+
+  // Fine / damage / deposit etc. raised by the warden: one line, no rent / mess split
+  if (invoice.kind === 'CHARGE') {
+    return { charge: invoice.title || 'Charge', note: invoice.note || '', rent: 0, mess: 0, elec: 0, total };
+  }
 
   // If specific components are stored on the invoice
   if (
@@ -206,11 +211,11 @@ const generatePDF = (invoice) => {
   }
 
   // 4. Line Items Table
-  const rows = [
+  const rows = bd.charge ? [['1', `${bd.charge}${bd.note ? `\n(${bd.note})` : ''}`, `Rs. ${bd.total.toLocaleString('en-IN')}`]] : [
     ['1', `Room Rent & Accommodation\n(${sharingLabel} Sharing – ${period})`, `Rs. ${bd.rent.toLocaleString('en-IN')}`],
     ['2', 'Mess / Catering Charges\n(Meenakshi Enterprises – Monthly Charge)', `Rs. ${bd.mess.toLocaleString('en-IN')}`],
   ];
-  if (bd.elec > 0) {
+  if (!bd.charge && bd.elec > 0) {
     rows.push(['3', 'Electricity & Utility Charges\n(Based on meter reading)', `Rs. ${bd.elec.toLocaleString('en-IN')}`]);
   }
 
@@ -419,6 +424,16 @@ const InvoicePreviewModal = ({ invoice, onClose }) => {
                 </tr>
               </thead>
               <tbody>
+                {bd.charge ? (
+                  <tr>
+                    <td className="px-4 py-3 text-[12px] text-[var(--text-tertiary)]">1</td>
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-[13px]">{bd.charge}</div>
+                      {bd.note && <div className="text-[11px] text-[var(--text-tertiary)]">{bd.note}</div>}
+                    </td>
+                    <td className="px-4 py-3 text-right font-bold text-[14px]">₹{bd.total.toLocaleString('en-IN')}</td>
+                  </tr>
+                ) : (<>
                 <tr className="border-t border-[var(--border-color)]">
                   <td className="px-4 py-3 text-[12px] text-[var(--text-tertiary)]">1</td>
                   <td className="px-4 py-3">
@@ -468,6 +483,7 @@ const InvoicePreviewModal = ({ invoice, onClose }) => {
                     <td className="px-4 py-3 text-right font-bold text-[14px]">₹{bd.elec.toLocaleString('en-IN')}</td>
                   </tr>
                 )}
+                </>)}
               </tbody>
               <tfoot>
                 <tr style={{ background: 'linear-gradient(135deg, #246460, #3a918a)' }}>

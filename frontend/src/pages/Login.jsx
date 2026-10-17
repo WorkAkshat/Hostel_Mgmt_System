@@ -154,7 +154,7 @@ const Login = () => {
             <House size={24} strokeWidth={2.2} />
           </div>
           <div>
-            <p className="text-[18px] font-bold text-[var(--text-primary)] leading-tight m-0">Hari Pushp PG</p>
+            <p className="text-[18px] font-bold text-[var(--text-primary)] leading-tight m-0">Hari Pushp Tower</p>
             <p className="text-[13px] text-brand-700 m-0">Girls hostel management system</p>
           </div>
         </div>
@@ -190,7 +190,7 @@ const Login = () => {
             <div className="w-14 h-14 rounded-2xl bg-[var(--sidebar-bg)] flex items-center justify-center text-brand-600 mb-3">
               <House size={26} strokeWidth={2.2} />
             </div>
-            <p className="text-[20px] font-bold text-[var(--text-primary)] m-0">Hari Pushp PG</p>
+            <p className="text-[20px] font-bold text-[var(--text-primary)] m-0">Hari Pushp Tower</p>
             <p className="text-[13px] text-brand-700 m-0">Girls hostel management system</p>
           </div>
 
@@ -276,7 +276,7 @@ const Login = () => {
           </div>
 
           <p className="text-center text-[12px] text-[var(--text-tertiary)] mt-6 mb-0">
-            © {new Date().getFullYear()} Hari Pushp PG. All rights reserved.
+            © {new Date().getFullYear()} Hari Pushp Tower. All rights reserved.
           </p>
         </div>
       </main>

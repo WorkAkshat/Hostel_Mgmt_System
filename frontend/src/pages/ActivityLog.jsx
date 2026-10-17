@@ -1,638 +1,354 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Activity,
-  Search,
-  Filter,
-  RefreshCw,
-  Calendar,
-  User,
-  Shield,
-  Clock,
-  Download,
-  CheckCircle2,
-  XCircle,
-  LogIn,
-  LogOut,
-  FileText,
-  AlertTriangle,
-  Users,
-  Home,
-  UtensilsCrossed,
-  Receipt,
-  Eye,
-  ChevronLeft,
-  ChevronRight,
-  TrendingUp,
-  Sparkles,
-  ArrowUpDown,
-  Building2
+  Activity, BedDouble, CalendarDays, ChevronDown, ClipboardCheck, Contact, DoorOpen, Download, KeyRound, Landmark,
+  MessageSquareText, Moon, Radio, Receipt, SlidersHorizontal, Users, UtensilsCrossed, Wrench, X,
 } from 'lucide-react';
 import { activityLogs as activityLogsApi } from '../utils/api';
+import FilterChips from '../components/ui/FilterChips';
+import ProgressBar from '../components/ui/ProgressBar';
+import Avatar from '../components/ui/Avatar';
+import { EmptyPanel, ErrorPanel, PageHeader, SearchBox } from '../components/ui/PageStates';
+import { downloadCsv, fmtDate, fmtTime, plural } from '../utils/format';
 
-const MODULES = [
-  { id: 'ALL', label: 'All Modules', icon: '🌐' },
-  { id: 'AUTH', label: 'Authentication', icon: '🔐', color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
-  { id: 'LEAVE', label: 'Leaves & Passes', icon: '🏖️', color: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-  { id: 'COMPLAINT', label: 'Complaints', icon: '🛠️', color: 'bg-rose-100 text-rose-800 border-rose-200' },
-  { id: 'FEE', label: 'Fees & Demand Notes', icon: '🧾', color: 'bg-amber-100 text-amber-800 border-amber-200' },
-  { id: 'ROOM', label: 'Rooms & Beds', icon: '🏠', color: 'bg-cyan-100 text-cyan-800 border-cyan-200' },
-  { id: 'VISITOR', label: 'Visitors', icon: '👥', color: 'bg-purple-100 text-purple-800 border-purple-200' },
-  { id: 'MESS', label: 'Mess & Dining', icon: '🍽️', color: 'bg-orange-100 text-orange-800 border-orange-200' },
-  { id: 'ACCOUNTING', label: 'Accounting & Vouchers', icon: '📊', color: 'bg-teal-100 text-teal-800 border-teal-200' },
-  { id: 'ATTENDANCE', label: 'Night Attendance', icon: '🌙', color: 'bg-blue-100 text-blue-800 border-blue-200' },
-  { id: 'STAFF', label: 'Staff Roster', icon: '👔', color: 'bg-pink-100 text-pink-800 border-pink-200' },
-  { id: 'STUDENT', label: 'Students', icon: '🎓', color: 'bg-violet-100 text-violet-800 border-violet-200' },
-  { id: 'SUGGESTION', label: 'Suggestions', icon: '💬', color: 'bg-lime-100 text-lime-800 border-lime-200' },
-];
+const MODULES = {
+  AUTH: { label: 'Sign-ins', icon: KeyRound, chip: 'bg-lilac-50 text-lilac-700' },
+  STUDENT: { label: 'Students', icon: Users, chip: 'bg-mint-100 text-brand-700' },
+  ROOM: { label: 'Rooms', icon: BedDouble, chip: 'bg-mint-100 text-brand-700' },
+  LEAVE: { label: 'Leaves', icon: CalendarDays, chip: 'bg-cream-100 text-sun-800' },
+  VISITOR: { label: 'Visitors', icon: DoorOpen, chip: 'bg-cream-100 text-sun-800' },
+  ATTENDANCE: { label: 'Roll call', icon: Moon, chip: 'bg-lilac-50 text-lilac-700' },
+  MESS: { label: 'Mess', icon: UtensilsCrossed, chip: 'bg-peach-50 text-peach-700' },
+  COMPLAINT: { label: 'Complaints', icon: Wrench, chip: 'bg-peach-50 text-peach-700' },
+  SUGGESTION: { label: 'Suggestions', icon: MessageSquareText, chip: 'bg-peach-50 text-peach-700' },
+  FEE: { label: 'Fees', icon: Receipt, chip: 'bg-sun-200 text-sun-900' },
+  ACCOUNTING: { label: 'Accounts', icon: Landmark, chip: 'bg-sun-200 text-sun-900' },
+  STAFF: { label: 'Staff', icon: Contact, chip: 'bg-mint-100 text-brand-700' },
+};
+const moduleMeta = (m) => MODULES[m] || { label: m ? m.charAt(0) + m.slice(1).toLowerCase() : 'System', icon: Activity, chip: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]' };
 
-const ACTIONS = [
-  { id: 'ALL', label: 'All Actions' },
-  { id: 'LOGIN', label: 'Login 🔑' },
-  { id: 'LOGOUT', label: 'Logout 🚪' },
-  { id: 'CREATE', label: 'Create / Submit ➕' },
-  { id: 'UPDATE', label: 'Update ✏️' },
-  { id: 'DELETE', label: 'Delete 🗑️' },
-  { id: 'APPROVE', label: 'Approve ✅' },
-  { id: 'REJECT', label: 'Reject ❌' },
-  { id: 'CHECKOUT', label: 'Gate Exit 🚶' },
-  { id: 'CHECKIN', label: 'Gate Entry 🏠' },
-  { id: 'PAYMENT', label: 'Payment 💳' },
-  { id: 'OPT_OUT', label: 'Meal Opt-Out 🚫' },
-];
+const ACTIONS = {
+  LOGIN: 'Signed in', LOGOUT: 'Signed out', CREATE: 'Created', REGISTER: 'Registered', UPDATE: 'Updated', DELETE: 'Deleted',
+  APPROVE: 'Approved', REJECT: 'Rejected', CHECKOUT: 'Gate exit', CHECKIN: 'Gate entry', PAYMENT: 'Payment', OPT_OUT: 'Meal skipped',
+};
+const ACTION_BADGE = { APPROVE: 'badge-success', PAYMENT: 'badge-success', CREATE: 'badge-info', REJECT: 'badge-danger', DELETE: 'badge-danger', UPDATE: 'badge-warning' };
+const ROLE_LABEL = { ADMIN: 'Warden', STAFF: 'Staff', STUDENT: 'Student' };
 
-const ROLES = [
-  { id: 'ALL', label: 'All Roles' },
-  { id: 'ADMIN', label: 'Chief Warden / Admin' },
-  { id: 'STUDENT', label: 'Student' },
-  { id: 'STAFF', label: 'Staff / Security' },
-];
+const PAGE = 40;
 
-const getActionBadge = (action) => {
-  switch (action) {
-    case 'LOGIN':
-      return { label: 'Login', color: 'bg-blue-50 text-blue-700 border-blue-200' };
-    case 'LOGOUT':
-      return { label: 'Logout', color: 'bg-slate-100 text-slate-700 border-slate-200' };
-    case 'CREATE':
-    case 'REGISTER':
-      return { label: 'Created', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
-    case 'APPROVE':
-      return { label: 'Approved', color: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold' };
-    case 'REJECT':
-      return { label: 'Rejected', color: 'bg-rose-50 text-rose-700 border-rose-300 font-bold' };
-    case 'DELETE':
-      return { label: 'Deleted', color: 'bg-red-50 text-red-700 border-red-200' };
-    case 'UPDATE':
-      return { label: 'Updated', color: 'bg-amber-50 text-amber-700 border-amber-200' };
-    case 'CHECKOUT':
-      return { label: 'Gate Exit', color: 'bg-purple-50 text-purple-700 border-purple-200' };
-    case 'CHECKIN':
-      return { label: 'Gate Entry', color: 'bg-teal-50 text-teal-700 border-teal-200' };
-    case 'PAYMENT':
-      return { label: 'Payment', color: 'bg-green-50 text-green-700 border-green-300 font-bold' };
-    case 'OPT_OUT':
-      return { label: 'Opt-Out', color: 'bg-orange-50 text-orange-700 border-orange-200' };
-    default:
-      return { label: action, color: 'bg-slate-50 text-slate-700 border-slate-200' };
+const dayLabel = (date) => {
+  const d = new Date(date);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (d.toDateString() === today.toDateString()) return 'Today';
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return fmtDate(d, { weekday: 'long', year: d.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+};
+
+const parseMeta = (raw) => {
+  if (!raw) return null;
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    const entries = Object.entries(obj || {}).filter(([, v]) => v !== '' && v != null && typeof v !== 'object');
+    return entries.length ? entries : null;
+  } catch {
+    return null;
   }
 };
 
-const getRoleBadge = (role) => {
-  switch (role) {
-    case 'ADMIN':
-      return { label: 'Admin', color: 'bg-indigo-100 text-indigo-800' };
-    case 'STAFF':
-      return { label: 'Staff', color: 'bg-purple-100 text-purple-800' };
-    case 'STUDENT':
-      return { label: 'Student', color: 'bg-emerald-100 text-emerald-800' };
-    default:
-      return { label: role || 'System', color: 'bg-slate-100 text-slate-600' };
-  }
+const LogRow = ({ log }) => {
+  const [open, setOpen] = useState(false);
+  const meta = moduleMeta(log.module);
+  const Icon = meta.icon;
+  const details = parseMeta(log.metadata);
+  const expandable = Boolean(details || log.ipAddress || log.targetType);
+  return (
+    <li className="relative pl-12 sm:pl-14">
+      <span className={`absolute left-0 top-3 w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center ${meta.chip}`}><Icon size={17} /></span>
+      <div className="py-3 border-b border-[var(--border-color)]">
+        <button
+          onClick={() => expandable && setOpen((v) => !v)}
+          aria-expanded={expandable ? open : undefined}
+          className={`w-full text-left bg-transparent border-none p-0 flex flex-col sm:flex-row sm:items-start gap-1 sm:gap-3 ${expandable ? 'cursor-pointer' : 'cursor-default'}`}
+        >
+          <span className="flex-1 min-w-0">
+            <span className="block text-[14px] text-[var(--text-primary)] leading-snug">{log.description}</span>
+            <span className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-[12px] text-[var(--text-tertiary)]">
+              <span className="font-semibold text-[var(--text-secondary)]">{log.userName || 'System'}</span>
+              {log.userRole && <span>· {ROLE_LABEL[log.userRole] || log.userRole}</span>}
+              <span>· {meta.label}</span>
+            </span>
+          </span>
+          <span className="flex items-center gap-2 shrink-0">
+            <span className={`badge normal-case ${ACTION_BADGE[log.action] || 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)]'}`}>{ACTIONS[log.action] || log.action}</span>
+            <span className="text-[12px] text-[var(--text-tertiary)] w-[62px] text-right">{fmtTime(log.createdAt)}</span>
+            {expandable && <ChevronDown size={15} className={`text-[var(--text-tertiary)] transition-transform ${open ? 'rotate-180' : ''}`} />}
+          </span>
+        </button>
+        <AnimatePresence initial={false}>
+          {open && (
+            <motion.dl
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden m-0 mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[12px] bg-[var(--bg-primary)] rounded-xl px-3 py-2.5"
+            >
+              {details?.map(([k, v]) => (
+                <div key={k} className="contents">
+                  <dt className="text-[var(--text-tertiary)] capitalize">{k.replace(/([A-Z])/g, ' $1').toLowerCase()}</dt>
+                  <dd className="m-0 font-medium break-all">{String(v)}</dd>
+                </div>
+              ))}
+              {log.targetType && <><dt className="text-[var(--text-tertiary)]">Record</dt><dd className="m-0 font-medium">{log.targetType}</dd></>}
+              {log.ipAddress && <><dt className="text-[var(--text-tertiary)]">IP address</dt><dd className="m-0 font-medium">{log.ipAddress}</dd></>}
+              <dt className="text-[var(--text-tertiary)]">Time</dt><dd className="m-0 font-medium">{new Date(log.createdAt).toLocaleString('en-IN')}</dd>
+            </motion.dl>
+          )}
+        </AnimatePresence>
+      </div>
+    </li>
+  );
 };
 
-export default function ActivityLog() {
-  const { user } = useAuth();
-
+const ActivityLog = () => {
   const [logs, setLogs] = useState([]);
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [limit] = useState(40);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Filters
+  const [module, setModule] = useState('ALL');
+  const [showLogins, setShowLogins] = useState(false);
   const [search, setSearch] = useState('');
-  const [selectedModule, setSelectedModule] = useState('ALL');
-  const [selectedAction, setSelectedAction] = useState('ALL');
-  const [selectedRole, setSelectedRole] = useState('ALL');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-  const [autoRefresh, setAutoRefresh] = useState(false);
-  const [lastRefreshed, setLastRefreshed] = useState(new Date());
+  const [query, setQuery] = useState('');
+  const [role, setRole] = useState('ALL');
+  const [action, setAction] = useState('ALL');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [moreFilters, setMoreFilters] = useState(false);
+  const [live, setLive] = useState(false);
+  const debounce = useRef(null);
 
-  const searchTimeoutRef = useRef(null);
+  // Debounce typing in the search box
+  useEffect(() => {
+    clearTimeout(debounce.current);
+    debounce.current = setTimeout(() => setQuery(search.trim()), 350);
+    return () => clearTimeout(debounce.current);
+  }, [search]);
 
-  // Fetch Stats
-  const loadStats = useCallback(async () => {
+  const params = useMemo(() => ({
+    module: module === 'ALL' ? undefined : module,
+    action: action === 'ALL' ? undefined : action,
+    exclude: !showLogins && action === 'ALL' && module !== 'AUTH' ? 'LOGIN' : undefined,
+    role,
+    search: query,
+    from,
+    to,
+    limit: PAGE,
+  }), [module, action, showLogins, role, query, from, to]);
+
+  const load = useCallback(async (nextPage = 1) => {
     try {
-      const res = await activityLogsApi.getStats();
-      setStats(res?.data || res);
-    } catch (e) {
-      console.error('Error loading stats:', e);
-    }
-  }, []);
-
-  // Fetch Logs
-  const loadLogs = useCallback(async (targetPage = page) => {
-    setLoading(true);
-    try {
-      const params = {
-        page: targetPage,
-        limit,
-        module: selectedModule !== 'ALL' ? selectedModule : undefined,
-        action: selectedAction !== 'ALL' ? selectedAction : undefined,
-        role: selectedRole !== 'ALL' ? selectedRole : undefined,
-        search: search.trim() || undefined,
-        from: dateFrom || undefined,
-        to: dateTo || undefined,
-      };
-
-      const res = await activityLogsApi.getLogs(params);
-      const data = res?.data || res || {};
-      setLogs(data.logs || []);
-      setTotal(data.total || 0);
-      setTotalPages(data.totalPages || 1);
-      setPage(data.page || 1);
-      setLastRefreshed(new Date());
-    } catch (e) {
-      console.error('Error loading activity logs:', e);
+      setError(null);
+      const res = await activityLogsApi.getLogs({ ...params, page: nextPage });
+      setLogs((list) => (nextPage === 1 ? res.logs || [] : [...list, ...(res.logs || [])]));
+      setTotal(res.total || 0);
+      setPage(nextPage);
+    } catch (err) {
+      setError(err.message || 'Could not load the activity log.');
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, [page, limit, selectedModule, selectedAction, selectedRole, search, dateFrom, dateTo]);
-
-  // Initial load
-  useEffect(() => {
-    loadStats();
-  }, [loadStats]);
+  }, [params]);
 
   useEffect(() => {
-    loadLogs(1);
-  }, [selectedModule, selectedAction, selectedRole, dateFrom, dateTo]);
+    setLoading(true);
+    load(1);
+  }, [load]);
 
-  // Search debounce
-  const handleSearchChange = (val) => {
-    setSearch(val);
-    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    searchTimeoutRef.current = setTimeout(() => {
-      loadLogs(1);
-    }, 350);
-  };
-
-  // Auto-refresh interval
   useEffect(() => {
-    if (!autoRefresh) return;
-    const interval = setInterval(() => {
-      loadLogs(page);
-      loadStats();
-    }, 8000);
-    return () => clearInterval(interval);
-  }, [autoRefresh, page, loadLogs, loadStats]);
+    activityLogsApi.getStats().then(setStats).catch(() => {});
+  }, []);
 
-  // Quick Date Filter Presets
-  const setDatePreset = (preset) => {
-    const today = new Date();
-    const fmt = (d) => d.toISOString().split('T')[0];
+  useEffect(() => {
+    if (!live) return undefined;
+    const id = setInterval(() => {
+      load(1);
+      activityLogsApi.getStats().then(setStats).catch(() => {});
+    }, 20000);
+    return () => clearInterval(id);
+  }, [live, load]);
 
-    if (preset === 'today') {
-      const t = fmt(today);
-      setDateFrom(t);
-      setDateTo(t);
-    } else if (preset === 'yesterday') {
-      const y = new Date(today);
-      y.setDate(y.getDate() - 1);
-      const str = fmt(y);
-      setDateFrom(str);
-      setDateTo(str);
-    } else if (preset === '7days') {
-      const w = new Date(today);
-      w.setDate(w.getDate() - 7);
-      setDateFrom(fmt(w));
-      setDateTo(fmt(today));
-    } else if (preset === '30days') {
-      const m = new Date(today);
-      m.setDate(m.getDate() - 30);
-      setDateFrom(fmt(m));
-      setDateTo(fmt(today));
-    } else if (preset === 'clear') {
-      setDateFrom('');
-      setDateTo('');
-    }
-  };
+  const groups = useMemo(() => {
+    const out = [];
+    logs.forEach((log) => {
+      const label = dayLabel(log.createdAt);
+      if (!out.length || out[out.length - 1].label !== label) out.push({ label, items: [] });
+      out[out.length - 1].items.push(log);
+    });
+    return out;
+  }, [logs]);
 
-  // Export to CSV
-  const handleExportCsv = () => {
-    if (logs.length === 0) return;
-    const headers = ['Timestamp', 'User', 'Role', 'Module', 'Action', 'Description', 'IP Address'];
-    const rows = logs.map(l => [
-      new Date(l.createdAt).toLocaleString('en-IN'),
-      l.userName || 'System',
-      l.userRole || '–',
-      l.module,
-      l.action,
-      `"${(l.description || '').replace(/"/g, '""')}"`,
-      l.ipAddress || '–'
-    ]);
+  const moduleCounts = Object.fromEntries((stats?.moduleBreakdown || []).map((m) => [m.module, m.count]));
+  const chipOptions = [
+    { value: 'ALL', label: 'Everything' },
+    ...Object.keys(MODULES).filter((k) => k !== 'AUTH' && moduleCounts[k]).map((k) => ({ value: k, label: MODULES[k].label, count: moduleCounts[k] })),
+  ];
+  const activeExtra = [role !== 'ALL', action !== 'ALL', from, to].filter(Boolean).length;
+  const maxModule = Math.max(1, ...(stats?.moduleBreakdown || []).map((m) => m.count));
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Activity_Logs_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const clearExtra = () => { setRole('ALL'); setAction('ALL'); setFrom(''); setTo(''); };
 
-  const fmtTime = (d) => {
-    const date = new Date(d);
-    return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-  };
-
-  const fmtDate = (d) => {
-    const date = new Date(d);
-    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
+  const exportCsv = () =>
+    downloadCsv(
+      `activity-log-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Time', 'Who', 'Role', 'Area', 'Action', 'What happened', 'IP address'],
+      logs.map((l) => [new Date(l.createdAt).toLocaleString('en-IN'), l.userName || 'System', ROLE_LABEL[l.userRole] || l.userRole || '', moduleMeta(l.module).label, ACTIONS[l.action] || l.action, l.description, l.ipAddress || ''])
+    );
 
   return (
-    <div className="animate-fade-in flex flex-col gap-5 text-left pb-12 min-h-screen">
-      {/* ── HEADER ── */}
-      <div className="rounded-2xl bg-white border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
-            <Activity size={22} />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-black text-slate-900 tracking-tight">System Activity Log</h1>
-              <span className="bg-indigo-50 text-indigo-700 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full border border-indigo-200">
-                Audit Trail
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 font-medium">Real-time trace of actions by students, wardens, staff, and system events</p>
-          </div>
-        </div>
+    <div className="flex flex-col gap-5">
+      <PageHeader
+        title="Activity Log"
+        subtitle={stats ? `${plural(stats.todayLogs, 'action')} today · ${stats.weekLogs ?? stats.totalLogs} this week` : 'Who did what, and when'}
+      >
+        <button
+          className={`${live ? 'btn-brand' : 'btn-secondary'}`}
+          onClick={() => setLive((v) => !v)}
+          aria-pressed={live}
+          title="Refresh every 20 seconds"
+        >
+          <Radio size={16} className={live ? 'animate-pulse' : ''} /> {live ? 'Live' : 'Go live'}
+        </button>
+        <button className="btn-secondary" onClick={exportCsv} disabled={!logs.length}><Download size={16} /> <span className="hidden sm:inline">Export</span></button>
+      </PageHeader>
 
-        {/* Top Controls */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Auto Refresh Toggle */}
-          <button
-            onClick={() => setAutoRefresh(!autoRefresh)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
-              autoRefresh
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 ring-2 ring-emerald-200 animate-pulse'
-                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full ${autoRefresh ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-            <span>{autoRefresh ? 'Live Auto-Sync ON' : 'Live Sync OFF'}</span>
-          </button>
-
-          {/* Manual Refresh */}
-          <button
-            onClick={() => { loadLogs(page); loadStats(); }}
-            disabled={loading}
-            className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-1.5 border border-slate-200 transition-all cursor-pointer"
-          >
-            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            <span>Refresh</span>
-          </button>
-
-          {/* CSV Export */}
-          <button
-            onClick={handleExportCsv}
-            disabled={logs.length === 0}
-            className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1.5 border-none shadow-sm shadow-indigo-200 transition-all cursor-pointer"
-          >
-            <Download size={13} />
-            <span>Export CSV</span>
-          </button>
-        </div>
-      </div>
-
-      {/* ── METRIC STATS BANNER ── */}
-      {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 font-black">
-              📊
-            </div>
-            <div>
-              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Total Activities</span>
-              <div className="text-xl font-black text-slate-900 leading-tight">{stats.totalLogs?.toLocaleString('en-IN') || 0}</div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 font-black">
-              ⚡
-            </div>
-            <div>
-              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Today's Actions</span>
-              <div className="text-xl font-black text-emerald-700 leading-tight">{stats.todayLogs?.toLocaleString('en-IN') || 0}</div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 font-black">
-              🏛️
-            </div>
-            <div>
-              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Active Modules</span>
-              <div className="text-xl font-black text-purple-700 leading-tight">{stats.moduleBreakdown?.length || 0}</div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3.5 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600 font-black">
-              👥
-            </div>
-            <div>
-              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Top Actors</span>
-              <div className="text-sm font-black text-slate-800 truncate max-w-[130px]">
-                {stats.recentUsers?.[0]?.userName || 'Admin'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── FILTER & SEARCH BAR ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 shadow-xs">
-        {/* Search & Main Selects */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
-          {/* Search Box */}
-          <div className="md:col-span-4 relative">
-            <input
-              type="text"
-              placeholder="Search user name or description..."
-              value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-indigo-400 focus:bg-white transition-all"
-            />
-            {search && (
-              <button
-                onClick={() => { setSearch(''); loadLogs(1); }}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-black"
-              >
-                ✕
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-5 items-start">
+        <div className="flex flex-col gap-4 min-w-0">
+          <div className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-4 flex flex-col gap-3">
+            <div className="flex gap-2">
+              <SearchBox value={search} onChange={setSearch} placeholder="Search what happened or who did it" className="flex-1" />
+              <button className={`btn-secondary relative ${moreFilters ? 'bg-mint-50' : ''}`} onClick={() => setMoreFilters((v) => !v)} aria-expanded={moreFilters}>
+                <SlidersHorizontal size={16} /> <span className="hidden sm:inline">Filters</span>
+                {activeExtra > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-sun-400 text-sun-900 text-[11px] font-bold flex items-center justify-center">{activeExtra}</span>}
               </button>
-            )}
-          </div>
-
-          {/* Module Select */}
-          <div className="md:col-span-3">
-            <select
-              value={selectedModule}
-              onChange={(e) => setSelectedModule(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-400 cursor-pointer"
-            >
-              {MODULES.map(m => (
-                <option key={m.id} value={m.id}>{m.icon} {m.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Action Select */}
-          <div className="md:col-span-3">
-            <select
-              value={selectedAction}
-              onChange={(e) => setSelectedAction(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-400 cursor-pointer"
-            >
-              {ACTIONS.map(a => (
-                <option key={a.id} value={a.id}>{a.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Role Select */}
-          <div className="md:col-span-2">
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 outline-none focus:border-indigo-400 cursor-pointer"
-            >
-              {ROLES.map(r => (
-                <option key={r.id} value={r.id}>{r.label}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Date Filters & Quick Presets */}
-        <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1">
-              <Calendar size={13} /> Date Range:
-            </span>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:border-indigo-400"
-            />
-            <span className="text-slate-400 font-bold">to</span>
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold outline-none focus:border-indigo-400"
-            />
-          </div>
-
-          {/* Presets */}
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="text-[10px] font-bold text-slate-400 mr-1">Quick:</span>
-            {[
-              { id: 'today', label: 'Today' },
-              { id: 'yesterday', label: 'Yesterday' },
-              { id: '7days', label: 'Last 7D' },
-              { id: '30days', label: 'Last 30D' },
-              { id: 'clear', label: 'Reset' }
-            ].map(p => (
-              <button
-                key={p.id}
-                onClick={() => setDatePreset(p.id)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer transition-all border ${
-                  p.id === 'clear'
-                    ? 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
-                    : 'bg-white hover:bg-indigo-50 text-slate-600 hover:text-indigo-700 border-slate-200 hover:border-indigo-200'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* ── ACTIVITY TIMELINE / FEED ── */}
-      <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-        {/* Feed Header */}
-        <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Activity Feed</h3>
-            <span className="bg-slate-200 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-full">
-              {total} entries
-            </span>
-          </div>
-          <span className="text-[10px] text-slate-400 font-semibold">
-            Last synced at {lastRefreshed.toLocaleTimeString('en-IN', { hour12: false })}
-          </span>
-        </div>
-
-        {/* Feed Content */}
-        {loading ? (
-          <div className="py-16 text-center">
-            <div className="spinner mx-auto mb-3" />
-            <p className="text-xs font-bold text-slate-400">Loading activity feed...</p>
-          </div>
-        ) : logs.length === 0 ? (
-          <div className="py-16 text-center flex flex-col items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-2xl">
-              🔍
             </div>
-            <div>
-              <h4 className="text-sm font-black text-slate-800">No activities match your filters</h4>
-              <p className="text-xs text-slate-400 font-medium mt-0.5">Try clearing filters or search query to see all logs.</p>
+            <AnimatePresence initial={false}>
+              {moreFilters && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 pt-1">
+                    <select className="form-input cursor-pointer" value={role} onChange={(e) => setRole(e.target.value)} aria-label="Who">
+                      <option value="ALL">Anyone</option>
+                      {Object.entries(ROLE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}s</option>)}
+                    </select>
+                    <select className="form-input cursor-pointer" value={action} onChange={(e) => setAction(e.target.value)} aria-label="Action">
+                      <option value="ALL">Any action</option>
+                      {Object.entries(ACTIONS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                    <input type="date" className="form-input" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} aria-label="From date" />
+                    <input type="date" className="form-input" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} aria-label="To date" />
+                  </div>
+                  {activeExtra > 0 && (
+                    <button className="mt-2 flex items-center gap-1 text-[12px] font-semibold text-brand-700 bg-transparent border-none cursor-pointer p-0" onClick={clearExtra}>
+                      <X size={13} /> Clear filters
+                    </button>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <FilterChips id="log-module" value={module} onChange={setModule} options={chipOptions} />
+              <label className="flex items-center gap-2 text-[13px] text-[var(--text-secondary)] cursor-pointer select-none shrink-0">
+                <input type="checkbox" className="w-4 h-4 accent-[var(--color-brand-600)]" checked={showLogins} onChange={(e) => setShowLogins(e.target.checked)} />
+                Show sign-ins
+              </label>
             </div>
-            <button
-              onClick={() => {
-                setSelectedModule('ALL');
-                setSelectedAction('ALL');
-                setSelectedRole('ALL');
-                setDateFrom('');
-                setDateTo('');
-                setSearch('');
-              }}
-              className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold hover:bg-indigo-100 border border-indigo-200 cursor-pointer"
-            >
-              Reset All Filters
-            </button>
           </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {logs.map((log) => {
-              const actionBadge = getActionBadge(log.action);
-              const roleBadge = getRoleBadge(log.userRole);
-              const modInfo = MODULES.find(m => m.id === log.module) || { label: log.module, icon: '📌', color: 'bg-slate-100 text-slate-800 border-slate-200' };
 
-              return (
-                <div
-                  key={log.id}
-                  className="p-4 hover:bg-slate-50/80 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
-                >
-                  {/* Left: Avatar + Details */}
-                  <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                    {/* User Avatar */}
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-white font-black text-sm flex items-center justify-center shrink-0 shadow-xs">
-                      {(log.userName || 'S').charAt(0).toUpperCase()}
-                    </div>
+          {error && <ErrorPanel message={error} onRetry={() => { setLoading(true); load(1); }} />}
 
-                    {/* Action & Info */}
-                    <div className="flex flex-col gap-1 min-w-0 flex-1">
-                      {/* Top Badges Row */}
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="font-black text-slate-900 text-xs truncate max-w-[200px]">
-                          {log.userName || 'System / Automated'}
-                        </span>
-                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-md ${roleBadge.color}`}>
-                          {roleBadge.label}
-                        </span>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${actionBadge.color}`}>
-                          {actionBadge.label}
-                        </span>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-md border ${modInfo.color}`}>
-                          {modInfo.icon} {modInfo.label}
-                        </span>
-                      </div>
-
-                      {/* Description */}
-                      <p className="text-slate-700 font-semibold text-xs leading-relaxed break-words">
-                        {log.description}
-                      </p>
-
-                      {/* Meta: Target Type & IP */}
-                      <div className="flex flex-wrap items-center gap-2 text-[10px] text-slate-400 font-semibold mt-0.5">
-                        {log.targetType && (
-                          <span className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-mono">
-                            Target: {log.targetType}
-                          </span>
-                        )}
-                        {log.ipAddress && (
-                          <span className="text-slate-400">
-                            IP: {log.ipAddress.replace(/^.*:/, '')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right: Timestamp */}
-                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center shrink-0 text-right border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
-                    <span className="text-xs font-black text-slate-800 font-mono">
-                      {fmtTime(log.createdAt)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 font-semibold">
-                      {fmtDate(log.createdAt)}
-                    </span>
-                  </div>
+          {loading ? (
+            <div className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-5 flex flex-col gap-3" aria-busy="true">
+              {[0, 1, 2, 3, 4].map((i) => <div key={i} className="h-12 rounded-xl skeleton-loading" />)}
+            </div>
+          ) : logs.length === 0 ? (
+            <EmptyPanel icon={ClipboardCheck} title="Nothing recorded" text={query || module !== 'ALL' || activeExtra ? 'No activity matches these filters.' : 'Actions by wardens, staff and students will appear here.'} />
+          ) : (
+            <section className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] px-4 sm:px-5 pb-3">
+              {groups.map((g) => (
+                <div key={g.label}>
+                  <h2 className="sticky top-[var(--header-height)] z-[1] bg-white text-[12px] font-bold uppercase tracking-wider text-[var(--text-tertiary)] m-0 pt-4 pb-1">{g.label}</h2>
+                  <ul className="list-none m-0 p-0">
+                    {g.items.map((log) => <LogRow key={log.id} log={log} />)}
+                  </ul>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              ))}
+              <div className="flex items-center justify-between gap-3 pt-3">
+                <span className="text-[12px] text-[var(--text-tertiary)]">Showing {logs.length} of {total}</span>
+                {logs.length < total && (
+                  <button className="btn-secondary h-9 px-4 text-[13px]" disabled={loadingMore} onClick={() => { setLoadingMore(true); load(page + 1); }}>
+                    {loadingMore ? 'Loading…' : 'Load more'}
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
+        </div>
 
-        {/* ── PAGINATION CONTROLS ── */}
-        {totalPages > 1 && (
-          <div className="bg-slate-50 border-t border-slate-200 px-5 py-3.5 flex items-center justify-between text-xs">
-            <span className="text-slate-500 font-bold">
-              Showing page <b className="text-slate-800">{page}</b> of <b className="text-slate-800">{totalPages}</b> ({total} logs)
-            </span>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  if (page > 1) {
-                    setPage(page - 1);
-                    loadLogs(page - 1);
-                  }
-                }}
-                disabled={page <= 1 || loading}
-                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
-              >
-                <ChevronLeft size={14} /> Prev
-              </button>
-
-              <button
-                onClick={() => {
-                  if (page < totalPages) {
-                    setPage(page + 1);
-                    loadLogs(page + 1);
-                  }
-                }}
-                disabled={page >= totalPages || loading}
-                className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer"
-              >
-                Next <ChevronRight size={14} />
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Side summary */}
+        <aside className="flex flex-col gap-5">
+          <section className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-5">
+            <h2 className="text-[15px] font-bold m-0 mb-3">Busiest areas</h2>
+            {!stats ? (
+              <div className="h-24 rounded-xl skeleton-loading" />
+            ) : (
+              <ul className="list-none m-0 p-0 flex flex-col gap-2.5">
+                {stats.moduleBreakdown.slice(0, 6).map((m, i) => {
+                  const meta = moduleMeta(m.module);
+                  const Icon = meta.icon;
+                  return (
+                    <li key={m.module}>
+                      <button onClick={() => { setModule(m.module); if (m.module === 'AUTH') setShowLogins(true); }} className="w-full bg-transparent border-none p-0 text-left cursor-pointer group">
+                        <span className="flex items-center gap-2 text-[13px] mb-1">
+                          <Icon size={14} className="text-[var(--text-tertiary)]" />
+                          <span className="flex-1 group-hover:text-brand-700">{meta.label}</span>
+                          <strong>{m.count}</strong>
+                        </span>
+                        <ProgressBar value={m.count} max={maxModule} tone={i === 0 ? 'brand' : 'sun'} height={5} delay={i * 0.05} label={`${meta.label} activity`} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+          {stats?.recentUsers?.length > 0 && (
+            <section className="bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-5">
+              <h2 className="text-[15px] font-bold m-0 mb-3">Most active this week</h2>
+              <ul className="list-none m-0 p-0 flex flex-col gap-2.5">
+                {stats.recentUsers.map((u) => (
+                  <li key={`${u.userName}-${u.userRole}`}>
+                    <button onClick={() => setSearch(u.userName)} className="w-full flex items-center gap-3 bg-transparent border-none p-0 cursor-pointer text-left group">
+                      <Avatar name={u.userName} size={32} tone={u.userRole === 'STUDENT' ? 'mint' : u.userRole === 'STAFF' ? 'lilac' : 'sun'} />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[13px] font-semibold truncate group-hover:text-brand-700">{u.userName}</span>
+                        <span className="block text-[11px] text-[var(--text-tertiary)]">{ROLE_LABEL[u.userRole] || u.userRole}</span>
+                      </span>
+                      <span className="text-[12px] font-semibold text-[var(--text-secondary)]">{u.count}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </aside>
       </div>
     </div>
   );
-}
+};
+
+export default ActivityLog;

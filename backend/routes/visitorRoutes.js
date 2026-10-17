@@ -1,5 +1,6 @@
 const express = require('express');
 const {
+  getGateResidents,
   createVisitor,
   getAllVisitors,
   logVisitorCheckout
@@ -7,6 +8,8 @@ const {
 const { protect, authorize } = require('../middleware/auth');
 
 const router = express.Router();
+
+router.get('/residents', protect, authorize('ADMIN', 'STAFF'), getGateResidents);
 
 router.route('/')
   .post(protect, authorize('ADMIN', 'STAFF'), createVisitor)

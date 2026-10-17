@@ -32,7 +32,7 @@ const Sidebar = ({ isCollapsed, setIsCollapsed, isMobileOpen, onClose }) => {
         </div>
         {!collapsed && (
           <div className="flex flex-col min-w-0">
-            <span className="text-[15px] font-bold text-[var(--text-primary)] leading-tight truncate">Hari Pushp PG</span>
+            <span className="text-[15px] font-bold text-[var(--text-primary)] leading-tight truncate">Hari Pushp Tower</span>
             <span className="text-[12px] text-brand-700 leading-tight truncate">{ROLE_LABELS[user.role]} portal</span>
           </div>
         )}

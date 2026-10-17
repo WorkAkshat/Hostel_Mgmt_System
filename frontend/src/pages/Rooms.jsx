@@ -13,6 +13,8 @@ import { useToast } from '../components/ui/Toast';
 import RoomFormModal from './rooms/RoomFormModal';
 import RoomDrawer, { ROOM_STATUS } from './rooms/RoomDrawer';
 import { priceFor } from '../config/hostel';
+import DownloadMenu from '../components/ui/DownloadMenu';
+import { exportFreeBeds, exportResidents, exportRooms } from '../utils/exports';
 
 const capacityOf = (room) => room.sharingType || room.capacity || 0;
 
@@ -226,9 +228,18 @@ const Rooms = () => {
           <h1 className="page-title">Rooms & beds</h1>
           <p className="page-subtitle">Tap a room to see who lives there, assign free beds or mark repairs.</p>
         </div>
-        <button className="btn-primary" onClick={() => { setEditing(null); setFormOpen(true); }}>
-          <Plus size={17} /> Add room
-        </button>
+        <div className="flex gap-2">
+          <DownloadMenu
+            options={[
+              { key: 'rooms', label: 'Rooms & beds', hint: `${floor === 'all' ? 'All floors' : `Floor ${floor}`} · status, beds, residents`, run: () => exportRooms(rooms, floor) },
+              { key: 'free', label: 'Free beds only', hint: 'Rooms with space for new admissions', run: () => exportFreeBeds(rooms, floor) },
+              { key: 'residents', label: 'Residents list', hint: 'Phone, parents, room and bed of everyone', run: () => exportResidents(students, floor) },
+            ]}
+          />
+          <button className="btn-primary" onClick={() => { setEditing(null); setFormOpen(true); }}>
+            <Plus size={17} /> Add room
+          </button>
+        </div>
       </div>
 
       {/* Totals */}

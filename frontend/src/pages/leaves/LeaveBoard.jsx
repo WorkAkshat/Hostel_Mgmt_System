@@ -10,6 +10,7 @@ import { useToast } from '../../components/ui/Toast';
 import { EmptyPanel, ErrorPanel, PageHeader, SearchBox, SkeletonList } from '../../components/ui/PageStates';
 import { LEAVE_STATUS, LEAVE_TYPES } from '../../config/hostel';
 import { daysSpan, downloadCsv, duration, fmtDateTime, plural, timeAgo } from '../../utils/format';
+import useLiveRefresh from '../../hooks/useLiveRefresh';
 
 const isLate = (l) => l.status === 'CHECKED_OUT' && new Date(l.endDate) < new Date();
 
@@ -156,6 +157,7 @@ const LeaveBoard = () => {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   const floors = useMemo(
     () => [...new Set(leaves.map((l) => l.student?.room?.floorNumber).filter(Boolean))].sort((a, b) => a - b),

@@ -3,6 +3,7 @@ const {
   createPoll,
   getPolls,
   voteInPoll,
+  removeVote,
   togglePollStatus,
   deletePoll
 } = require('../controllers/pollController');
@@ -15,7 +16,8 @@ router.route('/')
   .post(protect, authorize('ADMIN'), createPoll);
 
 router.route('/:id/vote')
-  .post(protect, voteInPoll);
+  .post(protect, voteInPoll)
+  .delete(protect, removeVote);
 
 router.route('/:id/toggle')
   .put(protect, authorize('ADMIN'), togglePollStatus);

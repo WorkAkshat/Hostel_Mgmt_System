@@ -283,7 +283,7 @@ const StudentAdmissionFormPrint = ({ student, onClose }) => {
 
           {/* Declaration Statement */}
           <p className="text-[10.5px] text-slate-700 font-medium leading-relaxed border-l-4 border-brand-600 pl-3 py-1 m-0">
-            <strong>Undertaking:</strong> I hereby declare that all information provided above is true and correct to the best of my knowledge. I have read and agree to strictly abide by all rules & regulations of Hari Pushp PG Girls Hostel.
+            <strong>Undertaking:</strong> I hereby declare that all information provided above is true and correct to the best of my knowledge. I have read and agree to strictly abide by all rules & regulations of Hari Pushp Tower Girls Hostel.
           </p>
 
           {/* SECTION E: SIGNATURES & VERIFICATION */}
@@ -306,7 +306,7 @@ const StudentAdmissionFormPrint = ({ student, onClose }) => {
 
           {/* Footer Metadata */}
           <div className="border-t border-slate-200 pt-3 flex justify-between text-[10px] text-slate-400 font-medium">
-            <span>Form Generated via Hari Pushp PG Management Portal</span>
+            <span>Form Generated via Hari Pushp Tower Management Portal</span>
             <span>Date & Place: {joiningDate}, Jaipur</span>
           </div>
 

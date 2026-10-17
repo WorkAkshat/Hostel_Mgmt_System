@@ -38,7 +38,7 @@ const sendMail = async ({ to, subject, text, html }) => {
     });
 
     const info = await transporter.sendMail({
-      from: `"Hari Pushp PG" <${user}>`,
+      from: `"Hari Pushp Tower" <${user}>`,
       to,
       subject,
       text,
@@ -63,7 +63,7 @@ const buildResetPasswordEmail = ({ name, resetCode }) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hari Pushp PG — Password Reset Verification</title>
+  <title>Hari Pushp Tower — Password Reset Verification</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
   <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 30px 15px;">
@@ -81,7 +81,7 @@ const buildResetPasswordEmail = ({ name, resetCode }) => {
                     <div style="display: inline-block; width: 48px; height: 48px; line-height: 48px; background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%); border-radius: 16px; color: #ffffff; font-size: 24px; font-weight: bold; margin-bottom: 12px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);">
                       🏠
                     </div>
-                    <h1 style="color: #ffffff; font-size: 22px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">Hari Pushp PG</h1>
+                    <h1 style="color: #ffffff; font-size: 22px; font-weight: 800; margin: 0; letter-spacing: -0.5px;">Hari Pushp Tower</h1>
                     <p style="color: #a5b4fc; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; margin: 6px 0 0 0;">Hostel Management Security</p>
                   </td>
                 </tr>
@@ -95,7 +95,7 @@ const buildResetPasswordEmail = ({ name, resetCode }) => {
               <h2 style="color: #0f172a; font-size: 19px; font-weight: 700; margin: 0 0 12px 0; letter-spacing: -0.3px;">Password Reset Request</h2>
               <p style="color: #475569; font-size: 14px; line-height: 1.6; margin: 0 0 24px 0;">
                 Hello <strong>${name}</strong>,<br>
-                We received a request to reset the password for your Hari Pushp PG account. Use the 6-digit verification code below to authorize your password update.
+                We received a request to reset the password for your Hari Pushp Tower account. Use the 6-digit verification code below to authorize your password update.
               </p>
 
               <!-- OTP Verification Code Badge -->
@@ -124,7 +124,7 @@ const buildResetPasswordEmail = ({ name, resetCode }) => {
 
               <p style="color: #64748b; font-size: 13px; line-height: 1.5; margin: 0;">
                 Warm regards,<br>
-                <strong>Hari Pushp PG Administration Team</strong>
+                <strong>Hari Pushp Tower Administration Team</strong>
               </p>
             </td>
           </tr>
@@ -133,7 +133,7 @@ const buildResetPasswordEmail = ({ name, resetCode }) => {
           <tr>
             <td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
               <p style="color: #94a3b8; font-size: 11px; margin: 0; line-height: 1.5;">
-                &copy; 2026 Hari Pushp PG Girls Hostel &bull; Official Management System<br>
+                &copy; 2026 Hari Pushp Tower Girls Hostel &bull; Official Management System<br>
                 This is an automated operational security message.
               </p>
             </td>

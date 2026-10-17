@@ -16,6 +16,7 @@ import { useToast } from '../components/ui/Toast';
 import StudentFormModal from './students/StudentFormModal';
 import StudentDrawer from './students/StudentDrawer';
 import { STUDENT_STATUS } from '../config/hostel';
+import useLiveRefresh from '../hooks/useLiveRefresh';
 
 const VIEW_KEY = 'hms_students_view';
 
@@ -117,6 +118,7 @@ const Students = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useLiveRefresh(load);
 
   // Dashboard "Add student" quick action lands here
   useEffect(() => {

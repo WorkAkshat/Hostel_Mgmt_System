@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import AnnouncementsPanel from '../../components/AnnouncementsPanel';
 import {
   CalendarDays,
   Coffee,
@@ -38,7 +39,8 @@ import {
   complaints as complaintsApi
 } from '../../utils/api';
 import Avatar from '../../components/ui/Avatar';
-import ProgressBar from '../../components/ui/ProgressBar';
+import { normalizeMenu, dayName } from '../mess/menuUtils';
+import useLiveRefresh from '../../hooks/useLiveRefresh';
 
 const MEAL_ICONS = {
   Breakfast: Coffee,
@@ -69,7 +71,7 @@ const StudentDashboard = () => {
     try {
       const [dashData, feeList, leaveList, menuData] = await Promise.all([
         dashboardApi.getDashboard().catch(() => null),
-        feesApi.getAll().catch(() => []),
+        feesApi.getMyInvoices().catch(() => []),
         leavesApi.getMyLeaves().catch(() => []),
         messApi.getMenu().catch(() => null),
       ]);
@@ -78,12 +80,8 @@ const StudentDashboard = () => {
       setInvoices(feeList || []);
       setLeaves(leaveList || []);
 
-      // Extract today's day of week
-      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const todayDay = dayNames[new Date().getDay()];
-      if (menuData && menuData[todayDay]) {
-        setTodayMenu(menuData[todayDay]);
-      }
+      // The menu is stored as { Monday: { breakfast, lunch, snacks, dinner } }
+      if (menuData) setTodayMenu(normalizeMenu(menuData)[dayName()]);
     } catch (err) {
       console.error('Error loading student dashboard:', err);
     } finally {
@@ -95,6 +93,7 @@ const StudentDashboard = () => {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   if (loading) {
     return (
@@ -111,12 +110,12 @@ const StudentDashboard = () => {
 
   const profile = stats?.profile || user?.studentDetails || {};
   const room = profile.room || user?.studentDetails?.room || null;
-  const floorNum = room?.floor || (room?.roomNumber ? parseInt(String(room.roomNumber)[0]) : null);
-  const companyName = floorNum ? COMPANY_FLOOR_MAP[floorNum] || `Floor ${floorNum}` : 'Hari Pushp PG';
+  const floorNum = room?.floorNumber || (room?.roomNumber ? parseInt(String(room.roomNumber)[0]) : null);
+  const companyName = floorNum ? COMPANY_FLOOR_MAP[floorNum] || `Floor ${floorNum}` : 'Hari Pushp Tower';
 
   // Metrics
   const activeLeaves = leaves.filter((l) => l.status === 'PENDING' || l.status === 'APPROVED' || l.status === 'CHECKED_OUT').length;
-  const pendingFees = invoices.filter((inv) => inv.status !== 'PAID').reduce((sum, inv) => sum + (Number(inv.totalAmount) || 0), 0);
+  const pendingFees = invoices.filter((inv) => inv.status !== 'PAID').reduce((sum, inv) => sum + (Number(inv.amount) || 0), 0);
   const latestInvoice = invoices[0] || null;
   const activeLeave = leaves[0] || null;
 
@@ -170,7 +169,7 @@ const StudentDashboard = () => {
                 {room.roomNumber}
               </span>
               <span className="text-[12px] text-white/90 font-medium">
-                {room.block ? `${room.block} Block &bull; ` : ''}{room.sharingType || 2}-Sharing Room
+                {room.block ? `${room.block} Block · ` : ''}{room.sharingType || 2}-Sharing Room
               </span>
             </div>
           ) : (
@@ -180,6 +179,9 @@ const StudentDashboard = () => {
           )}
         </div>
       </div>
+
+      <AnnouncementsPanel limit={2} />
+
 
       {/* 2. Top KPI Metric Tiles */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -295,7 +297,7 @@ const StudentDashboard = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {['Breakfast', 'Lunch', 'Snacks', 'Dinner'].map((meal) => {
                   const Icon = MEAL_ICONS[meal] || UtensilsCrossed;
-                  const itemText = todayMenu[meal] || 'Chef Special &bull; Rotating Menu';
+                  const itemText = todayMenu[meal.toLowerCase()] || 'Menu not set yet';
                   return (
                     <div
                       key={meal}
@@ -388,6 +390,7 @@ const StudentDashboard = () => {
                     </span>
                   </div>
 
+                  {(latestInvoice.rentAmount != null || latestInvoice.messAmount != null) && (
                   <div className="grid grid-cols-3 gap-2 text-xs border-t border-[var(--border-color)] pt-2 mt-1">
                     <div>
                       <span className="text-[10px] text-[var(--text-tertiary)] block">Rent</span>
@@ -402,11 +405,12 @@ const StudentDashboard = () => {
                       <span className="font-bold">₹{Number(latestInvoice.electricityAmount || 0).toLocaleString('en-IN')}</span>
                     </div>
                   </div>
+                  )}
 
                   <div className="flex items-center justify-between border-t border-[var(--border-color)] pt-2 mt-1">
                     <span className="text-xs font-bold text-[var(--text-secondary)]">Total Amount:</span>
                     <span className="text-[15px] font-extrabold text-brand-800">
-                      ₹{Number(latestInvoice.totalAmount || 0).toLocaleString('en-IN')}
+                      ₹{Number(latestInvoice.amount || 0).toLocaleString('en-IN')}
                     </span>
                   </div>
                 </div>

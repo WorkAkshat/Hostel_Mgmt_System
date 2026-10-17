@@ -206,7 +206,7 @@ const PendingStudentsPrintModal = ({ pendingUsers = [], onClose }) => {
 
           {/* Official Footer */}
           <div className="pt-4 border-t-2 border-slate-900 flex justify-between items-center text-xs text-slate-500">
-            <span>Hari Pushp PG Girls Hostel &bull; Official Confidential Record</span>
+            <span>Hari Pushp Tower Girls Hostel &bull; Official Confidential Record</span>
             <span>Generated on {todayStr}</span>
           </div>
         </div>

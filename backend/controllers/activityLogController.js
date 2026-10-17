@@ -16,6 +16,7 @@ const getActivityLogs = async (req, res) => {
       from,
       to,
       userId,
+      exclude,
     } = req.query;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -26,6 +27,7 @@ const getActivityLogs = async (req, res) => {
 
     if (module) where.module = module;
     if (action) where.action = action;
+    else if (exclude) where.action = { not: exclude };
     if (role) where.userRole = role;
     if (userId) where.userId = userId;
 
@@ -77,26 +79,28 @@ const getActivityStats = async (req, res) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const [totalLogs, todayLogs, moduleBreakdown, actionBreakdown, recentUsers] = await Promise.all([
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 6);
+
+    // groupBy works the same on SQLite and Postgres (raw SQL table names differ)
+    const [totalLogs, todayLogs, weekLogs, byModule, byAction, byUser] = await Promise.all([
       prisma.activityLog.count(),
       prisma.activityLog.count({ where: { createdAt: { gte: today } } }),
-      prisma.$queryRawUnsafe(
-        `SELECT module, COUNT(*) as count FROM ActivityLog GROUP BY module ORDER BY count DESC LIMIT 10`
-      ),
-      prisma.$queryRawUnsafe(
-        `SELECT action, COUNT(*) as count FROM ActivityLog GROUP BY action ORDER BY count DESC LIMIT 10`
-      ),
-      prisma.$queryRawUnsafe(
-        `SELECT userName, userRole, COUNT(*) as count FROM ActivityLog WHERE userName IS NOT NULL GROUP BY userName, userRole ORDER BY count DESC LIMIT 5`
-      ),
+      prisma.activityLog.count({ where: { createdAt: { gte: weekAgo } } }),
+      prisma.activityLog.groupBy({ by: ['module'], _count: { _all: true } }),
+      prisma.activityLog.groupBy({ by: ['action'], _count: { _all: true } }),
+      prisma.activityLog.groupBy({ by: ['userName', 'userRole'], where: { userName: { not: null }, createdAt: { gte: weekAgo } }, _count: { _all: true } }),
     ]);
+
+    const top = (rows, n) => rows.sort((x, y) => y._count._all - x._count._all).slice(0, n);
 
     res.json({
       totalLogs,
       todayLogs,
-      moduleBreakdown: moduleBreakdown.map(r => ({ module: r.module, count: Number(r.count) })),
-      actionBreakdown: actionBreakdown.map(r => ({ action: r.action, count: Number(r.count) })),
-      recentUsers: recentUsers.map(r => ({ userName: r.userName, userRole: r.userRole, count: Number(r.count) })),
+      weekLogs,
+      moduleBreakdown: top(byModule, 12).map((r) => ({ module: r.module, count: r._count._all })),
+      actionBreakdown: top(byAction, 12).map((r) => ({ action: r.action, count: r._count._all })),
+      recentUsers: top(byUser, 5).map((r) => ({ userName: r.userName, userRole: r.userRole, count: r._count._all })),
     });
   } catch (error) {
     console.error('Error fetching activity stats:', error);

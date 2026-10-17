@@ -11,6 +11,7 @@ import { EmptyPanel, ErrorPanel, PageHeader, SearchBox, SkeletonList } from '../
 import { COMPLAINT_STATUS, PRIORITIES } from '../../config/hostel';
 import { fmtDateTime, plural, timeAgo } from '../../utils/format';
 import { COMPLAINT_CATEGORIES, PRIORITY_WEIGHT, categoryMeta, isDeveloperIssue } from './complaintMeta';
+import useLiveRefresh from '../../hooks/useLiveRefresh';
 
 const daysOpen = (c) => Math.floor((Date.now() - new Date(c.createdAt).getTime()) / 86400000);
 
@@ -132,6 +133,7 @@ const ComplaintBoard = () => {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   const scoped = useMemo(() => {
     const q = search.trim().toLowerCase();

@@ -401,7 +401,7 @@ const Register = () => {
               <Building2 size={20} />
             </div>
             <span className="text-[18px] sm:text-[20px] font-bold text-[var(--text-primary)] tracking-tight">
-              Hari Pushp PG Hostel
+              Hari Pushp Tower Hostel
             </span>
           </div>
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[12px] font-bold bg-mint-100 text-brand-800 border border-mint-200">
@@ -1088,7 +1088,7 @@ const Register = () => {
 
         {/* Portal footer */}
         <p className="text-center text-[12px] text-[var(--text-tertiary)] font-medium mt-6">
-          Hari Pushp PG Girls Hostel &bull; Secure Admission Portal
+          Hari Pushp Tower Girls Hostel &bull; Secure Admission Portal
         </p>
       </div>
 

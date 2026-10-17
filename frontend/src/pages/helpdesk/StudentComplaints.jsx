@@ -7,6 +7,7 @@ import { EmptyPanel, ErrorPanel, PageHeader, SkeletonList } from '../../componen
 import { COMPLAINT_STATUS, PRIORITIES } from '../../config/hostel';
 import { timeAgo } from '../../utils/format';
 import { COMPLAINT_CATEGORIES, categoryMeta } from './complaintMeta';
+import useLiveRefresh from '../../hooks/useLiveRefresh';
 
 const STEPS = ['Raised', 'Being fixed', 'Resolved'];
 const stepOf = { PENDING: 0, IN_PROGRESS: 1, RESOLVED: 2 };
@@ -37,6 +38,7 @@ const StudentComplaints = () => {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   const set = (key, value) => { setForm((f) => ({ ...f, [key]: value })); setFormError(null); };
 

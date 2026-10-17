@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Hari Pushp PG",
+    "name": "Hari Pushp Tower",
     "slug": "hari-pushp-pg",
     "version": "1.0.0",
     "runtimeVersion": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "haripushppg",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "bundleIdentifier": "com.haripushppg.app",
       "icon": "./assets/images/icon.png",
@@ -15,18 +15,15 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#7F56D9",
+        "backgroundColor": "#D5ECEA",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.haripushppg.app",
-      "googleServicesFile": "./google-services.json",
       "permissions": [
-        "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.VIBRATE"
       ]
     },
     "web": {
@@ -38,32 +35,24 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#7F56D9",
+          "backgroundColor": "#D5ECEA",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 100
         }
       ],
       "expo-secure-store",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/icon.png",
-          "color": "#7F56D9",
-          "sounds": [],
-          "mode": "production"
-        }
-      ]
+      "expo-sharing"
     ],
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "14df0893-9fa5-4606-998d-a5280bb2a498"
+        "projectId": "1ebb6621-0a7f-46b7-85ff-44349e99c326"
       }
     },
     "experiments": {
-      "typedRoutes": true,
+      "typedRoutes": false,
       "reactCompiler": true
     },
-    "owner": "akshat29032903"
+    "owner": "kritikagupta2909"
   }
 }

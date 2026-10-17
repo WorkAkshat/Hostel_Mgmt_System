@@ -11,6 +11,7 @@ import { MEALS } from '../../config/hostel';
 import WeeklyMenu from './WeeklyMenu';
 import MessNotices from './MessNotices';
 import { dayName, mealState, normalizeMenu } from './menuUtils';
+import useLiveRefresh from '../../hooks/useLiveRefresh';
 
 export const MEAL_ICONS = { breakfast: Coffee, lunch: Soup, snacks: Cookie, dinner: Moon };
 
@@ -41,6 +42,7 @@ const MessAdmin = () => {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   const saveMenu = async (menu) => {
     try {

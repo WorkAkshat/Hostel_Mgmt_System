@@ -9,6 +9,7 @@ import { MEALS } from '../config/hostel';
 import { fmtDate } from '../utils/format';
 import { MEAL_ICONS } from './mess/MessAdmin';
 import { dayName, isoDate, mealState, normalizeMenu } from './mess/menuUtils';
+import useLiveRefresh from '../hooks/useLiveRefresh';
 
 // What the kitchen needs to cook: plates per meal after students skip meals.
 const CookDashboard = () => {
@@ -22,8 +23,8 @@ const CookDashboard = () => {
   if (which === 'tomorrow') date.setDate(date.getDate() + 1);
   const dateKey = isoDate(date);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const load = useCallback(async (quiet) => {
+    if (!quiet) setLoading(true);
     try {
       setError(null);
       const [cook, m] = await Promise.all([messApi.getCookDashboard(dateKey), messApi.getMenu().catch(() => null)]);
@@ -39,6 +40,7 @@ const CookDashboard = () => {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(() => load(true));
 
   const day = dayName(date);
   const optOuts = data?.optOutsList || [];

@@ -8,6 +8,7 @@ import FilterChips from '../components/ui/FilterChips';
 import { useToast } from '../components/ui/Toast';
 import { EmptyPanel, ErrorPanel, PageHeader, SearchBox, SkeletonList } from '../components/ui/PageStates';
 import { fmtDateTime, timeAgo } from '../utils/format';
+import useLiveRefresh from '../hooks/useLiveRefresh';
 
 const STATUS = {
   PENDING: { label: 'New', badge: 'badge-warning' },
@@ -15,13 +16,32 @@ const STATUS = {
   RESOLVED: { label: 'Done', badge: 'badge-success' },
 };
 
-// Students can send suggestions but the API only lets staff read them
+const STUDENT_STATUS_TEXT = {
+  PENDING: 'Waiting to be read',
+  READ: 'Read by the warden',
+  RESOLVED: 'Done — acted on',
+};
+
+// Students send ideas and see whether the warden has read or acted on them
 const StudentSuggestion = () => {
   const toast = useToast();
   const [text, setText] = useState('');
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [sentCount, setSentCount] = useState(0);
+  const [mine, setMine] = useState(null);
+
+  const loadMine = useCallback(async () => {
+    try {
+      setMine((await suggestionsApi.getMine()) || []);
+    } catch {
+      setMine((m) => m || []);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadMine();
+  }, [loadMine]);
+  useLiveRefresh(loadMine);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -31,7 +51,7 @@ const StudentSuggestion = () => {
       await suggestionsApi.create(text.trim());
       toast.success('Suggestion sent', 'Thank you — the warden office reads every one.');
       setText('');
-      setSentCount((n) => n + 1);
+      loadMine();
     } catch (err) {
       setError(err.message || 'Could not send your suggestion.');
     } finally {
@@ -56,7 +76,7 @@ const StudentSuggestion = () => {
           maxLength={1000}
         />
         <div className="flex items-center justify-between text-[12px] text-[var(--text-tertiary)] -mt-2">
-          <span>{sentCount ? `${sentCount} sent this visit` : ''}</span>
+          <span />
           <span>{text.length}/1000</span>
         </div>
         {error && (
@@ -66,6 +86,31 @@ const StudentSuggestion = () => {
         )}
         <button type="submit" className="btn-primary h-12" disabled={saving}><Send size={16} /> {saving ? 'Sending…' : 'Send suggestion'}</button>
       </form>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-[16px] font-bold m-0">My suggestions</h2>
+        {mine === null ? (
+          <SkeletonList count={2} height={80} columns="grid-cols-1" />
+        ) : mine.length === 0 ? (
+          <p className="text-[13px] text-[var(--text-tertiary)] m-0">What you send appears here, with whether the warden has read it.</p>
+        ) : (
+          <ul className="list-none m-0 p-0 flex flex-col gap-2.5">
+            <AnimatePresence initial={false}>
+              {mine.map((s) => (
+                <motion.li key={s.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} className="bg-white border border-[var(--border-color)] rounded-2xl p-4 flex flex-col gap-2">
+                  <p className="text-[14px] m-0 whitespace-pre-wrap">{s.content}</p>
+                  <div className="flex items-center justify-between gap-2 text-[12px] text-[var(--text-tertiary)]">
+                    <span title={fmtDateTime(s.createdAt)}>Sent {timeAgo(s.createdAt)}</span>
+                    <span className={`badge normal-case ${STATUS[s.status]?.badge || ''}`}>
+                      {s.status === 'RESOLVED' ? <CheckCheck size={12} /> : s.status === 'READ' ? <Eye size={12} /> : <Check size={12} />} {STUDENT_STATUS_TEXT[s.status] || s.status}
+                    </span>
+                  </div>
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </ul>
+        )}
+      </section>
     </div>
   );
 };
@@ -95,6 +140,7 @@ const SuggestionInbox = () => {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   const setStatus = async (item, status) => {
     setBusyId(item.id);

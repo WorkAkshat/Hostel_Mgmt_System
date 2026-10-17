@@ -2,6 +2,24 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { logActivity } = require('../utils/activityLogger');
 
+// @desc    Residents the gate can pick from when checking a visitor in.
+//          Only what the gate needs: name, roll number, room (no contacts or fees).
+// @route   GET /api/visitors/residents
+// @access  Private (Admin/Staff only)
+const getGateResidents = async (req, res) => {
+  try {
+    const students = await prisma.student.findMany({
+      where: { status: 'CHECKED_IN', roomId: { not: null } },
+      select: { id: true, rollNumber: true, profilePic: true, user: { select: { name: true } }, room: { select: { roomNumber: true, floorNumber: true } } },
+      orderBy: { rollNumber: 'asc' },
+    });
+    res.json(students.map((s) => ({ id: s.id, rollNumber: s.rollNumber, name: s.user?.name || '', avatar: s.profilePic, roomNumber: s.room?.roomNumber || null, floorNumber: s.room?.floorNumber || null })));
+  } catch (error) {
+    console.error('Error loading gate residents:', error);
+    res.status(500).json({ message: 'Could not load residents' });
+  }
+};
+
 // @desc    Log a new visitor check-in (Warden/Staff only)
 // @route   POST /api/visitors
 // @access  Private (Admin/Staff only)
@@ -48,6 +66,7 @@ const createVisitor = async (req, res) => {
 
     logActivity({ req, action: 'CREATE', module: 'VISITOR', description: `Visitor ${name} (${relationship}) checked in for student ${studentRollNumber}`, targetId: visitor.id, targetType: 'Visitor' });
   } catch (error) {
+    console.error('[visitorController]', error);
     res.status(500).json({ message: 'Server error logging visitor check-in' });
   }
 };
@@ -109,11 +128,13 @@ const logVisitorCheckout = async (req, res) => {
 
     logActivity({ req, action: 'CHECKOUT', module: 'VISITOR', description: `Visitor ${visitor.name} checked out`, targetId: id, targetType: 'Visitor' });
   } catch (error) {
+    console.error('[visitorController]', error);
     res.status(500).json({ message: 'Server error logging visitor check-out' });
   }
 };
 
 module.exports = {
+  getGateResidents,
   createVisitor,
   getAllVisitors,
   logVisitorCheckout

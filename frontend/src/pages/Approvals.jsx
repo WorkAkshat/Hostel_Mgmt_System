@@ -14,6 +14,7 @@ import FilterChips from '../components/ui/FilterChips';
 import { useToast } from '../components/ui/Toast';
 import ApproveRegistrationModal, { requestedRole } from './approvals/ApproveRegistrationModal';
 import { DOCUMENT_TYPES } from '../config/hostel';
+import useLiveRefresh from '../hooks/useLiveRefresh';
 
 const timeAgo = (value) => {
   if (!value) return '';
@@ -119,6 +120,7 @@ const Approvals = () => {
   useEffect(() => {
     load();
   }, [load]);
+  useLiveRefresh(load);
 
   const studentById = useMemo(() => new Map(students.map((s) => [s.id, s])), [students]);
 

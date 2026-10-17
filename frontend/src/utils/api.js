@@ -16,6 +16,9 @@ import * as nightAttendance from './api/nightAttendance';
 import * as floors from './api/floors';
 import * as activityLogs from './api/activityLogs';
 import * as notices from './api/notices';
+import * as accounting from './api/accounting';
+import * as reports from './api/reports';
+import * as inventory from './api/inventory';
 
 export default client;
 export {
@@ -36,5 +39,8 @@ export {
   nightAttendance,
   floors,
   activityLogs,
-  notices
+  inventory,
+  notices,
+  accounting,
+  reports
 };

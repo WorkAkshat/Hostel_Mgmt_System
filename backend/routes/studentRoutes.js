@@ -6,6 +6,7 @@ const {
   updateStudent,
   deleteStudent,
   createProfileRequest,
+  getMyProfileRequests,
   getPendingProfileRequests,
   approveProfileRequest,
   rejectProfileRequest,
@@ -23,6 +24,8 @@ router.route('/')
   .post(protect, authorize('ADMIN'), createStudent);
 
 // Profile requests
+router.get('/profile-requests/mine', protect, getMyProfileRequests);
+
 router.route('/profile-requests')
   .get(protect, authorize('ADMIN'), getPendingProfileRequests)
   .post(protect, createProfileRequest);
