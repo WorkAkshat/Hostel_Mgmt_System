@@ -8,12 +8,13 @@ import { asList } from '../../api/client';
 import { useData } from '../../lib/query';
 import { STUDENT_STATUS, priceFor } from '../../lib/hostel';
 import { colors, radius, shadow } from '../../ui/theme';
-import { Avatar, Badge, Button, Chips, IconButton, Press, Row, Segmented, T, tap } from '../../ui/primitives';
+import { Avatar, Badge, Button, Card, Chips, IconButton, Press, Row, Segmented, T, tap } from '../../ui/primitives';
 import { SearchInput } from '../../ui/form';
 import { Empty, ErrorBox, Loading, useToast } from '../../ui/feedback';
 import { Appear, ListRow, Screen } from '../../ui/layout';
 import { Sheet } from '../../ui/Sheet';
 import Bell from '../../features/Bell';
+import AssignRoomSheet from '../../features/AssignRoomSheet';
 import { call, whatsapp } from '../../lib/contact';
 import { FloorChips, onFloor, useFloor } from '../../features/floor';
 import { go } from '../../lib/nav';
@@ -25,18 +26,30 @@ const bedsOf = (r: any) => r.sharingType || r.capacity || 0;
 export default function Residents() {
   const params = useLocalSearchParams<{ tab?: 'students' | 'rooms' }>();
   const [tab, setTab] = useState<'students' | 'rooms'>('students');
+  const [assignTarget, setAssignTarget] = useState<{ open: boolean; student?: any; room?: any }>({ open: false });
+
   useEffect(() => { if (params.tab) { setTab(params.tab); router.setParams({ tab: undefined }); } }, [params.tab]);
 
   return (
     <Screen title="Residents" subtitle="Students, rooms and beds" right={<Bell />}>
       <Segmented value={tab} onChange={setTab} options={[{ value: 'students', label: 'Students' }, { value: 'rooms', label: 'Rooms & beds' }]} />
       <FloorChips />
-      {tab === 'students' ? <StudentList /> : <RoomGrid />}
+      {tab === 'students' ? (
+        <StudentList onAssign={(target) => setAssignTarget({ open: true, ...target })} />
+      ) : (
+        <RoomGrid onAssign={(r) => setAssignTarget({ open: true, room: r, student: null })} />
+      )}
+      <AssignRoomSheet
+        open={assignTarget.open}
+        student={assignTarget.student}
+        room={assignTarget.room}
+        onClose={() => setAssignTarget({ open: false })}
+      />
     </Screen>
   );
 }
 
-const StudentList = () => {
+const StudentList = ({ onAssign }: { onAssign: (target: { student?: any; room?: any }) => void }) => {
   const { floor } = useFloor();
   const { data, isLoading, error, refetch } = useData(['students'], studentsApi.all);
   const { bills } = useAllBills();
@@ -52,15 +65,40 @@ const StudentList = () => {
       .sort((a: any, b: any) => String(a.user?.name).localeCompare(String(b.user?.name)));
   }, [data, floor, q, status]);
   const all = asList(data);
+  const unassignedCount = all.filter((x: any) => !x.roomId).length;
 
   return (
     <>
       <SearchInput value={q} onChange={setQ} placeholder="Name, roll no., room or phone" />
       <Chips value={status} onChange={setStatus} options={[
         { value: 'CHECKED_IN', label: 'Checked in', count: all.filter((x: any) => x.status === 'CHECKED_IN').length },
-        { value: 'none', label: 'No room', count: all.filter((x: any) => !x.roomId).length },
+        { value: 'none', label: 'No room', count: unassignedCount },
         { value: 'all', label: 'All' },
       ]} />
+
+      {unassignedCount > 0 && status !== 'CHECKED_IN' && (
+        <Card style={{ backgroundColor: colors.peach50, borderColor: colors.peach100, padding: 12 }}>
+          <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <Row gap={8} style={{ flex: 1, alignItems: 'center' }}>
+              <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.peach100, alignItems: 'center', justifyContent: 'center' }}>
+                <BedDouble size={16} color={colors.peach700} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <T v="small" w="bold">{unassignedCount} resident{unassignedCount > 1 ? 's' : ''} without room</T>
+                <T v="caption" c={colors.text2}>Bed allocation needed</T>
+              </View>
+            </Row>
+            <Button
+              title="Assign"
+              icon={BedDouble}
+              kind="brand"
+              small
+              onPress={() => onAssign({ student: all.find((x: any) => !x.roomId) || null })}
+            />
+          </Row>
+        </Card>
+      )}
+
       {error ? <ErrorBox message={(error as Error).message} onRetry={refetch} /> : isLoading ? <Loading rows={5} h={68} /> : list.length === 0 ? (
         <Empty icon={Users} title="No students match" text="Try another name or floor." />
       ) : list.map((s: any, i: number) => (
@@ -70,7 +108,21 @@ const StudentList = () => {
             title={s.user?.name}
             sub={s.room ? `Room ${s.room.roomNumber} · Floor ${s.room.floorNumber}` : 'No room yet'}
             meta={dues[s.id] ? `${rupees(dues[s.id].total)} ${dues[s.id].overdue ? 'overdue' : 'due'}` : 'Paid up'}
-            actions={s.status !== 'CHECKED_IN' ? <Badge label={STUDENT_STATUS[s.status]?.label || s.status} tone={STUDENT_STATUS[s.status]?.tone || 'white'} /> : s.phoneNumber ? <IconButton icon={Phone} label={`Call ${s.user?.name}`} tone="mint" size={36} onPress={() => call(s.phoneNumber)} /> : undefined}
+            actions={
+              !s.roomId ? (
+                <Button
+                  title="Assign"
+                  icon={BedDouble}
+                  kind="brand"
+                  small
+                  onPress={() => onAssign({ student: s })}
+                />
+              ) : s.status !== 'CHECKED_IN' ? (
+                <Badge label={STUDENT_STATUS[s.status]?.label || s.status} tone={STUDENT_STATUS[s.status]?.tone || 'white'} />
+              ) : s.phoneNumber ? (
+                <IconButton icon={Phone} label={`Call ${s.user?.name}`} tone="mint" size={36} onPress={() => call(s.phoneNumber)} />
+              ) : undefined
+            }
             onPress={() => go(`/manage/student/${s.id}`)}
             chevron={false}
           />
@@ -113,7 +165,7 @@ const BED_LOOK: Record<BedState, { bg: string; border: string; fg: string; label
   overdue: { bg: colors.dangerBg, border: '#f5c9c6', fg: colors.danger, label: 'Overdue' },
 };
 
-const RoomGrid = () => {
+const RoomGrid = ({ onAssign }: { onAssign: (r: any) => void }) => {
   const { floor } = useFloor();
   const { data, isLoading, error, refetch } = useData(['rooms'], roomsApi.all);
   const { bills } = useAllBills();
@@ -193,12 +245,12 @@ const RoomGrid = () => {
           </Appear>
         );
       })}
-      <RoomSheet room={live} onClose={() => setOpen(null)} />
+      <RoomSheet room={live} onClose={() => setOpen(null)} onAssign={onAssign} />
     </>
   );
 };
 
-const RoomSheet = ({ room, onClose }: { room: any; onClose: () => void }) => {
+const RoomSheet = ({ room, onClose, onAssign }: { room: any; onClose: () => void; onAssign: (room: any) => void }) => {
   const qc = useQueryClient();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -212,9 +264,26 @@ const RoomSheet = ({ room, onClose }: { room: any; onClose: () => void }) => {
   };
   if (!room) return <Sheet open={false} onClose={onClose}><View /></Sheet>;
   const p = priceFor(room.sharingType);
+  const freeCount = Math.max(0, bedsOf(room) - (room.students?.length || 0));
   return (
     <Sheet open={!!room} onClose={onClose} title={`Room ${room.roomNumber}`} subtitle={`Floor ${room.floorNumber} · ${p.label}${room.isAc ? ' · AC' : ''} · ₹${p.total.toLocaleString('en-IN')}/bed`}
-      footer={<Button title={room.status === 'MAINTENANCE' ? 'Mark available' : 'Mark under repair'} icon={Wrench} kind={room.status === 'MAINTENANCE' ? 'brand' : 'secondary'} loading={busy} onPress={toggleRepair} full />}
+      footer={
+        <View style={{ gap: 8 }}>
+          {freeCount > 0 && room.status !== 'MAINTENANCE' && (
+            <Button
+              title="Assign resident to this room"
+              icon={BedDouble}
+              kind="brand"
+              onPress={() => {
+                onClose();
+                onAssign(room);
+              }}
+              full
+            />
+          )}
+          <Button title={room.status === 'MAINTENANCE' ? 'Mark available' : 'Mark under repair'} icon={Wrench} kind={room.status === 'MAINTENANCE' ? 'brand' : 'secondary'} loading={busy} onPress={toggleRepair} full />
+        </View>
+      }
     >
       {(room.students || []).length === 0 ? <T c={colors.text2}>Nobody lives here yet.</T> : (room.students || []).map((s: any) => (
         <ListRow key={s.id} leading={<Avatar name={s.user?.name} uri={s.user?.avatar || s.profilePic} />} title={s.user?.name} sub={`${s.rollNumber}${s.bedId ? ` · ${s.bedId}` : ''}`}
@@ -226,7 +295,7 @@ const RoomSheet = ({ room, onClose }: { room: any; onClose: () => void }) => {
           ) : undefined}
           onPress={() => { onClose(); go(`/manage/student/${s.id}`); }} chevron={false} />
       ))}
-      <T v="caption" c={colors.text3}>Move residents between rooms from the website (Rooms → room → Assign).</T>
+      <T v="caption" c={colors.text3}>{freeCount > 0 ? `${freeCount} bed(s) available in this room.` : 'All beds are currently occupied.'}</T>
     </Sheet>
   );
 };

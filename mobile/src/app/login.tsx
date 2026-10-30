@@ -24,8 +24,8 @@ export default function Login() {
   const [kb, setKb] = useState(false);
   const [kbHeight, setKbHeight] = useState(0);
   const { height: winH } = useWindowDimensions();
-  const scroll = useRef<ScrollView>(null);
-  const passwordRef = useRef<TextInput>(null);
+  const scroll = useRef<any>(null);
+  const passwordRef = useRef<any>(null);
   useEffect(() => {
     const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', (e) => {
       setKb(true);

@@ -39,7 +39,7 @@ const GROUPS = [
   {
     title: 'Team',
     items: [
-      { icon: Contact, tone: 'mint' as const, title: 'Staff', sub: 'Call guards, cooks and cleaners', go: '/manage/staff' },
+      { icon: Contact, tone: 'mint' as const, title: 'Staff & advances', sub: 'Call staff, salary advances given', go: '/manage/staff' },
       { icon: Activity, tone: 'lilac' as const, title: 'Activity log', sub: 'Who did what, and when', go: '/manage/activity' },
     ],
   },

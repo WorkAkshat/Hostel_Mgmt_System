@@ -14,6 +14,7 @@ export type Bill = {
   id: string;
   kind: 'invoice' | 'note';
   charge?: boolean; // a one-off charge (fine, deposit…) rather than the monthly fee
+  category?: string | null;
   studentId: string;
   student: any;
   title: string;
@@ -29,6 +30,16 @@ export type Bill = {
 
 const short = (m: string) => monthLabel(m).replace(/^(\w{3})\w*/, '$1');
 
+export const CHARGE_LABELS: Record<string, string> = {
+  FINE: 'Fine',
+  DAMAGE: 'Damage',
+  DEPOSIT: 'Security deposit',
+  LATE_FEE: 'Late fee',
+  EXTRA: 'Extra service',
+  ADVANCE: 'Advance payment',
+  OTHER: 'Other charge',
+};
+
 // Extra charges the warden can raise on one resident
 export const CHARGE_TYPES: { value: ChargeCategory; label: string; title: string; ask: boolean; paid: boolean }[] = [
   { value: 'FINE', label: 'Fine', title: 'Fine', ask: true, paid: true },
@@ -43,12 +54,13 @@ export const CHARGE_TYPES: { value: ChargeCategory; label: string; title: string
 // How a fee bill or an extra charge reads on screen and on the PDF
 export const invoiceView = (i: any) => {
   const charge = i.kind === 'CHARGE';
+  const categoryLabel = i.category ? CHARGE_LABELS[i.category] || i.category : '';
   return {
     charge,
-    title: charge ? i.title || 'Charge' : `Fee bill · ${short(monthKey(new Date(i.createdAt)))}`,
+    title: charge ? i.title || categoryLabel || 'Charge' : `Fee bill · ${short(monthKey(new Date(i.createdAt)))}`,
     number: `${charge ? 'CHG' : 'INV'}/${String(i.id).slice(0, 6).toUpperCase()}`,
     lines: charge
-      ? [{ label: i.title || 'Charge', detail: i.note || undefined, amount: Number(i.amount) || 0 }]
+      ? [{ label: i.title || categoryLabel || 'Charge', detail: i.note || undefined, amount: Number(i.amount) || 0 }]
       : i.rentAmount != null || i.messAmount != null
         ? [{ label: 'Room rent', amount: i.rentAmount || 0 }, { label: 'Mess & catering', amount: i.messAmount || 0 }, ...(i.electricityAmount ? [{ label: 'Electricity', amount: i.electricityAmount }] : [])]
         : [{ label: 'Hostel fee', amount: Number(i.amount) || 0 }],
@@ -64,6 +76,7 @@ export const toBills = (invoices: unknown, notes: unknown): Bill[] => [
     const v = invoiceView(i);
     return {
       key: `i-${i.id}`, id: i.id, kind: 'invoice', studentId: i.studentId, student: i.student, charge: v.charge,
+      category: i.category || null,
       title: v.title, number: v.number,
       amount: Number(i.amount) || 0, due: i.dueDate, paidAt: i.paidAt, state: billState(i.status, i.dueDate) as Bill['state'],
       floor: i.floorNumber || i.student?.room?.floorNumber,
@@ -101,14 +114,19 @@ export const useAllBills = () => {
   };
 };
 
-// Unpaid money per student: { total, overdue, count }
+// Money status per student: { total, overdue, count, deposit, advance }
 export const duesByStudent = (bills: Bill[]) => {
-  const out: Record<string, { total: number; overdue: number; count: number }> = {};
-  bills.filter((b) => b.state !== 'paid').forEach((b) => {
-    const s = (out[b.studentId] ||= { total: 0, overdue: 0, count: 0 });
-    s.total += b.amount;
-    s.count += 1;
-    if (b.state === 'overdue') s.overdue += b.amount;
+  const out: Record<string, { total: number; overdue: number; count: number; deposit: number; advance: number }> = {};
+  bills.forEach((b) => {
+    const s = (out[b.studentId] ||= { total: 0, overdue: 0, count: 0, deposit: 0, advance: 0 });
+    if (b.state !== 'paid') {
+      s.total += b.amount;
+      s.count += 1;
+      if (b.state === 'overdue') s.overdue += b.amount;
+    } else {
+      if (b.category === 'DEPOSIT') s.deposit += b.amount;
+      if (b.category === 'ADVANCE') s.advance += b.amount;
+    }
   });
   return out;
 };

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import type { BottomTabBarProps } from 'expo-router/build/react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import type { LucideIcon } from 'lucide-react-native';
@@ -8,18 +7,24 @@ import { colors, shadow } from './theme';
 import { T, tap } from './primitives';
 import { useKeyboardTop } from './keyboard';
 
+type BottomTabBarProps = {
+  state: any;
+  descriptors: Record<string, any>;
+  navigation: any;
+};
+
 // Floating bottom navigation. A yellow pill slides to the active tab.
 // It sits over the content; Screen adds bottom padding so nothing hides behind it.
 const noBadges = (): Record<string, number> => ({});
 const PAD = 6;
 
 export const makeTabBar = (icons: Record<string, LucideIcon>, useBadges: () => Record<string, number> = noBadges) =>
-  function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  function TabBar({ state, descriptors, navigation }: any) {
     const insets = useSafeAreaInsets();
     const badges = useBadges();
     const typing = useKeyboardTop() != null;
-    const routes = state.routes.filter((r) => (descriptors[r.key].options as any).href !== null);
-    const active = Math.max(0, routes.findIndex((r) => r.key === state.routes[state.index]?.key));
+    const routes = state.routes.filter((r: any) => (descriptors[r.key].options as any).href !== null);
+    const active = Math.max(0, routes.findIndex((r: any) => r.key === state.routes[state.index]?.key));
     const [w, setW] = useState(0);
     const itemW = w ? (w - PAD * 2) / routes.length : 0;
 
@@ -38,7 +43,7 @@ export const makeTabBar = (icons: Record<string, LucideIcon>, useBadges: () => R
               <View style={styles.pill} />
             </Animated.View>
           )}
-          {routes.map((route, index) => {
+          {routes.map((route: any, index: number) => {
             const { options } = descriptors[route.key];
             const focused = index === active;
             const label = (options.title ?? route.name) as string;

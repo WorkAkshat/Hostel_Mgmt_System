@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { Building2, CircleCheck, Download, HandCoins, Info, Receipt, ScrollText, Share2, Wallet, Zap } from 'lucide-react-native';
+import { Building2, CircleCheck, Download, HandCoins, Info, Receipt, ScrollText, Share2, ShieldCheck, Wallet, Zap } from 'lucide-react-native';
 import { dashboardApi, demandNotesApi, feesApi, paymentsApi } from '../../api';
 import { asList } from '../../api/client';
 import { useAuth } from '../../lib/auth';
@@ -44,7 +44,7 @@ export default function StudentBills() {
     ...asList(inv.data).map((i: any) => {
       const v = invoiceView(i);
       return {
-        id: i.id, kind: 'invoice', raw: i, number: v.number, title: v.title, charge: v.charge, amount: i.amount, due: i.dueDate, paidAt: i.paidAt, state: billState(i.status, i.dueDate),
+        id: i.id, kind: 'invoice', raw: i, number: v.number, title: v.title, charge: v.charge, category: i.category || null, amount: i.amount, due: i.dueDate, paidAt: i.paidAt, state: billState(i.status, i.dueDate),
         lines: v.lines,
         floor: i.floorNumber || i.student?.room?.floorNumber,
       };
@@ -52,7 +52,7 @@ export default function StudentBills() {
     ...asList(notes.data).map((n: any) => {
       const due = noteDueDate(n);
       return {
-        id: n.id, kind: 'note', charge: false, raw: n, title: `Demand note · ${monthLabel(monthKey(new Date(n.cycleStart))).replace(/^(\w{3})\w*/, '$1')}`, period: `${fmtDate(n.cycleStart)} – ${fmtDate(n.cycleEnd)}`, amount: n.totalAmount, due, paidAt: n.paidAt, state: billState(n.status, due),
+        id: n.id, kind: 'note', charge: false, category: undefined as string | undefined, raw: n, title: `Demand note · ${monthLabel(monthKey(new Date(n.cycleStart))).replace(/^(\w{3})\w*/, '$1')}`, period: `${fmtDate(n.cycleStart)} – ${fmtDate(n.cycleEnd)}`, amount: n.totalAmount, due, paidAt: n.paidAt, state: billState(n.status, due),
         lines: [
           { label: 'Hostel accommodation', amount: n.hostelFee },
           { label: 'Electricity', detail: n.electricityUnits ? `${n.electricityUnits} units × ₹${n.electricityRate} (your share)` : undefined, amount: n.electricityAmount },
@@ -69,6 +69,10 @@ export default function StudentBills() {
   const shown = filter === 'open' ? open : bills.filter((b) => b.state === 'paid');
   const fee = room?.sharingType ? priceFor(room.sharingType) : null;
   const loading = inv.isLoading || notes.isLoading;
+
+  const securityDepositPaid = bills.filter((b) => b.category === 'DEPOSIT' && b.state === 'paid').reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const advancePaid = bills.filter((b) => b.category === 'ADVANCE' && b.state === 'paid').reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const depositDue = bills.filter((b) => b.category === 'DEPOSIT' && b.state !== 'paid').reduce((s, b) => s + (Number(b.amount) || 0), 0);
 
   const share = async (b: any, mode: 'share' | 'download' = 'share') => {
     setSharing(true);
@@ -113,9 +117,36 @@ export default function StudentBills() {
               {open.length ? <Wallet size={24} color={colors.white} /> : <CircleCheck size={24} color={colors.white} />}
             </View>
           </Row>
-          {fee && <HeroCells items={[{ k: 'Rent', v: rupeesShort(fee.roomRent) }, { k: 'Mess', v: rupeesShort(fee.messFee) }, { k: 'Monthly', v: rupeesShort(fee.total) }]} />}
+          <HeroCells items={[
+            ...(fee ? [{ k: 'Monthly fee', v: rupeesShort(fee.total) }] : []),
+            { k: 'Security deposit', v: securityDepositPaid > 0 ? rupees(securityDepositPaid) : depositDue > 0 ? `${rupees(depositDue)} due` : '₹0' },
+            { k: 'Advance payment', v: advancePaid > 0 ? rupees(advancePaid) : '₹0' },
+          ]} />
         </Hero>
       </Appear>
+
+      {(securityDepositPaid > 0 || advancePaid > 0 || depositDue > 0) && (
+        <Appear>
+          <Card style={{ backgroundColor: colors.cream100, borderColor: colors.sun200, gap: 10 }}>
+            <Row gap={8} style={{ alignItems: 'center' }}>
+              <ShieldCheck size={18} color={colors.brand700} />
+              <T v="title" w="bold" style={{ flex: 1 }}>Security & Advance on record</T>
+            </Row>
+            <Row gap={10}>
+              <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border, gap: 2 }}>
+                <T v="caption" c={colors.text3}>Security deposit</T>
+                <T v="title" w="bold" c={securityDepositPaid > 0 ? colors.success : depositDue > 0 ? colors.danger : colors.text}>{rupees(securityDepositPaid || depositDue)}</T>
+                <T v="caption" c={securityDepositPaid > 0 ? colors.success : colors.text3}>{securityDepositPaid > 0 ? 'Paid (Refundable)' : depositDue > 0 ? 'Pending payment' : 'Not required'}</T>
+              </View>
+              <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border, gap: 2 }}>
+                <T v="caption" c={colors.text3}>Advance payment</T>
+                <T v="title" w="bold" c={advancePaid > 0 ? colors.brand700 : colors.text}>{rupees(advancePaid)}</T>
+                <T v="caption" c={advancePaid > 0 ? colors.brand700 : colors.text3}>{advancePaid > 0 ? 'Advance recorded' : 'No advance'}</T>
+              </View>
+            </Row>
+          </Card>
+        </Appear>
+      )}
 
       <Chips value={filter} onChange={setFilter} options={[{ value: 'open', label: 'To pay', count: open.length }, { value: 'paid', label: 'Paid', count: bills.length - open.length }]} />
 
@@ -128,7 +159,15 @@ export default function StudentBills() {
             tone={b.state === 'paid' ? 'success' : b.state === 'overdue' ? 'peach' : 'sun'}
             title={b.title}
             sub={b.state === 'paid' ? `Paid ${fmtDate(b.paidAt, { year: 'numeric' })}` : `Due ${fmtDate(b.due, { year: 'numeric' })}`}
-            right={<View style={{ alignItems: 'flex-end', gap: 4 }}><T v="title" w="bold">{rupees(b.amount)}</T>{b.state !== 'paid' && claimFor(b.id)?.status === 'PENDING' ? <Badge label="Checking" tone="lilac" /> : <Badge label={BILL_STATUS[b.state].label} tone={BILL_STATUS[b.state].tone} />}</View>}
+            right={
+              <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                <T v="title" w="bold">{rupees(b.amount)}</T>
+                <Row gap={4}>
+                  {b.category === 'DEPOSIT' ? <Badge label="Deposit" tone="lilac" /> : b.category === 'ADVANCE' ? <Badge label="Advance" tone="mint" /> : null}
+                  {b.state !== 'paid' && claimFor(b.id)?.status === 'PENDING' ? <Badge label="Checking" tone="lilac" /> : <Badge label={BILL_STATUS[b.state].label} tone={BILL_STATUS[b.state].tone} />}
+                </Row>
+              </View>
+            }
             onPress={() => setViewing(b)}
             chevron={false}
           />

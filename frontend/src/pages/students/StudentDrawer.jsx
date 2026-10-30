@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   BedDouble, CalendarDays, Check, IdCard, Mail, Pencil, Phone, PhoneCall,
-  Printer, ReceiptText, Trash2, Wrench, X, GraduationCap, MapPin,
+  Printer, ReceiptText, ShieldCheck, Trash2, Wrench, X, GraduationCap, MapPin,
 } from 'lucide-react';
 import Drawer from '../../components/ui/Drawer';
 import Avatar from '../../components/ui/Avatar';
@@ -28,9 +28,12 @@ const Row = ({ label, children }) => (
   </div>
 );
 
-const Section = ({ title, children }) => (
+const Section = ({ title, action, children }) => (
   <section className="mt-6">
-    <h4 className="text-[11px] font-bold text-brand-700 tracking-widest uppercase m-0 mb-1">{title}</h4>
+    <div className="flex items-center justify-between mb-1">
+      <h4 className="text-[11px] font-bold text-brand-700 tracking-widest uppercase m-0">{title}</h4>
+      {action}
+    </div>
     <dl className="m-0">{children}</dl>
   </section>
 );
@@ -44,7 +47,7 @@ const PhoneLink = ({ number }) =>
 
 const DOC_BADGE = { PENDING: 'badge-warning', VERIFIED: 'badge-success', REJECTED: 'badge-danger' };
 
-const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview }) => {
+const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview, onAssignRoom }) => {
   const toast = useToast();
   const [details, setDetails] = useState(null);
   const [detailsFailed, setDetailsFailed] = useState(false);
@@ -87,6 +90,12 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview 
   const room = s?.room;
   const unpaid = (details?.invoices || []).filter((i) => i.status === 'UNPAID');
   const dues = unpaid.reduce((sum, i) => sum + (i.amount || 0), 0);
+  const depositPaid = (details?.invoices || [])
+    .filter((i) => (i.category === 'DEPOSIT' || i.title?.toLowerCase().includes('deposit')) && i.status === 'PAID')
+    .reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+  const advancePaid = (details?.invoices || [])
+    .filter((i) => (i.category === 'ADVANCE' || i.title?.toLowerCase().includes('advance')) && i.status === 'PAID')
+    .reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
   const pendingLeaves = (details?.leaveRequests || []).filter((l) => l.status === 'PENDING').length;
   const openComplaints = (details?.complaints || []).filter((c) => c.status !== 'RESOLVED').length;
   const age = ageFrom(s?.dob);
@@ -263,13 +272,64 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview 
             ))}
           </div>
 
-          <Section title="Stay">
+          {/* ─── Security Deposit & Advance Status ─── */}
+          {details && (depositPaid > 0 || advancePaid > 0) && (
+            <div className="grid grid-cols-2 gap-2 mt-3">
+              <div className="rounded-xl p-3 bg-brand-50 border border-brand-100 flex flex-col justify-between">
+                <div className="text-[11px] font-semibold text-brand-700 flex items-center gap-1">
+                  <ShieldCheck size={13} /> Security Deposit
+                </div>
+                <div className="text-[17px] font-bold text-brand-900 mt-1">
+                  ₹{depositPaid.toLocaleString('en-IN')}
+                </div>
+                <div className="text-[10px] text-brand-600 mt-0.5">Refundable on exit</div>
+              </div>
+              <div className="rounded-xl p-3 bg-lilac-50 border border-lilac-100 flex flex-col justify-between">
+                <div className="text-[11px] font-semibold text-lilac-700 flex items-center gap-1">
+                  <ReceiptText size={13} /> Advance Payment
+                </div>
+                <div className="text-[17px] font-bold text-lilac-900 mt-1">
+                  ₹{advancePaid.toLocaleString('en-IN')}
+                </div>
+                <div className="text-[10px] text-lilac-600 mt-0.5">Balance on record</div>
+              </div>
+            </div>
+          )}
+
+          <Section
+            title="Stay"
+            action={
+              onAssignRoom && (
+                <button
+                  type="button"
+                  onClick={() => onAssignRoom(s)}
+                  className="text-[12px] font-semibold text-brand-700 hover:text-brand-800 bg-transparent border-none cursor-pointer flex items-center gap-1.5"
+                >
+                  <BedDouble size={14} /> {room ? 'Change room' : 'Assign room'}
+                </button>
+              )
+            }
+          >
             <Row label="Room">{room && `Room ${room.roomNumber}${room.block ? ` · ${room.block}` : ''}`}</Row>
             <Row label="Floor">{room?.floorNumber && `Floor ${room.floorNumber}`}</Row>
             <Row label="Sharing">{room && `${priceFor(room.sharingType).label} · ${room.isAc ? 'AC' : 'Non-AC'}`}</Row>
             <Row label="Monthly fee">{room && `₹${priceFor(room.sharingType).total.toLocaleString('en-IN')}`}</Row>
+            <Row label="Security deposit">{depositPaid > 0 ? `₹${depositPaid.toLocaleString('en-IN')} (Paid)` : '₹0'}</Row>
+            <Row label="Advance payment">{advancePaid > 0 ? `₹${advancePaid.toLocaleString('en-IN')} (Paid)` : '₹0'}</Row>
             <Row label="Bed">{s.bedId}</Row>
             <Row label="Joined">{fmtDate(s.dateOfJoining)}</Row>
+            {!room && onAssignRoom && (
+              <div className="mt-3 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-2">
+                <span className="text-[12px] font-medium text-amber-900">No room assigned yet</span>
+                <button
+                  type="button"
+                  onClick={() => onAssignRoom(s)}
+                  className="btn-primary h-8 px-3 text-[12px] flex items-center gap-1.5"
+                >
+                  <BedDouble size={14} /> Assign room
+                </button>
+              </div>
+            )}
           </Section>
 
           <Section title="Contact">

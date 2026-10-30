@@ -7,7 +7,7 @@ import { asList } from '../../api/client';
 import { useData } from '../../lib/query';
 import { fmtDate, isoDay, monthKey, rupees } from '../../lib/format';
 import { colors, type Tone } from '../../ui/theme';
-import { Badge, Button, Card, Divider, Row, Segmented, T } from '../../ui/primitives';
+import { Badge, Button, Card, Divider, Progress, Row, Segmented, T } from '../../ui/primitives';
 import { Choices, DateTimeField, Field, Input, SearchInput, money } from '../../ui/form';
 import { Confirm, Empty, ErrorBox, Loading, useToast } from '../../ui/feedback';
 import { Appear, ListRow, Screen } from '../../ui/layout';
@@ -25,6 +25,8 @@ const CONDITION: Record<string, { label: string; tone: Tone }> = {
 };
 const UNITS = ['pcs', 'kg', 'g', 'L', 'packet', 'box', 'bag', 'cylinder'];
 const qty = (n: number) => (Math.round(n * 100) / 100).toLocaleString('en-IN');
+// Colour of the stock bar: red at 20% or less, amber up to 40%, green above
+const levelColor = (p: number | null | undefined, low?: boolean) => (low || (p != null && p <= 20) ? colors.danger : p != null && p <= 40 ? colors.sun400 : colors.brand500);
 
 // Stock register: fixed assets, other inventory and consumables. For consumables you
 // log what came in and what was used, so the kitchen's monthly use is visible.
@@ -50,6 +52,26 @@ export default function Inventory() {
       right={<Button title="Add" icon={Plus} small onPress={() => setAdding(true)} />}>
       <TileTabs stacked value={cat} onChange={setCat} items={(Object.keys(CAT) as StockCategory[]).map((k) => ({ value: k, label: CAT[k].label, icon: CAT[k].icon, tone: CAT[k].tone, count: counts[k] }))} />
 
+      {cat === 'CONSUMABLE' && low.length > 0 && (
+        <Card tone="danger" style={{ gap: 10 }}>
+          <Row gap={8}>
+            <TriangleAlert size={18} color={colors.danger} />
+            <T v="title" c={colors.danger} style={{ flex: 1 }}>Running low — reorder soon</T>
+            <Badge label={String(low.length)} tone="danger" />
+          </Row>
+          {low.map((l) => (
+            <View key={l.id} style={{ gap: 4 }}>
+              <Row>
+                <T v="small" w="semibold" style={{ flex: 1 }} numberOfLines={1}>{l.name}</T>
+                <T v="small" w="bold" c={colors.danger}>{l.out ? 'Finished' : `${qty(l.quantity)} ${l.unit}${l.percent != null ? ` · ${l.percent}% left` : ''}`}</T>
+              </Row>
+              {l.percent != null && <Progress value={l.percent} max={100} color={colors.danger} track={colors.white} height={6} />}
+            </View>
+          ))}
+          <T v="caption" c={colors.danger}>You get an alert (and an email) when an item drops to 20% of its full stock.</T>
+        </Card>
+      )}
+
       {cat === 'CONSUMABLE' && (
         <>
           <MonthStepper value={month} onChange={setMonth} />
@@ -74,12 +96,6 @@ export default function Inventory() {
             ))}
             {flow.length === 0 && <T v="caption" c={colors.text3}>Nothing came in or was used in this month yet.</T>}
           </Card>
-          {low.length > 0 && (
-            <Card tone="danger" style={{ gap: 6 }}>
-              <Row gap={8}><TriangleAlert size={18} color={colors.danger} /><T v="title" c={colors.danger}>Running low</T></Row>
-              {low.map((l) => <T key={l.id} v="small" c={colors.danger}>{l.name}: {qty(l.quantity)} {l.unit} left (alert at {qty(l.minQuantity)})</T>)}
-            </Card>
-          )}
         </>
       )}
 
@@ -87,13 +103,19 @@ export default function Inventory() {
       {items.error ? <ErrorBox message={(items.error as Error).message} onRetry={items.refetch} /> : items.isLoading ? <Loading rows={4} h={70} /> : shown.length === 0 ? (
         <Empty icon={CAT[cat].icon} tone={CAT[cat].tone} title={`No ${CAT[cat].label.toLowerCase()} yet`} text={CAT[cat].hint} action={<Button title={`Add ${CAT[cat].one.toLowerCase()}`} icon={Plus} onPress={() => setAdding(true)} />} />
       ) : shown.map((i: any, idx: number) => {
-        const isLow = i.category === 'CONSUMABLE' && i.minQuantity != null && i.quantity <= i.minQuantity;
+        const isLow = !!i.low;
+        const consumable = i.category === 'CONSUMABLE';
         return (
           <Appear key={i.id} i={idx}>
             <ListRow icon={CAT[i.category as StockCategory].icon} tone={isLow ? 'danger' : CAT[i.category as StockCategory].tone} title={i.name}
               sub={[i.location, i.floorNumber ? `Floor ${i.floorNumber}` : null].filter(Boolean).join(' · ') || CAT[i.category as StockCategory].one}
-              meta={i.category === 'CONSUMABLE' ? (isLow ? 'Running low' : i.unitCost ? `${rupees(i.unitCost)} / ${i.unit}` : undefined) : CONDITION[i.condition]?.label}
-              right={<View style={{ alignItems: 'flex-end' }}><T v="title" w="bold" c={isLow ? colors.danger : colors.text}>{qty(i.quantity)}</T><T v="caption" c={colors.text3}>{i.unit}</T></View>}
+              meta={consumable ? (i.out ? 'Finished — reorder' : isLow ? `Running low · ${i.percent != null ? `${i.percent}% left` : 'reorder'}` : i.percent != null ? `${i.percent}% left` : i.unitCost ? `${rupees(i.unitCost)} / ${i.unit}` : undefined) : CONDITION[i.condition]?.label}
+              right={
+                <View style={{ alignItems: 'flex-end', gap: 4, minWidth: 64 }}>
+                  <T v="title" w="bold" c={isLow ? colors.danger : colors.text}>{qty(i.quantity)} <T v="caption" c={colors.text3}>{i.unit}</T></T>
+                  {consumable && i.percent != null && <View style={{ width: 64 }}><Progress value={i.percent} max={100} color={levelColor(i.percent, isLow)} height={5} /></View>}
+                </View>
+              }
               onPress={() => setOpenId(i.id)} chevron={false} />
           </Appear>
         );
@@ -119,9 +141,9 @@ const ItemForm = ({ open, onClose, defaultCategory, item }: { open: boolean; onC
     setError(null);
     setF(item ? {
       name: item.name, category: item.category, location: item.location || '', floorNumber: item.floorNumber ? String(item.floorNumber) : '', unit: item.unit,
-      minQuantity: item.minQuantity != null ? String(item.minQuantity) : '', unitCost: item.unitCost != null ? String(item.unitCost) : '', condition: item.condition,
+      minQuantity: item.minQuantity != null ? String(item.minQuantity) : '', fullQuantity: item.fullQuantity != null ? String(item.fullQuantity) : '', unitCost: item.unitCost != null ? String(item.unitCost) : '', condition: item.condition,
       purchaseDate: item.purchaseDate ? new Date(item.purchaseDate) : null, notes: item.notes || '',
-    } : { name: '', category: defaultCategory, location: defaultCategory === 'CONSUMABLE' ? 'Kitchen' : '', floorNumber: '', unit: defaultCategory === 'CONSUMABLE' ? 'kg' : 'pcs', openingQuantity: '', minQuantity: '', unitCost: '', condition: 'GOOD', purchaseDate: null, notes: '' });
+    } : { name: '', category: defaultCategory, location: defaultCategory === 'CONSUMABLE' ? 'Kitchen' : '', floorNumber: '', unit: defaultCategory === 'CONSUMABLE' ? 'kg' : 'pcs', openingQuantity: '', minQuantity: '', fullQuantity: '', unitCost: '', condition: 'GOOD', purchaseDate: null, notes: '' });
   }, [open, item, defaultCategory]);
   const set = (k: string) => (v: any) => { setF((x: any) => ({ ...x, [k]: v })); setError(null); };
   const consumable = f.category === 'CONSUMABLE';
@@ -131,7 +153,7 @@ const ItemForm = ({ open, onClose, defaultCategory, item }: { open: boolean; onC
     setBusy(true); setError(null);
     const body: Record<string, unknown> = {
       name: f.name, category: f.category, location: f.location, floorNumber: f.floorNumber || null, unit: f.unit,
-      minQuantity: consumable ? f.minQuantity || null : null, unitCost: f.unitCost || null, condition: f.condition,
+      minQuantity: consumable ? f.minQuantity || null : null, ...(consumable && (item || f.fullQuantity) ? { fullQuantity: f.fullQuantity || null } : {}), unitCost: f.unitCost || null, condition: f.condition,
       purchaseDate: f.purchaseDate ? isoDay(f.purchaseDate) : null, notes: f.notes,
     };
     try {
@@ -157,7 +179,12 @@ const ItemForm = ({ open, onClose, defaultCategory, item }: { open: boolean; onC
         <View style={{ flex: 1 }}><Field label={`Price / ${f.unit || 'unit'}`}><Input prefix="₹" value={f.unitCost} onChangeText={(v) => set('unitCost')(money(v))} keyboardType="decimal-pad" placeholder="0" /></Field></View>
       </Row>
       {consumable ? (
-        <Field label="Warn me when stock falls to" hint="Shows under “Running low”"><Input value={f.minQuantity} onChangeText={(v) => set('minQuantity')(money(v))} keyboardType="decimal-pad" placeholder={`e.g. 5 ${f.unit || ''}`} /></Field>
+        <>
+          <Field label="Full stock level" hint={`Alert when 20% is left${Number(f.fullQuantity || f.openingQuantity) ? ` (at ${qty(Number(f.fullQuantity || f.openingQuantity) * 0.2)} ${f.unit || ''})` : ''}. Rises by itself when you stock in more.`}>
+            <Input value={f.fullQuantity} onChangeText={(v) => set('fullQuantity')(money(v))} keyboardType="decimal-pad" placeholder={item ? '' : f.openingQuantity ? `${f.openingQuantity} (quantity now)` : `e.g. 50 ${f.unit || ''}`} />
+          </Field>
+          <Field label="Also warn me at (optional)" hint="A fixed level, if you want an earlier alert"><Input value={f.minQuantity} onChangeText={(v) => set('minQuantity')(money(v))} keyboardType="decimal-pad" placeholder={`e.g. 5 ${f.unit || ''}`} /></Field>
+        </>
       ) : (
         <Field label="Condition"><Choices pills value={f.condition || 'GOOD'} onChange={set('condition')} options={Object.entries(CONDITION).map(([value, c]) => ({ value, label: c.label }))} /></Field>
       )}
@@ -211,6 +238,15 @@ const ItemSheet = ({ item, onClose }: { item: any | null; onClose: () => void })
                 </View>
               ))}
             </View>
+            {item.category === 'CONSUMABLE' && item.percent != null && (
+              <View style={{ gap: 6 }}>
+                <Row>
+                  <T v="small" w="semibold" c={item.low ? colors.danger : colors.text2} style={{ flex: 1 }}>{item.out ? 'Finished — reorder now' : item.low ? 'Running low — reorder soon' : 'Stock level'}</T>
+                  <T v="small" w="bold" c={levelColor(item.percent, item.low)}>{item.percent}% of {qty(item.fullQuantity)} {item.unit}</T>
+                </Row>
+                <Progress value={item.percent} max={100} color={levelColor(item.percent, item.low)} height={8} />
+              </View>
+            )}
             {item.category !== 'CONSUMABLE' && <Row gap={6}><T v="small" c={colors.text3}>Condition</T><Badge label={CONDITION[item.condition]?.label || item.condition} tone={CONDITION[item.condition]?.tone || 'white'} /></Row>}
             <Segmented value={type} onChange={(v) => { setType(v); setError(null); }} options={[{ value: 'IN', label: c.inLabel }, { value: 'OUT', label: c.outLabel }, { value: 'ADJUST', label: 'Count' }]} />
             <Row gap={10} align="flex-start">

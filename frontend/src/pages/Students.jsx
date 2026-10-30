@@ -15,6 +15,7 @@ import FilterChips from '../components/ui/FilterChips';
 import { useToast } from '../components/ui/Toast';
 import StudentFormModal from './students/StudentFormModal';
 import StudentDrawer from './students/StudentDrawer';
+import AssignRoomModal from './students/AssignRoomModal';
 import { STUDENT_STATUS } from '../config/hostel';
 import useLiveRefresh from '../hooks/useLiveRefresh';
 
@@ -98,6 +99,7 @@ const Students = () => {
   const [isSmall, setIsSmall] = useState(() => window.innerWidth < 640);
 
   const [formOpen, setFormOpen] = useState(false);
+  const [assignModal, setAssignModal] = useState({ open: false, student: null, room: null });
   const [editing, setEditing] = useState(null);
   const [viewing, setViewing] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -278,6 +280,16 @@ const Students = () => {
             <Download size={15} /> <span className="hidden sm:inline">Export CSV</span><span className="sm:hidden">Export</span>
           </button>
           <button
+            className="h-10 px-4 rounded-[var(--border-radius-btn)] text-[13px] font-bold flex items-center gap-2 cursor-pointer border-none transition-all"
+            style={{ background: 'rgba(255,255,255,0.25)', color: '#fff', border: '1px solid rgba(255,255,255,0.35)' }}
+            onClick={() => setAssignModal({ open: true, student: null, room: null })}
+            title="Assign a room to a resident"
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+          >
+            <BedDouble size={16} /> <span className="hidden sm:inline">Assign room</span><span className="sm:hidden">Assign</span>
+          </button>
+          <button
             className="h-10 px-5 rounded-[var(--border-radius-btn)] text-[13px] font-bold flex items-center gap-2 cursor-pointer border-none transition-all"
             style={{ background: '#fff', color: '#246460' }}
             onClick={openAdd}
@@ -398,12 +410,43 @@ const Students = () => {
                     </div>
                   </td>
                   <td><code className="text-[12px] text-[var(--text-secondary)]">{s.rollNumber}</code></td>
-                  <td><RoomLabel room={s.room} /></td>
+                  <td>
+                    {s.room ? (
+                      <div className="flex items-center gap-2">
+                        <RoomLabel room={s.room} />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setAssignModal({ open: true, student: s, room: null }); }}
+                          className="opacity-0 group-hover:opacity-100 text-[11px] font-semibold text-brand-700 hover:underline bg-transparent border-none cursor-pointer transition-opacity"
+                          title="Change room"
+                        >
+                          Change
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setAssignModal({ open: true, student: s, room: null }); }}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[12px] font-semibold text-brand-700 bg-mint-100 hover:bg-mint-200 border border-mint-300 transition-colors cursor-pointer"
+                        title="Assign room"
+                      >
+                        <BedDouble size={13} /> Assign room
+                      </button>
+                    )}
+                  </td>
                   <td className="whitespace-nowrap">{s.phoneNumber}</td>
                   <td className="whitespace-nowrap">{s.parentContact}</td>
                   <td><StatusBadge status={s.status} /></td>
                   <td className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setAssignModal({ open: true, student: s, room: null }); }}
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-tertiary)] hover:bg-mint-100 hover:text-brand-700 bg-transparent border-none cursor-pointer"
+                        aria-label={`Assign room to ${s.user?.name}`}
+                        title={s.room ? "Change room" : "Assign room"}
+                      >
+                        <BedDouble size={15} />
+                      </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); openEdit(s); }}
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-[var(--text-tertiary)] hover:bg-mint-100 hover:text-brand-700 bg-transparent border-none cursor-pointer"
@@ -453,9 +496,30 @@ const Students = () => {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 mt-4">
-                    <div className="rounded-xl bg-mint-50 px-3 py-2">
-                      <div className="text-[11px] text-[var(--text-tertiary)]">Room</div>
-                      <RoomLabel room={s.room} />
+                    <div className="rounded-xl bg-mint-50 px-3 py-2 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-[var(--text-tertiary)]">Room</span>
+                        {s.room && (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setAssignModal({ open: true, student: s, room: null }); }}
+                            className="text-[11px] font-semibold text-brand-700 hover:underline bg-transparent border-none cursor-pointer p-0"
+                          >
+                            Change
+                          </button>
+                        )}
+                      </div>
+                      {s.room ? (
+                        <RoomLabel room={s.room} />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); setAssignModal({ open: true, student: s, room: null }); }}
+                          className="btn-primary w-full h-7 text-[11px] font-semibold flex items-center justify-center gap-1 mt-1"
+                        >
+                          <BedDouble size={12} /> Assign room
+                        </button>
+                      )}
                     </div>
                     <div className="rounded-xl bg-mint-50 px-3 py-2">
                       <div className="text-[11px] text-[var(--text-tertiary)]">Parent</div>
@@ -492,6 +556,17 @@ const Students = () => {
         onDelete={setDeleting}
         onPrint={setPrinting}
         onPreview={setPreview}
+        onAssignRoom={(s) => setAssignModal({ open: true, student: s, room: null })}
+      />
+
+      <AssignRoomModal
+        isOpen={assignModal.open}
+        student={assignModal.student}
+        room={assignModal.room}
+        students={students}
+        rooms={rooms}
+        onClose={() => setAssignModal({ open: false, student: null, room: null })}
+        onSuccess={load}
       />
 
       <ConfirmDialog

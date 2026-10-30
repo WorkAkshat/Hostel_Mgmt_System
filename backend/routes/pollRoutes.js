@@ -5,6 +5,7 @@ const {
   voteInPoll,
   removeVote,
   togglePollStatus,
+  updatePoll,
   deletePoll
 } = require('../controllers/pollController');
 const { protect, authorize } = require('../middleware/auth');
@@ -23,6 +24,7 @@ router.route('/:id/toggle')
   .put(protect, authorize('ADMIN'), togglePollStatus);
 
 router.route('/:id')
+  .put(protect, authorize('ADMIN'), updatePoll)
   .delete(protect, authorize('ADMIN'), deletePoll);
 
 module.exports = router;

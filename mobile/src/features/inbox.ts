@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  CalendarCheck, CalendarX, CircleCheck, FileText, IdCard, Lightbulb, Megaphone, Receipt, UserCheck, UserPen, Vote, Wallet, Wrench, type LucideIcon,
+  CalendarCheck, CalendarX, CircleCheck, ShoppingBasket, FileText, IdCard, Lightbulb, Megaphone, Receipt, UserCheck, UserPen, Vote, Wallet, Wrench, type LucideIcon,
 } from 'lucide-react-native';
-import { authApi, complaintsApi, demandNotesApi, feesApi, leavesApi, noticesApi, paymentsApi, pollsApi, studentsApi, suggestionsApi, visitorsApi } from '../api';
+import { authApi, complaintsApi, demandNotesApi, feesApi, inventoryApi, leavesApi, noticesApi, paymentsApi, pollsApi, studentsApi, suggestionsApi, visitorsApi } from '../api';
 import { asList } from '../api/client';
 import { useData } from '../lib/query';
 import { storage, KEYS } from '../lib/storage';
@@ -82,7 +82,14 @@ const wardenItems = async (): Promise<InboxItem[]> => {
     studentsApi.profileRequests().catch(() => []), studentsApi.documents('PENDING').catch(() => []), suggestionsApi.all('PENDING').catch(() => []),
     paymentsApi.claims('PENDING').catch(() => []),
   ]);
+  const stock: any = await inventoryApi.summary().catch(() => null);
   const out: InboxItem[] = [];
+  // One bell item per grocery that is running low; its id changes as the level drops, so it shows as new again
+  ((stock?.lowStock || []) as any[]).forEach((l) => out.push({
+    id: `stock-${l.id}-${l.out ? 'out' : l.percent ?? 'low'}`, title: l.out ? `${l.name} has finished` : `${l.name} is running low`,
+    message: l.out ? 'Reorder now.' : `${l.quantity} ${l.unit} left${l.percent != null ? ` (${l.percent}% of full stock)` : ''} — reorder soon.`,
+    href: '/manage/inventory', icon: ShoppingBasket, tone: 'danger', time: 'Now',
+  }));
   const add = (key: string, n: number, title: string, message: string, href: string, icon: LucideIcon, tone: Tone) => {
     if (n > 0) out.push({ id: `${key}-${n}`, title, message, href, icon, tone, time: 'Now' });
   };

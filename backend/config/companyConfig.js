@@ -85,7 +85,7 @@ const FEE_STRUCTURE = {
     3: 9000,  // Triple sharing (Room fee: ₹9,000 + Catering ₹3,000 = Total ₹12,000)
   },
   mess: 3000, // Meenakshi Enterprises monthly catering
-  electricityRate: 12.0, // ₹ per unit
+  electricityRate: 11.0, // ₹ per unit
   lateFeePerDay: 100, // ₹ per day after due date
 };
 

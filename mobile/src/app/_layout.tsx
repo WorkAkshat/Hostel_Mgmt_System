@@ -79,7 +79,7 @@ export default function RootLayout() {
             <ToastProvider>
               {/* Always show the clock / battery with dark icons over the app's light header */}
               <StatusBar style="dark" hidden={false} />
-              {Platform.OS === 'android' && <RNStatusBar translucent backgroundColor="transparent" />}
+              {Platform.OS === 'android' && <RNStatusBar backgroundColor="transparent" barStyle="dark-content" {...({ translucent: true } as any)} />}
               <Navigator />
             </ToastProvider>
           </AuthProvider>

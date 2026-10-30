@@ -5,16 +5,21 @@ const { COMPANY_CONFIG, FEE_STRUCTURE, generateDemandNoteNumber, numberToWords }
 
 const PAYMENT_METHODS = ['CASH', 'UPI', 'BANK', 'CHEQUE'];
 
-// Current billing month as YYYY-MM
+// Current billing month as YYYY-MM based on 10-to-10 cycle:
+// If today is before the 10th, the active cycle is from the 10th of the previous month.
 const currentMonth = () => {
   const d = new Date();
+  if (d.getDate() < 10) {
+    const prev = new Date(d.getFullYear(), d.getMonth() - 1, 15);
+    return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+  }
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
 
-// A billing cycle runs from the 10th of the month to the 9th of the next month
+// A billing cycle runs from the 10th of the month to the 10th of the next month (10-to-10)
 const billingCycle = (billingMonth) => {
   const [y, m] = billingMonth.split('-').map(Number);
-  return { cycleStart: new Date(y, m - 1, 10), cycleEnd: new Date(y, m, 9) };
+  return { cycleStart: new Date(y, m - 1, 10), cycleEnd: new Date(y, m, 10) };
 };
 
 // @desc    Generate 10-to-10 Demand Notes for a billing month

@@ -1,8 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 import {
-  Boxes, CalendarCheck, CircleCheck, QrCode, CalendarX, ChartColumn, ClipboardList, Contact, DoorOpen, Gauge, HandCoins, IdCard, Megaphone, Moon, NotebookPen, Vote, UserCheck, UserPen, UtensilsCrossed, Wallet, Wrench,
+  Boxes, CalendarCheck, CircleCheck, QrCode, CalendarX, ChartColumn, ClipboardList, Contact, DoorOpen, Gauge, HandCoins, IdCard, Megaphone, Moon, NotebookPen, ShoppingBasket, Vote, UserCheck, UserPen, UtensilsCrossed, Wallet, Wrench,
 } from 'lucide-react-native';
-import { authApi, complaintsApi, floorsApi, leavesApi, noticesApi, paymentsApi, pollsApi, reportsApi, studentsApi, visitorsApi } from '../../api';
+import { authApi, complaintsApi, floorsApi, inventoryApi, leavesApi, noticesApi, paymentsApi, pollsApi, reportsApi, studentsApi, visitorsApi } from '../../api';
 import { asList } from '../../api/client';
 import { useAuth } from '../../lib/auth';
 import { useData, useRefreshAll } from '../../lib/query';
@@ -32,6 +32,8 @@ export default function WardenHome() {
   const pays = useData(['payment-claims', 'PENDING'], () => paymentsApi.claims('PENDING'));
   const notices = useData(['notices'], () => noticesApi.all());
   const polls = useData(['polls'], pollsApi.all);
+  const stock = useData(['inventory', 'summary', 'now'], () => inventoryApi.summary());
+  const lowStock = ((stock.data?.lowStock || []) as any[]);
   const livePoll = asList(polls.data).find((p: any) => p.isActive);
   const payDetails = useData(['payment-settings'], paymentsApi.settings, { interval: false });
   const floorsWithoutUpi = payDetails.data ? floors.filter((x: any) => !payDetails.data?.[String(x.floorNumber)]?.upiId).length : 0;
@@ -59,6 +61,7 @@ export default function WardenHome() {
   const overdueStudents = new Set(unpaidBills.filter((b) => b.state === 'overdue').map((b) => b.studentId)).size;
 
   const attention = [
+    { n: lowStock.length, icon: ShoppingBasket, tone: 'danger' as const, title: lowStock.some((l) => l.out) ? 'Groceries finished / low' : 'Groceries running low', sub: lowStock.slice(0, 3).map((l) => `${l.name}${l.percent != null ? ` ${l.percent}%` : ''}`).join(', ') + (lowStock.length > 3 ? '…' : ''), go: '/manage/inventory' },
     { n: asList(regs.data).length, icon: UserCheck, tone: 'danger' as const, title: 'New joiners', sub: 'Approve and give a room', go: '/warden/requests?tab=registrations' },
     { n: floorsWithoutUpi, icon: QrCode, tone: 'mint' as const, title: 'Add UPI for bills', sub: 'So residents can pay in the app', go: '/manage/payment-settings' },
     { n: asList(pays.data).length, icon: HandCoins, tone: 'sun' as const, title: 'Payments to confirm', sub: 'Residents paid by UPI / bank', go: '/warden/requests?tab=payments' },

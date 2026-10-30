@@ -41,8 +41,14 @@ export const noteDueDate = (note) => {
   return grace > start ? grace : start;
 };
 
-export const monthKey = (date) => {
+// 10-to-10 month cycle:
+// If day is before 10th, the active cycle belongs to the 10th of the previous month.
+export const monthKey = (date = new Date()) => {
   const d = new Date(date);
+  if (d.getDate() < 10) {
+    const prev = new Date(d.getFullYear(), d.getMonth() - 1, 15);
+    return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+  }
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 };
 
@@ -50,7 +56,26 @@ export const currentMonth = () => monthKey(new Date());
 
 export const shiftMonth = (key, delta) => {
   const [y, m] = key.split('-').map(Number);
-  return monthKey(new Date(y, m - 1 + delta, 1));
+  const next = new Date(y, m - 1 + delta, 15);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+};
+
+export const monthCycleDates = (key) => {
+  const [y, m] = key.split('-').map(Number);
+  const start = new Date(y, m - 1, 10);
+  const end = new Date(y, m, 10);
+  return { start, end };
+};
+
+export const monthCycleLabel = (key, opts = { year: true }) => {
+  if (!key) return '';
+  const { start, end } = monthCycleDates(key);
+  const sDay = start.getDate();
+  const sMon = start.toLocaleDateString('en-IN', { month: 'short' });
+  const eDay = end.getDate();
+  const eMon = end.toLocaleDateString('en-IN', { month: 'short' });
+  const eYear = end.getFullYear();
+  return opts.year ? `${sDay} ${sMon} – ${eDay} ${eMon} ${eYear}` : `${sDay} ${sMon} – ${eDay} ${eMon}`;
 };
 
 export const monthLabel = (key, opts = { month: 'long', year: 'numeric' }) => {

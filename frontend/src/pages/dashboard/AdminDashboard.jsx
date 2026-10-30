@@ -16,6 +16,7 @@ import {
   History,
   IndianRupee,
   Moon,
+  Pencil,
   ReceiptText,
   RefreshCw,
   Soup,
@@ -44,6 +45,7 @@ import { Card, CardHeader, EmptyState, StatTile } from './DashboardWidgets';
 import LeaveRequestsCard from './LeaveRequestsCard';
 import FeesMonthCard from './FeesMonthCard';
 import OutsideCard from './OutsideCard';
+import EditPollModal from './EditPollModal';
 import {
   STATUS_BADGE,
   TONES,
@@ -80,6 +82,7 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const toast = useToast();
   const [data, setData] = useState(null);
+  const [editingPoll, setEditingPoll] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
@@ -684,9 +687,19 @@ const AdminDashboard = () => {
                 <Vote size={16} className="text-brand-600" />
                 <h2 className="text-[15px] font-bold m-0">Latest poll</h2>
               </div>
-              <span className={`badge ${view.poll.isActive ? 'badge-success' : 'badge-info'}`}>
-                {view.poll.isActive ? 'Live' : 'Closed'}
-              </span>
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEditingPoll(view.poll)}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-[var(--text-tertiary)] hover:bg-mint-100 hover:text-brand-700 bg-transparent border-none cursor-pointer transition-colors"
+                  title="Edit poll"
+                >
+                  <Pencil size={13} />
+                </button>
+                <span className={`badge ${view.poll.isActive ? 'badge-success' : 'badge-info'}`}>
+                  {view.poll.isActive ? 'Live' : 'Closed'}
+                </span>
+              </div>
             </div>
             <p className="text-[14px] font-medium text-[var(--text-primary)] mt-0 mb-3">{view.poll.question}</p>
             <ul className="list-none m-0 p-0 flex flex-col gap-2.5">
@@ -704,6 +717,15 @@ const AdminDashboard = () => {
           </Card>
         )}
       </div>
+
+      {editingPoll && (
+        <EditPollModal
+          isOpen={Boolean(editingPoll)}
+          poll={editingPoll}
+          onClose={() => setEditingPoll(null)}
+          onSuccess={load}
+        />
+      )}
     </motion.div>
   );
 };

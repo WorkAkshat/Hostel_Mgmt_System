@@ -213,16 +213,18 @@ const payInvoice = async (req, res) => {
   }
 };
 
-// Helper & controller for automated month-end invoicing
+// Helper & controller for automated 10-to-10 month invoicing
 const generateMonthlyBillingRun = async () => {
   const today = new Date();
-  const monthName = today.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-  
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+  const cycleYear = today.getDate() < 10 ? (today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear()) : today.getFullYear();
+  const cycleMonth = today.getDate() < 10 ? (today.getMonth() === 0 ? 11 : today.getMonth() - 1) : today.getMonth();
 
-  // Due date: 5th of next month
-  const dueDate = new Date(today.getFullYear(), today.getMonth() + 1, 5);
+  const startOfMonth = new Date(cycleYear, cycleMonth, 10);
+  const endOfMonth = new Date(cycleYear, cycleMonth + 1, 10, 23, 59, 59);
+  const monthName = `${startOfMonth.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${endOfMonth.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}`;
+
+  // Due date: 10th of cycle start (payable in advance)
+  const dueDate = startOfMonth;
 
   // Fetch all approved students (whose user approval is done -> user.role === 'STUDENT')
   const approvedStudents = await prisma.student.findMany({

@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { logActivity } = require('../utils/activityLogger');
+const { sendMail } = require('../utils/mail');
 
 // Stock register:
 //  FIXED_ASSET  furniture in rooms, solar plant, lift, water cooler…
@@ -11,6 +12,38 @@ const CONDITIONS = ['GOOD', 'NEEDS_REPAIR', 'DAMAGED', 'DISPOSED'];
 const TYPES = ['IN', 'OUT', 'ADJUST'];
 
 const num = (v) => (v === '' || v === null || v === undefined ? null : Number(v));
+
+// "Running low" = 20% or less of the full stock left, or at/below the item's own low-stock level
+const LOW_PERCENT = 20;
+const stockLevel = (i) => {
+  const percent = i.fullQuantity > 0 ? Math.max(0, Math.round((i.quantity / i.fullQuantity) * 100)) : null;
+  const low = i.category === 'CONSUMABLE' && (
+    (percent !== null && percent <= LOW_PERCENT) || (i.minQuantity != null && i.quantity <= i.minQuantity)
+  );
+  return { percent, low, out: i.category === 'CONSUMABLE' && i.quantity <= 0 };
+};
+const withLevel = (i) => ({ ...i, ...stockLevel(i) });
+
+// Tell the wardens once when an item drops into "running low"; reset when it is restocked
+const checkLowStock = async (item) => {
+  const { low, percent } = stockLevel(item);
+  if (low && !item.lowAlertAt) {
+    await prisma.inventoryItem.update({ where: { id: item.id }, data: { lowAlertAt: new Date() } });
+    const left = `${item.quantity} ${item.unit}${percent !== null ? ` (${percent}% left)` : ''}`;
+    logActivity({ action: 'UPDATE', module: 'INVENTORY', description: `Running low: ${item.name} — ${left}`, targetId: item.id, targetType: 'InventoryItem' });
+    const admins = await prisma.user.findMany({ where: { role: 'ADMIN' }, select: { email: true } });
+    const to = admins.map((a) => a.email).filter(Boolean).join(',');
+    if (to) {
+      sendMail({
+        to,
+        subject: `Stock running low: ${item.name} — ${left}`,
+        text: `${item.name} is running low in the stock register.\n\nLeft now: ${left}${item.fullQuantity ? `\nFull stock: ${item.fullQuantity} ${item.unit}` : ''}${item.location ? `\nKept at: ${item.location}` : ''}\n\nPlease reorder soon. Open the Hari Pushp Tower app → Stock to see everything that is running low.`,
+      }).catch((e) => console.warn('[Stock alert mail]', e.message));
+    }
+  } else if (!low && item.lowAlertAt) {
+    await prisma.inventoryItem.update({ where: { id: item.id }, data: { lowAlertAt: null } });
+  }
+};
 const cleanItem = (body, partial = false) => {
   const out = {};
   const err = (m) => { throw Object.assign(new Error(m), { status: 400 }); };
@@ -30,6 +63,11 @@ const cleanItem = (body, partial = false) => {
     const m = num(body.minQuantity);
     if (m !== null && (Number.isNaN(m) || m < 0)) err('Low-stock level must be 0 or more');
     out.minQuantity = m;
+  }
+  if (body.fullQuantity !== undefined) {
+    const fq = num(body.fullQuantity);
+    if (fq !== null && (Number.isNaN(fq) || fq < 0)) err('Full stock level must be 0 or more');
+    out.fullQuantity = fq;
   }
   if (body.unitCost !== undefined) {
     const c = num(body.unitCost);
@@ -62,7 +100,7 @@ const listItems = async (req, res) => {
     if (req.query.floorNumber) where.floorNumber = Number(req.query.floorNumber);
     const items = await prisma.inventoryItem.findMany({ where, orderBy: [{ category: 'asc' }, { name: 'asc' }] });
     const q = String(req.query.q || '').trim().toLowerCase();
-    res.json(q ? items.filter((i) => [i.name, i.location, i.notes].some((v) => v && v.toLowerCase().includes(q))) : items);
+    res.json((q ? items.filter((i) => [i.name, i.location, i.notes].some((v) => v && v.toLowerCase().includes(q))) : items).map(withLevel));
   } catch (error) { fail(res, error, 'Could not load stock items'); }
 };
 
@@ -76,10 +114,12 @@ const createItem = async (req, res) => {
       data: {
         ...data,
         quantity: opening,
+        fullQuantity: data.fullQuantity ?? (opening || null),
         movements: opening ? { create: { type: 'IN', quantity: opening, unitCost: data.unitCost ?? null, note: 'Opening stock', date: data.purchaseDate || new Date(), byName: req.user.name } } : undefined,
       },
     });
-    res.status(201).json(item);
+    res.status(201).json(withLevel(item));
+    checkLowStock(item).catch(() => {});
     logActivity({ req, action: 'CREATE', module: 'INVENTORY', description: `Added ${item.name} (${opening} ${item.unit}) to stock`, targetId: item.id, targetType: 'InventoryItem' });
   } catch (error) { fail(res, error, 'Could not add the item'); }
 };
@@ -89,7 +129,8 @@ const updateItem = async (req, res) => {
   try {
     const data = cleanItem(req.body || {}, true);
     const item = await prisma.inventoryItem.update({ where: { id: req.params.id }, data });
-    res.json(item);
+    res.json(withLevel(item));
+    checkLowStock(item).catch(() => {});
     logActivity({ req, action: 'UPDATE', module: 'INVENTORY', description: `Updated ${item.name}`, targetId: item.id, targetType: 'InventoryItem' });
   } catch (error) {
     if (error.code === 'P2025') return res.status(404).json({ message: 'Item not found' });
@@ -139,10 +180,13 @@ const addMovement = async (req, res) => {
       }
       if (type === 'ADJUST') next = quantity;
       const movement = await tx.stockMovement.create({ data: { itemId: item.id, type, quantity, unitCost, note: String(note).trim().slice(0, 200) || null, date, byName: req.user.name } });
-      const updated = await tx.inventoryItem.update({ where: { id: item.id }, data: { quantity: Math.round(next * 1000) / 1000, ...(type === 'IN' && unitCost !== null ? { unitCost } : {}) } });
+      const qty = Math.round(next * 1000) / 1000;
+      const full = type !== 'OUT' && qty > (item.fullQuantity || 0) ? { fullQuantity: qty } : {};
+      const updated = await tx.inventoryItem.update({ where: { id: item.id }, data: { quantity: qty, ...full, ...(type === 'IN' && unitCost !== null ? { unitCost } : {}) } });
       return { movement, item: updated, before: item.quantity };
     });
-    res.status(201).json(result);
+    res.status(201).json({ ...result, item: withLevel(result.item) });
+    checkLowStock(result.item).catch((e) => console.warn('[Stock alert]', e.message));
     const verb = type === 'IN' ? 'Stock in' : type === 'OUT' ? 'Used' : 'Counted';
     logActivity({ req, action: type === 'OUT' ? 'UPDATE' : 'CREATE', module: 'INVENTORY', description: `${verb}: ${result.item.name} ${quantity} ${result.item.unit} (now ${result.item.quantity})`, targetId: result.item.id, targetType: 'InventoryItem' });
   } catch (error) {
@@ -170,8 +214,9 @@ const summary = async (req, res) => {
       b.value += (i.unitCost || 0) * (i.quantity || 0);
       if (i.condition === 'NEEDS_REPAIR' || i.condition === 'DAMAGED') b.needsRepair += 1;
     });
-    const lowStock = items.filter((i) => i.category === 'CONSUMABLE' && i.minQuantity != null && i.quantity <= i.minQuantity)
-      .map((i) => ({ id: i.id, name: i.name, quantity: i.quantity, unit: i.unit, minQuantity: i.minQuantity }));
+    const lowStock = items.map(withLevel).filter((i) => i.low)
+      .sort((a, b) => (a.percent ?? 0) - (b.percent ?? 0))
+      .map((i) => ({ id: i.id, name: i.name, quantity: i.quantity, unit: i.unit, minQuantity: i.minQuantity, fullQuantity: i.fullQuantity, percent: i.percent, out: i.out, location: i.location }));
 
     const flow = {};
     moves.filter((mv) => mv.type !== 'ADJUST').forEach((mv) => {

@@ -25,12 +25,12 @@ export const Screen = ({
 
   // Keyboard: leave room only for what it really covers, and keep the focused box visible
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
-  const root = useRef<View>(null);
+  const root = useRef<any>(null);
   const [bottom, setBottom] = useState(0);
   const kbTop = useKeyboardTop();
   const kbRef = useRef<number | null>(null);
   kbRef.current = kbTop;
-  const measure = () => root.current?.measureInWindow((_x, top, _w, h) => { if (h) setBottom(top + h); });
+  const measure = () => (root.current as any)?.measureInWindow((_x: any, top: any, _w: any, h: any) => { if (h) setBottom(top + h); });
   const reveal = useCallback(() => { setTimeout(() => revealFocusedInput(scrollRef.current as any, scrollY.current, kbRef.current), 120); }, [scrollRef]);
   useInputFocus(reveal);
   useEffect(() => { if (kbTop != null) { measure(); reveal(); } }, [kbTop, reveal]);

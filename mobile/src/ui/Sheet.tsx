@@ -22,15 +22,15 @@ export const Sheet = ({
   const fade = useSharedValue(0);
 
   // Where the sheet area ends on screen, and where the keyboard starts
-  const root = useRef<View>(null);
+  const root = useRef<any>(null);
   const [bottom, setBottom] = useState(height);
   const kbTop = useKeyboardTop();
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<any>(null);
   const scrollY = useRef(0);
   const kbRef = useRef<number | null>(null);
   kbRef.current = kbTop;
-  const measure = () => root.current?.measureInWindow((_x, top, _w, h) => { if (h) setBottom(top + h); });
-  const reveal = useCallback(() => { setTimeout(() => revealFocusedInput(scroll.current, scrollY.current, kbRef.current), 120); }, []);
+  const measure = () => (root.current as any)?.measureInWindow((_x: any, top: any, _w: any, h: any) => { if (h) setBottom(top + h); });
+  const reveal = useCallback(() => { setTimeout(() => revealFocusedInput(scroll.current as any, scrollY.current, kbRef.current), 120); }, []);
   useInputFocus(reveal);
   useEffect(() => { if (kbTop != null) { measure(); reveal(); } }, [kbTop, reveal]);
 

@@ -54,7 +54,7 @@ const DemandNotePrint = ({ note, onClose }) => {
   const short = (d) => new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
   const [year, month] = (note.billingMonth || '').split('-');
   const cycleStart = note.cycleStart ? new Date(note.cycleStart) : new Date(Number(year), Number(month) - 1, 10);
-  const cycleEnd = note.cycleEnd ? new Date(note.cycleEnd) : new Date(Number(year), Number(month), 9);
+  const cycleEnd = note.cycleEnd ? new Date(note.cycleEnd) : new Date(Number(year), Number(month), 10);
   const issued = note.createdAt ? new Date(note.createdAt) : new Date();
   // Payable in advance by the 10th; notes issued later get five days
   const due = new Date(Math.max(cycleStart.getTime(), issued.getTime() + 5 * 86400000));
