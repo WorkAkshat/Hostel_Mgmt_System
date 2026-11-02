@@ -79,12 +79,30 @@ model Student {
 }
 
 model Staff {
-  id          String   @id @default(uuid())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String         @id @default(uuid())
+  userId      String         @unique
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   department  String
   designation String
   phoneNumber String
+  advances    StaffAdvance[]
+}
+
+// Money given to a staff member ahead of salary, and how much has been taken back
+model StaffAdvance {
+  id              String    @id @default(uuid())
+  staffId         String?   // set when the person is in the staff list
+  staff           Staff?    @relation(fields: [staffId], references: [id], onDelete: SetNull)
+  staffName       String    // kept even for cooks / helpers without an app login
+  amount          Float
+  method          String    @default("CASH") // CASH | UPI | BANK | CHEQUE
+  reference       String?
+  note            String?
+  givenOn         DateTime  @default(now())
+  recoveredAmount Float     @default(0)       // taken back from salary so far
+  recoveredOn     DateTime? // last time something was taken back
+  createdBy       String?
+  createdAt       DateTime  @default(now())
 }
 
 model Room {
@@ -365,6 +383,8 @@ model InventoryItem {
   unit         String          @default("pcs") // pcs, kg, L, packet…
   quantity     Float           @default(0)     // current stock / count
   minQuantity  Float?          // consumables: warn when stock falls to this
+  fullQuantity Float?          // stock when full (set on stock-in); alert at 20% of this
+  lowAlertAt   DateTime?       // when the "running low" alert went out; cleared on restock
   unitCost     Float?          // latest purchase price per unit
   condition    String          @default("GOOD") // "GOOD", "NEEDS_REPAIR", "DAMAGED", "DISPOSED"
   purchaseDate DateTime?

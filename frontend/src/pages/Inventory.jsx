@@ -46,10 +46,10 @@ const ItemModal = ({ open, item, defaultCategory, onClose, onSaved }) => {
     setError(null);
     setF(item ? {
       name: item.name, category: item.category, location: item.location || '', floorNumber: item.floorNumber ?? '', unit: item.unit,
-      minQuantity: item.minQuantity ?? '', unitCost: item.unitCost ?? '', condition: item.condition, purchaseDate: item.purchaseDate ? item.purchaseDate.slice(0, 10) : '', notes: item.notes || '',
+      minQuantity: item.minQuantity ?? '', fullQuantity: item.fullQuantity ?? '', unitCost: item.unitCost ?? '', condition: item.condition, purchaseDate: item.purchaseDate ? item.purchaseDate.slice(0, 10) : '', notes: item.notes || '',
     } : {
       name: '', category: defaultCategory, location: defaultCategory === 'CONSUMABLE' ? 'Kitchen' : '', floorNumber: '', unit: defaultCategory === 'CONSUMABLE' ? 'kg' : 'pcs',
-      openingQuantity: '', minQuantity: '', unitCost: '', condition: 'GOOD', purchaseDate: '', notes: '',
+      openingQuantity: '', minQuantity: '', fullQuantity: '', unitCost: '', condition: 'GOOD', purchaseDate: '', notes: '',
     });
   }, [open, item, defaultCategory]);
   const set = (k, v) => { setF((x) => ({ ...x, [k]: v })); setError(null); };
@@ -61,7 +61,7 @@ const ItemModal = ({ open, item, defaultCategory, onClose, onSaved }) => {
     setSaving(true);
     const body = {
       name: f.name.trim(), category: f.category, location: f.location, floorNumber: f.floorNumber === '' ? null : f.floorNumber, unit: f.unit,
-      minQuantity: consumable && f.minQuantity !== '' ? f.minQuantity : null, unitCost: f.unitCost === '' ? null : f.unitCost,
+      minQuantity: consumable && f.minQuantity !== '' ? f.minQuantity : null, ...(consumable && (item || f.fullQuantity !== '') ? { fullQuantity: f.fullQuantity === '' ? null : f.fullQuantity } : {}), unitCost: f.unitCost === '' ? null : f.unitCost,
       condition: f.condition, purchaseDate: f.purchaseDate || null, notes: f.notes,
     };
     try {
@@ -113,9 +113,14 @@ const ItemModal = ({ open, item, defaultCategory, onClose, onSaved }) => {
             <input id="inv-cost" className="form-input" inputMode="decimal" value={f.unitCost ?? ''} onChange={(e) => set('unitCost', num(e.target.value))} placeholder="0" />
           </Field>
           {consumable ? (
-            <Field label="Warn me when stock falls to" htmlFor="inv-min" hint="Shows under “Running low”">
-              <input id="inv-min" className="form-input" inputMode="decimal" value={f.minQuantity ?? ''} onChange={(e) => set('minQuantity', num(e.target.value))} placeholder={`e.g. 5 ${f.unit || ''}`} />
-            </Field>
+            <>
+              <Field label="Full stock level" htmlFor="inv-full" hint="Alert (and email) when 20% of this is left. Rises by itself when you stock in more.">
+                <input id="inv-full" className="form-input" inputMode="decimal" value={f.fullQuantity ?? ''} onChange={(e) => set('fullQuantity', num(e.target.value))} placeholder={f.openingQuantity ? `${f.openingQuantity} (quantity now)` : `e.g. 50 ${f.unit || ''}`} />
+              </Field>
+              <Field label="Also warn me at (optional)" htmlFor="inv-min" hint="A fixed level, for an earlier alert">
+                <input id="inv-min" className="form-input" inputMode="decimal" value={f.minQuantity ?? ''} onChange={(e) => set('minQuantity', num(e.target.value))} placeholder={`e.g. 5 ${f.unit || ''}`} />
+              </Field>
+            </>
           ) : (
             <Field label="Condition" htmlFor="inv-cond">
               <select id="inv-cond" className="form-input" value={f.condition || 'GOOD'} onChange={(e) => set('condition', e.target.value)}>
@@ -334,9 +339,9 @@ const Inventory = () => {
           </div>
           <div className={`rounded-[var(--border-radius-card)] p-4 flex flex-col gap-2 border ${low.length ? 'bg-[var(--danger-bg)] border-transparent' : 'bg-[var(--success-bg)] border-transparent'}`}>
             <div className={`flex items-center gap-2 font-bold text-[14px] ${low.length ? 'text-[var(--danger)]' : 'text-[var(--success)]'}`}><AlertTriangle size={16} /> {low.length ? 'Running low' : 'Stock is fine'}</div>
-            {low.length === 0 ? <p className="text-[13px] text-[var(--success)] m-0">No consumable is below its alert level.</p> : low.map((l) => (
+            {low.length === 0 ? <p className="text-[13px] text-[var(--success)] m-0">No consumable is at 20% or below.</p> : low.map((l) => (
               <button key={l.id} type="button" onClick={() => setOpenId(l.id)} className="text-left text-[13px] text-[var(--danger)] bg-transparent border-none p-0 cursor-pointer hover:underline">
-                {l.name}: {qty(l.quantity)} {l.unit} left (alert at {qty(l.minQuantity)})
+                {l.name}: {l.out ? 'finished' : `${qty(l.quantity)} ${l.unit} left`}{l.percent != null ? ` (${l.percent}% of full stock)` : ''}
               </button>
             ))}
           </div>
@@ -353,7 +358,7 @@ const Inventory = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {shown.map((i) => {
             const Icon = CAT[i.category].icon;
-            const isLow = i.category === 'CONSUMABLE' && i.minQuantity != null && i.quantity <= i.minQuantity;
+            const isLow = !!i.low;
             return (
               <button key={i.id} type="button" onClick={() => setOpenId(i.id)}
                 className="text-left bg-white border border-[var(--border-color)] rounded-[var(--border-radius-card)] p-4 flex items-center gap-3 cursor-pointer hover:shadow-[var(--shadow-hover)] transition-shadow">
@@ -364,11 +369,17 @@ const Inventory = () => {
                     {[i.location, i.floorNumber ? `Floor ${i.floorNumber}` : null].filter(Boolean).join(' · ') || CAT[i.category].label}
                     {i.category !== 'CONSUMABLE' && i.condition !== 'GOOD' ? ` · ${CONDITION[i.condition]?.label}` : ''}
                     {isLow ? ' · Running low' : ''}
+                    {i.category === 'CONSUMABLE' && i.percent != null ? ` · ${i.percent}% left` : ''}
                   </span>
                 </span>
                 <span className="text-right">
                   <span className={`block text-[17px] font-bold ${isLow ? 'text-[var(--danger)]' : ''}`}>{qty(i.quantity)}</span>
                   <span className="block text-[12px] text-[var(--text-tertiary)]">{i.unit}</span>
+                  {i.category === 'CONSUMABLE' && i.percent != null && (
+                    <span className="block w-16 h-1.5 mt-1 rounded-full bg-[var(--border-color)] overflow-hidden ml-auto">
+                      <span className="block h-full rounded-full" style={{ width: `${i.percent}%`, background: isLow ? 'var(--danger)' : i.percent <= 40 ? '#edb52f' : '#3a918a' }} />
+                    </span>
+                  )}
                 </span>
               </button>
             );

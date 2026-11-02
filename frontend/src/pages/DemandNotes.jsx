@@ -17,7 +17,7 @@ import { BILL_STATUS, billState, currentMonth, monthLabel, noteDueDate, shiftMon
 
 const cycleText = (month) => {
   const [y, m] = month.split('-').map(Number);
-  return `${fmtDate(new Date(y, m - 1, 10))} – ${fmtDate(new Date(y, m, 9), { year: 'numeric' })}`;
+  return `${fmtDate(new Date(y, m - 1, 10))} – ${fmtDate(new Date(y, m, 10), { year: 'numeric' })}`;
 };
 
 const DemandNotes = () => {
@@ -39,7 +39,7 @@ const DemandNotes = () => {
   const [paying, setPaying] = useState(null);
   const [viewing, setViewing] = useState(null);
 
-  const rate = config?.fees?.electricityRate || 12;
+  const rate = config?.fees?.electricityRate || 11;
   const [isSmall, setIsSmall] = useState(() => window.innerWidth < 768);
 
   useEffect(() => {

@@ -165,7 +165,7 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
   const readings = useData(['readings', month], () => electricityApi.readings({ month }), { interval: false });
   const prev = useData(['readings', shiftMonth(month, -1)], () => electricityApi.readings({ month: shiftMonth(month, -1) }), { interval: false });
   const config = useData(['company-config'], demandNotesApi.companyConfig, { interval: false });
-  const rate = Number(config.data?.fees?.electricityRate) || 12;
+  const rate = Number(config.data?.fees?.electricityRate) || 11;
   const [draft, setDraft] = useState<Record<string, { prev: string; curr: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [finishing, setFinishing] = useState<'send' | 'review' | null>(null);

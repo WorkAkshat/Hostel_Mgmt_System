@@ -80,6 +80,7 @@ const getStudentById = async (req, res) => {
         complaints: true,
         leaveRequests: true,
         invoices: true,
+        demandNotes: true,
         visitors: true
       }
     });

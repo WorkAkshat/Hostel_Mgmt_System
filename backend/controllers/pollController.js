@@ -206,6 +206,93 @@ const togglePollStatus = async (req, res) => {
   }
 };
 
+// @desc    Update a poll (Admin only)
+// @route   PUT /api/polls/:id
+// @access  Private (Admin only)
+const updatePoll = async (req, res) => {
+  const { id } = req.params;
+  const { question, options, target, endsAt, anonymous, isActive } = req.body;
+
+  try {
+    const poll = await prisma.poll.findUnique({
+      where: { id },
+      include: { votes: true },
+    });
+
+    if (!poll) {
+      return res.status(404).json({ message: 'Poll not found.' });
+    }
+
+    const data = {};
+
+    if (question !== undefined) {
+      const q = String(question || '').trim();
+      if (q.length < 3) return res.status(400).json({ message: 'Write the question for the poll.' });
+      if (q.length > 300) return res.status(400).json({ message: 'Keep the question under 300 characters.' });
+      data.question = q;
+    }
+
+    if (options !== undefined) {
+      const opts = [];
+      (Array.isArray(options) ? options : []).forEach((o) => {
+        const v = String(o || '').trim();
+        if (v && !opts.some((x) => x.toLowerCase() === v.toLowerCase())) opts.push(v);
+      });
+      if (opts.length < 2) return res.status(400).json({ message: 'Add at least 2 different options.' });
+      if (opts.length > 8) return res.status(400).json({ message: 'A poll can have at most 8 options.' });
+      if (opts.some((o) => o.length > 100)) return res.status(400).json({ message: 'Keep each option under 100 characters.' });
+      data.options = JSON.stringify(opts);
+
+      // Clean up votes for options that were deleted/removed
+      const removedOptions = poll.votes
+        .map((v) => v.option)
+        .filter((opt) => !opts.includes(opt));
+      if (removedOptions.length > 0) {
+        await prisma.pollVote.deleteMany({
+          where: {
+            pollId: id,
+            option: { in: removedOptions },
+          },
+        });
+      }
+    }
+
+    if (target !== undefined) {
+      if (!TARGETS.includes(target)) return res.status(400).json({ message: 'Choose who can vote: everyone, residents or staff.' });
+      data.target = target;
+    }
+
+    if (endsAt !== undefined) {
+      if (!endsAt) {
+        data.endsAt = null;
+      } else {
+        const end = new Date(endsAt);
+        if (Number.isNaN(end.getTime())) return res.status(400).json({ message: 'The closing time is not a valid date.' });
+        data.endsAt = end;
+      }
+    }
+
+    if (anonymous !== undefined) {
+      data.anonymous = !!anonymous;
+    }
+
+    if (isActive !== undefined) {
+      data.isActive = !!isActive;
+    }
+
+    const updated = await prisma.poll.update({
+      where: { id },
+      data,
+      include: voteInclude,
+    });
+
+    res.json({ success: true, message: 'Poll updated successfully.', poll: shape(updated, req.user) });
+  } catch (error) {
+    console.error('Error updating poll:', error);
+    res.status(500).json({ message: 'Server error updating poll.' });
+  }
+};
+
 // @desc    Delete a poll (Admin only)
 // @route   DELETE /api/polls/:id
 // @access  Private (Admin only)
@@ -233,5 +320,6 @@ module.exports = {
   voteInPoll,
   removeVote,
   togglePollStatus,
+  updatePoll,
   deletePoll
 };

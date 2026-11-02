@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Sparkles, Vote, X } from 'lucide-react-native';
+import { Pencil, Plus, Sparkles, Vote, X } from 'lucide-react-native';
 import { pollsApi } from '../api';
 import { asList } from '../api/client';
 import { useAuth } from '../lib/auth';
@@ -38,6 +38,7 @@ export default function Polls() {
   const polls = useData(['polls'], pollsApi.all, { interval: 20_000 });
   const [tab, setTab] = useState<'open' | 'closed'>('open');
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
   const [removing, setRemoving] = useState<any>(null);
   const params = useLocalSearchParams<{ new?: string }>();
   useEffect(() => { if (params.new) { if (admin) setCreating(true); router.setParams({ new: undefined }); } }, [params.new, admin]);
@@ -84,11 +85,24 @@ export default function Polls() {
           action={admin && tab === 'open' ? <Button title="Create a poll" icon={Plus} onPress={() => setCreating(true)} /> : undefined} />
       ) : list.map((p: any, i: number) => (
         <Appear key={p.id} i={i}>
-          <PollCard poll={p} admin={admin} onToggle={() => toggle(p)} onDelete={() => setRemoving(p)} />
+          <PollCard
+            poll={p}
+            admin={admin}
+            onToggle={() => toggle(p)}
+            onEdit={() => setEditing(p)}
+            onDelete={() => setRemoving(p)}
+          />
         </Appear>
       ))}
 
-      {admin && <NewPoll open={creating} onClose={() => setCreating(false)} onCreated={() => setTab('open')} />}
+      {admin && (
+        <PollFormSheet
+          open={creating || !!editing}
+          poll={editing}
+          onClose={() => { setCreating(false); setEditing(null); }}
+          onSaved={() => setTab('open')}
+        />
+      )}
       <Confirm open={!!removing} title="Delete this poll?" message="The poll and all its votes are removed for everyone." confirmLabel="Delete" danger
         onConfirm={async () => {
           try { await pollsApi.remove(removing.id); await qc.invalidateQueries({ queryKey: ['polls'] }); toast.success('Poll deleted'); }
@@ -99,7 +113,7 @@ export default function Polls() {
   );
 }
 
-const NewPoll = ({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) => {
+const PollFormSheet = ({ open, poll, onClose, onSaved }: { open: boolean; poll?: any; onClose: () => void; onSaved: () => void }) => {
   const qc = useQueryClient();
   const toast = useToast();
   const [question, setQuestion] = useState('');
@@ -110,7 +124,34 @@ const NewPoll = ({ open, onClose, onCreated }: { open: boolean; onClose: () => v
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const reset = () => { setQuestion(''); setOptions(['', '']); setTarget('ALL'); setCloses('never'); setPrivacy('named'); setError(null); };
+  useEffect(() => {
+    if (!open) return;
+    if (poll) {
+      setQuestion(poll.question || '');
+      const rawOpts = (poll.options || []).map((o: any) => (typeof o === 'string' ? o : o.option));
+      setOptions(rawOpts.length >= 2 ? rawOpts : ['', '']);
+      setTarget(poll.target || 'ALL');
+      if (poll.endsAt) {
+        const ms = new Date(poll.endsAt).getTime() - Date.now();
+        const days = Math.round(ms / 86400000);
+        if (days <= 1) setCloses('1');
+        else if (days <= 3) setCloses('3');
+        else setCloses('7');
+      } else {
+        setCloses('never');
+      }
+      setPrivacy(poll.anonymous ? 'anon' : 'named');
+      setError(null);
+    } else {
+      setQuestion('');
+      setOptions(['', '']);
+      setTarget('ALL');
+      setCloses('never');
+      setPrivacy('named');
+      setError(null);
+    }
+  }, [open, poll]);
+
   const pickIdea = (i: (typeof IDEAS)[number]) => { setQuestion(i.q); setOptions([...i.o]); setError(null); };
   const setOption = (i: number, v: string) => { setOptions((list) => list.map((x, j) => (j === i ? v : x))); setError(null); };
 
@@ -122,17 +163,35 @@ const NewPoll = ({ open, onClose, onCreated }: { open: boolean; onClose: () => v
     setBusy(true);
     try {
       const endsAt = closes === 'never' ? null : new Date(Date.now() + Number(closes) * 86400000).toISOString();
-      await pollsApi.create({ question: question.trim(), options: opts, target, endsAt, anonymous: privacy === 'anon' });
-      toast.success('Poll is live', target === 'STAFF' ? 'Staff can vote now.' : target === 'STUDENTS' ? 'Residents can vote now.' : 'Everyone can vote now.');
+      if (poll) {
+        await pollsApi.update(poll.id, {
+          question: question.trim(),
+          options: opts,
+          target,
+          endsAt,
+          anonymous: privacy === 'anon',
+        });
+        toast.success('Poll updated', 'Changes have been saved.');
+      } else {
+        await pollsApi.create({
+          question: question.trim(),
+          options: opts,
+          target,
+          endsAt,
+          anonymous: privacy === 'anon',
+        });
+        toast.success('Poll is live', target === 'STAFF' ? 'Staff can vote now.' : target === 'STUDENTS' ? 'Residents can vote now.' : 'Everyone can vote now.');
+      }
       await qc.invalidateQueries({ queryKey: ['polls'] });
-      reset(); onCreated(); onClose();
+      onSaved();
+      onClose();
     } catch (e: any) { setError(e.message); } finally { setBusy(false); }
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="New poll" subtitle="Ask anything — everyone votes from the app"
-      footer={<Button title="Start poll" icon={Vote} onPress={submit} loading={busy} full />}>
-      {!question && (
+    <Sheet open={open} onClose={onClose} title={poll ? 'Edit poll' : 'New poll'} subtitle={poll ? 'Update question, answers, or settings' : 'Ask anything — everyone votes from the app'}
+      footer={<Button title={poll ? 'Save changes' : 'Start poll'} icon={poll ? Pencil : Vote} onPress={submit} loading={busy} full />}>
+      {!poll && !question && (
         <View style={{ gap: 8 }}>
           <Row gap={6}><Sparkles size={14} color={colors.lilac700} /><T v="caption" w="bold" c={colors.lilac700}>Quick ideas</T></Row>
           <View style={styles.ideas}>

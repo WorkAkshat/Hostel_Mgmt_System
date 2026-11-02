@@ -12,6 +12,7 @@ import AnimatedNumber from '../components/ui/AnimatedNumber';
 import { useToast } from '../components/ui/Toast';
 import RoomFormModal from './rooms/RoomFormModal';
 import RoomDrawer, { ROOM_STATUS } from './rooms/RoomDrawer';
+import AssignRoomModal from './students/AssignRoomModal';
 import { priceFor } from '../config/hostel';
 import DownloadMenu from '../components/ui/DownloadMenu';
 import { exportFreeBeds, exportResidents, exportRooms } from '../utils/exports';
@@ -105,6 +106,7 @@ const Rooms = () => {
   const [search, setSearch] = useState('');
 
   const [formOpen, setFormOpen] = useState(false);
+  const [assignModal, setAssignModal] = useState({ open: false, student: null, room: null });
   const [editing, setEditing] = useState(null);
   const [openRoomId, setOpenRoomId] = useState(null);
   const [deleting, setDeleting] = useState(null);
@@ -236,11 +238,37 @@ const Rooms = () => {
               { key: 'residents', label: 'Residents list', hint: 'Phone, parents, room and bed of everyone', run: () => exportResidents(students, floor) },
             ]}
           />
+          <button
+            className="btn-secondary"
+            onClick={() => setAssignModal({ open: true, student: unassigned[0] || null, room: null })}
+          >
+            <BedDouble size={16} /> Assign room
+          </button>
           <button className="btn-primary" onClick={() => { setEditing(null); setFormOpen(true); }}>
             <Plus size={17} /> Add room
           </button>
         </div>
       </div>
+
+      {/* Unassigned banner if residents wait for beds */}
+      {unassigned.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-[var(--border-radius-card)] bg-amber-50 border border-amber-200 text-amber-900">
+          <div className="flex items-center gap-2.5">
+            <span className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-800 shrink-0 font-bold text-[14px]">
+              {unassigned.length}
+            </span>
+            <span className="text-[13px] font-medium">
+              {unassigned.length === 1 ? '1 resident is' : `${unassigned.length} residents are`} waiting for room allocation.
+            </span>
+          </div>
+          <button
+            className="btn-primary h-8 px-3 text-[12px] flex items-center gap-1.5 self-start sm:self-auto shrink-0"
+            onClick={() => setAssignModal({ open: true, student: unassigned[0], room: null })}
+          >
+            <BedDouble size={14} /> Assign room now
+          </button>
+        </div>
+      )}
 
       {/* Totals */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -384,6 +412,16 @@ const Rooms = () => {
         confirmLabel="Delete room"
         onConfirm={handleDelete}
         onClose={() => setDeleting(null)}
+      />
+
+      <AssignRoomModal
+        isOpen={assignModal.open}
+        student={assignModal.student}
+        room={assignModal.room}
+        students={students}
+        rooms={rooms}
+        onClose={() => setAssignModal({ open: false, student: null, room: null })}
+        onSuccess={load}
       />
 
       <ImageLightbox image={preview} onClose={() => setPreview(null)} />

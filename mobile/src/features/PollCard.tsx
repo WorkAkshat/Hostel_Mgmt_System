@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronDown, CircleCheck, Clock, EyeOff, Lock, LockOpen, Trash2, Users, Vote } from 'lucide-react-native';
+import { ChevronDown, CircleCheck, Clock, EyeOff, Lock, LockOpen, Pencil, Trash2, Users, Vote } from 'lucide-react-native';
 import { pollsApi } from '../api';
 import { colors } from '../ui/theme';
 import { Badge, Button, Card, IconTile, Press, Row, T } from '../ui/primitives';
@@ -51,7 +51,7 @@ const OptionRow = ({ label, pct, votes, mine, showResults, leading, busy, disabl
 
 // A poll: residents tap an answer to vote (and can change it while it's open);
 // results appear after voting. The warden always sees results and who voted.
-export default function PollCard({ poll, admin, onToggle, onDelete }: { poll: any; admin?: boolean; onToggle?: () => void; onDelete?: () => void }) {
+export default function PollCard({ poll, admin, onToggle, onEdit, onDelete }: { poll: any; admin?: boolean; onToggle?: () => void; onEdit?: () => void; onDelete?: () => void }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [busy, setBusy] = useState<string | null>(null);
@@ -143,7 +143,8 @@ export default function PollCard({ poll, admin, onToggle, onDelete }: { poll: an
 
       {admin && (
         <Row gap={8}>
-          <Button title={open ? 'Close poll' : 'Reopen'} icon={open ? Lock : LockOpen} kind="secondary" small onPress={() => onToggle?.()} style={{ flex: 1 }} />
+          <Button title="Edit" icon={Pencil} kind="secondary" small onPress={() => onEdit?.()} style={{ flex: 1 }} />
+          <Button title={open ? 'Close' : 'Reopen'} icon={open ? Lock : LockOpen} kind="secondary" small onPress={() => onToggle?.()} style={{ flex: 1 }} />
           <Button title="Delete" icon={Trash2} kind="danger" small onPress={() => onDelete?.()} style={{ flex: 1 }} />
         </Row>
       )}

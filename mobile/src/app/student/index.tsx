@@ -1,5 +1,5 @@
 import { StyleSheet, View } from 'react-native';
-import { BedDouble, CalendarDays, CircleCheck, Lightbulb, Megaphone, Plus, UtensilsCrossed, Wallet, Wrench } from 'lucide-react-native';
+import { BedDouble, CalendarDays, CircleCheck, Lightbulb, Megaphone, Plus, ShieldCheck, UtensilsCrossed, Wallet, Wrench } from 'lucide-react-native';
 import { dashboardApi, demandNotesApi, feesApi, leavesApi, messApi, noticesApi, pollsApi } from '../../api';
 import { asList } from '../../api/client';
 import { useAuth } from '../../lib/auth';
@@ -40,6 +40,13 @@ export default function StudentHome() {
   ];
   const due = unpaid.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const nextDue = unpaid.sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime())[0];
+
+  const depositPaid = asList(invoices.data)
+    .filter((i: any) => i.category === 'DEPOSIT' && i.status === 'PAID')
+    .reduce((s: number, i: any) => s + (Number(i.amount) || 0), 0);
+  const advancePaid = asList(invoices.data)
+    .filter((i: any) => i.category === 'ADVANCE' && i.status === 'PAID')
+    .reduce((s: number, i: any) => s + (Number(i.amount) || 0), 0);
 
   const active = asList(leaves.data).find((l: any) => ['PENDING', 'APPROVED', 'CHECKED_OUT'].includes(l.status));
   const openPoll = asList(polls.data).find((p: any) => p.isActive && !p.userHasVoted) || asList(polls.data).find((p: any) => p.isActive);
@@ -97,6 +104,34 @@ export default function StudentHome() {
           />
         </Grid>
       </Appear>
+
+      {(depositPaid > 0 || advancePaid > 0) && (
+        <Appear i={1}>
+          <Press onPress={() => go('/student/bills')} scaleTo={0.98} accessibilityRole="button" accessibilityLabel="View deposits and advance">
+            <Card style={{ paddingVertical: 10, paddingHorizontal: 14, backgroundColor: colors.white, borderColor: colors.mint100, gap: 6 }}>
+              <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <Row gap={6}>
+                  <ShieldCheck size={16} color={colors.brand700} />
+                  <T v="caption" w="bold" c={colors.brand700}>Security & Advance Held</T>
+                </Row>
+                <T v="caption" c={colors.text3}>View bills ›</T>
+              </Row>
+              <Row gap={16}>
+                <Row gap={4}>
+                  <T v="caption" c={colors.text3}>Security deposit:</T>
+                  <T v="caption" w="bold" c={colors.success}>{rupees(depositPaid)}</T>
+                </Row>
+                {advancePaid > 0 && (
+                  <Row gap={4}>
+                    <T v="caption" c={colors.text3}>Advance:</T>
+                    <T v="caption" w="bold" c={colors.brand700}>{rupees(advancePaid)}</T>
+                  </Row>
+                )}
+              </Row>
+            </Card>
+          </Press>
+        </Appear>
+      )}
 
       {/* Shortcuts */}
       <Appear i={2}>

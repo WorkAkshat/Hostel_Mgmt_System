@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { CalendarDays, ChevronDown, Download, CircleCheck, HandCoins, Plus, MessageCircle, Phone, Receipt, Share2, UserRound, Wrench } from 'lucide-react-native';
+import { CalendarDays, ChevronDown, Download, CircleCheck, HandCoins, Plus, MessageCircle, Phone, Receipt, Share2, ShieldCheck, UserRound, Wrench, BedDouble } from 'lucide-react-native';
 import { demandNotesApi, feesApi, studentsApi } from '../../../api';
 import { useData } from '../../../lib/query';
 import { call, whatsapp } from '../../../lib/contact';
@@ -14,6 +14,7 @@ import { Appear, ListRow, Screen, Section } from '../../../ui/layout';
 import { Hero, HeroPill, onHero } from '../../../ui/blocks';
 import RecordPayment from '../../../features/RecordPayment';
 import ChargeSheet, { type ChargeMode } from '../../../features/ChargeSheet';
+import AssignRoomSheet from '../../../features/AssignRoomSheet';
 import { useQueryClient } from '@tanstack/react-query';
 import { dueLabel, shareBillPdf, useAllBills, useRecordBill, type Bill } from '../../../features/dues';
 
@@ -37,6 +38,7 @@ export default function StudentDetail() {
   const [sharing, setSharing] = useState<string | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [charging, setCharging] = useState<ChargeMode | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
   const qc = useQueryClient();
 
   if (error) return <Screen title="Resident" back tabBar={false}><ErrorBox message={(error as Error).message} onRetry={refetch} /></Screen>;
@@ -47,6 +49,9 @@ export default function StudentDetail() {
   const unpaid = bills.filter((b) => b.state !== 'paid').sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime());
   const due = unpaid.reduce((a, b) => a + b.amount, 0);
   const overdue = unpaid.filter((b) => b.state === 'overdue').reduce((a, b) => a + b.amount, 0);
+  const depositPaid = bills.filter((b) => b.category === 'DEPOSIT' && b.state === 'paid').reduce((a, b) => a + b.amount, 0);
+  const advancePaid = bills.filter((b) => b.category === 'ADVANCE' && b.state === 'paid').reduce((a, b) => a + b.amount, 0);
+  const depositDue = bills.filter((b) => b.category === 'DEPOSIT' && b.state !== 'paid').reduce((a, b) => a + b.amount, 0);
   const lastPaid = bills.find((b) => b.state === 'paid');
   const next = unpaid[0];
   const leaves = [...(s.leaveRequests || [])].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -95,6 +100,50 @@ export default function StudentDetail() {
         </Hero>
       </Appear>
 
+      {/* Room allocation action */}
+      <Appear>
+        {!s.room ? (
+          <Card style={{ backgroundColor: colors.peach50, borderColor: colors.peach100, gap: 10 }}>
+            <Row gap={10} style={{ alignItems: 'center' }}>
+              <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.peach100, alignItems: 'center', justifyContent: 'center' }}>
+                <BedDouble size={20} color={colors.peach700} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <T v="title" w="bold">No room assigned</T>
+                <T v="caption" c={colors.text2}>This resident has not been allotted a bed yet.</T>
+              </View>
+            </Row>
+            <Button
+              title="Assign room"
+              icon={BedDouble}
+              kind="brand"
+              onPress={() => setAssignOpen(true)}
+              full
+            />
+          </Card>
+        ) : (
+          <Card style={{ gap: 8 }}>
+            <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+              <Row gap={10} style={{ flex: 1, alignItems: 'center' }}>
+                <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.mint100, alignItems: 'center', justifyContent: 'center' }}>
+                  <BedDouble size={18} color={colors.brand700} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <T v="title" w="bold">Room {s.room.roomNumber}</T>
+                  <T v="caption" c={colors.text3}>Floor {s.room.floorNumber} · {priceFor(s.room.sharingType).label}{s.room.isAc ? ' · AC' : ''}</T>
+                </View>
+              </Row>
+              <Button
+                title="Change room"
+                kind="secondary"
+                small
+                onPress={() => setAssignOpen(true)}
+              />
+            </Row>
+          </Card>
+        )}
+      </Appear>
+
       {/* Money */}
       <Appear i={1}>
         {all.isLoading ? <Loading rows={1} h={150} /> : due > 0 ? (
@@ -108,7 +157,12 @@ export default function StudentDetail() {
               <Badge label={overdue ? 'Overdue' : 'Due'} tone={overdue ? 'danger' : 'warning'} />
             </Row>
             <View style={styles.moneyRow}>
-              {[{ k: 'Total due', v: rupees(due), c: colors.text }, { k: 'Bills', v: String(unpaid.length), c: colors.text }, { k: 'Overdue', v: rupees(overdue), c: overdue ? colors.danger : colors.text }].map((x, i) => (
+              {[
+                { k: 'Total due', v: rupees(due), c: colors.text },
+                { k: 'Security', v: depositPaid > 0 ? rupees(depositPaid) : depositDue > 0 ? `${rupees(depositDue)} due` : '₹0', c: depositPaid > 0 ? colors.success : depositDue > 0 ? colors.danger : colors.text },
+                { k: 'Advance', v: advancePaid > 0 ? rupees(advancePaid) : '₹0', c: advancePaid > 0 ? colors.brand700 : colors.text },
+                { k: 'Overdue', v: rupees(overdue), c: overdue ? colors.danger : colors.text },
+              ].map((x, i) => (
                 <View key={x.k} style={[styles.moneyCell, i > 0 && { borderLeftWidth: 1, borderLeftColor: colors.border }]}>
                   <T v="caption" c={colors.text3}>{x.k}</T>
                   <T v="title" w="bold" c={x.c} numberOfLines={1} adjustsFontSizeToFit>{x.v}</T>
@@ -119,12 +173,26 @@ export default function StudentDetail() {
             {unpaid.length > 1 && <T v="caption" c={colors.text3} center>This records the oldest bill ({next?.title}). Collect the others from the list below.</T>}
           </Card>
         ) : (
-          <Card tone="success" style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <IconTile icon={CircleCheck} tone="white" size={38} />
-            <View style={{ flex: 1 }}>
-              <T v="title" c={colors.success}>All paid up</T>
-              <T v="caption" c={colors.success}>{lastPaid ? `Last payment ${fmtDate(lastPaid.paidAt || '', { year: 'numeric' })} · ${rupees(lastPaid.amount)}` : 'No bills yet'}</T>
-            </View>
+          <Card tone="success" style={{ gap: 10 }}>
+            <Row align="center" gap={12}>
+              <IconTile icon={CircleCheck} tone="white" size={38} />
+              <View style={{ flex: 1 }}>
+                <T v="title" c={colors.success}>All paid up</T>
+                <T v="caption" c={colors.success}>{lastPaid ? `Last payment ${fmtDate(lastPaid.paidAt || '', { year: 'numeric' })} · ${rupees(lastPaid.amount)}` : 'No outstanding fees'}</T>
+              </View>
+            </Row>
+            {(depositPaid > 0 || advancePaid > 0) && (
+              <View style={[styles.moneyRow, { borderTopWidth: 1, borderTopColor: 'rgba(36,100,96,0.15)', paddingTop: 8, marginTop: 4 }]}>
+                <View style={styles.moneyCell}>
+                  <T v="caption" c={colors.text3}>Security deposit</T>
+                  <T v="title" w="bold" c={colors.success}>{rupees(depositPaid)}</T>
+                </View>
+                <View style={[styles.moneyCell, { borderLeftWidth: 1, borderLeftColor: colors.border }]}>
+                  <T v="caption" c={colors.text3}>Advance payment</T>
+                  <T v="title" w="bold" c={advancePaid > 0 ? colors.brand700 : colors.text3}>{rupees(advancePaid)}</T>
+                </View>
+              </View>
+            )}
           </Card>
         )}
       </Appear>
@@ -154,7 +222,10 @@ export default function StudentDetail() {
                       </View>
                       <View style={{ alignItems: 'flex-end', gap: 4 }}>
                         <T v="title" w="bold" c={b.state === 'paid' ? colors.success : colors.text}>{rupees(b.amount)}</T>
-                        <Badge label={look.label} tone={look.tone} />
+                        <Row gap={4}>
+                          {b.category === 'DEPOSIT' ? <Badge label="Deposit" tone="lilac" /> : b.category === 'ADVANCE' ? <Badge label="Advance" tone="mint" /> : null}
+                          <Badge label={look.label} tone={look.tone} />
+                        </Row>
                       </View>
                     </Press>
                       <IconButton icon={Download} label={b.state === 'paid' ? 'Download receipt' : 'Download bill'} tone="mint" size={36} onPress={() => share(b, 'download')} />
@@ -225,6 +296,16 @@ export default function StudentDetail() {
           await record(paying, p);
           toast.success('Payment recorded', `${rupees(paying.amount)} from ${s.user?.name}`);
           setPaying(null);
+        }}
+      />
+
+      <AssignRoomSheet
+        open={assignOpen}
+        student={s}
+        onClose={() => setAssignOpen(false)}
+        onSuccess={() => {
+          refetch();
+          all.refetch();
         }}
       />
     </Screen>

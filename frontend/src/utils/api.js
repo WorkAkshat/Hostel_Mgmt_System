@@ -19,6 +19,7 @@ import * as notices from './api/notices';
 import * as accounting from './api/accounting';
 import * as reports from './api/reports';
 import * as inventory from './api/inventory';
+import * as polls from './api/polls';
 
 export default client;
 export {
@@ -42,5 +43,6 @@ export {
   inventory,
   notices,
   accounting,
-  reports
+  reports,
+  polls
 };

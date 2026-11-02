@@ -30,6 +30,7 @@ const nightAttendanceRoutes = require('./routes/nightAttendanceRoutes');
 const activityLogRoutes = require('./routes/activityLogRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
+const staffAdvanceRoutes = require('./routes/staffAdvanceRoutes');
 
 const app = express();
 
@@ -139,6 +140,7 @@ app.use('/api/v1/activity-logs', activityLogRoutes);
 app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
+app.use('/api/v1/staff-advances', staffAdvanceRoutes);
 
 // Health Check Endpoint
 app.get('/api/v1/health', (req, res) => {

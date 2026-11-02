@@ -35,6 +35,8 @@ export default function Fees() {
   const overdue = rows.filter((r: any) => r.state === 'overdue');
   const thisMonth = monthKey();
   const collected = rows.filter((r: any) => r.paidAt && monthKey(new Date(r.paidAt)) === thisMonth);
+  const deposits = rows.filter((r: any) => r.category === 'DEPOSIT' && r.state === 'paid');
+  const advances = rows.filter((r: any) => r.category === 'ADVANCE' && r.state === 'paid');
   const sum = (l: any[]) => l.reduce((a, x) => a + (Number(x.amount) || 0), 0);
   const shown = rows
     .filter((r: any) => (filter === 'open' ? r.state !== 'paid' : r.state === filter))
@@ -73,7 +75,9 @@ export default function Fees() {
         </Row>
         <HeroCells items={[
           { k: 'Overdue', v: rupees(sum(overdue)), active: filter === 'overdue', onPress: () => setFilter('overdue') },
-          { k: 'Collected · month', v: rupees(sum(collected)), active: filter === 'paid', onPress: () => setFilter('paid') },
+          { k: '10-to-10 month', v: rupees(sum(collected)), active: filter === 'paid', onPress: () => setFilter('paid') },
+          { k: 'Security', v: rupees(sum(deposits)) },
+          { k: 'Advance', v: rupees(sum(advances)) },
         ]} />
       </Hero>
       <SearchInput value={q} onChange={setQ} placeholder="Name, roll no. or room" />
@@ -92,7 +96,10 @@ export default function Fees() {
               </View>
               <View style={{ alignItems: 'flex-end', gap: 4 }}>
                 <T v="title" w="bold">{rupees(i.amount)}</T>
-                <Badge label={BILL_STATUS[i.state].label} tone={BILL_STATUS[i.state].tone} />
+                <Row gap={4}>
+                  {i.category === 'DEPOSIT' ? <Badge label="Deposit" tone="lilac" /> : i.category === 'ADVANCE' ? <Badge label="Advance" tone="mint" /> : null}
+                  <Badge label={BILL_STATUS[i.state].label} tone={BILL_STATUS[i.state].tone} />
+                </Row>
               </View>
             </Row>
             <T v="caption" c={i.state === 'overdue' ? colors.danger : colors.text3}>

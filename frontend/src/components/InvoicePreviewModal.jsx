@@ -64,7 +64,12 @@ const getBreakdown = (invoice = {}) => {
 
   // Fine / damage / deposit etc. raised by the warden: one line, no rent / mess split
   if (invoice.kind === 'CHARGE') {
-    return { charge: invoice.title || 'Charge', note: invoice.note || '', rent: 0, mess: 0, elec: 0, total };
+    const chargeTitle = invoice.category === 'DEPOSIT'
+      ? (invoice.title || 'Security deposit')
+      : invoice.category === 'ADVANCE'
+        ? (invoice.title || 'Advance payment')
+        : (invoice.title || 'Charge');
+    return { charge: chargeTitle, note: invoice.note || '', rent: 0, mess: 0, elec: 0, total };
   }
 
   // If specific components are stored on the invoice
@@ -476,7 +481,7 @@ const InvoicePreviewModal = ({ invoice, onClose }) => {
                         </span>
                         <div>
                           <div className="font-semibold text-[13px]">Electricity & Utility Charges</div>
-                          <div className="text-[11px] text-[var(--text-tertiary)]">Based on meter reading @ ₹12/unit</div>
+                          <div className="text-[11px] text-[var(--text-tertiary)]">Based on meter reading @ ₹11/unit</div>
                         </div>
                       </div>
                     </td>

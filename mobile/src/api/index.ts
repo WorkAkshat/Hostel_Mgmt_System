@@ -103,6 +103,7 @@ export const noticesApi = {
 export const pollsApi = {
   all: () => api('/polls'),
   create: (data: { question: string; options: string[]; target?: 'ALL' | 'STUDENTS' | 'STAFF'; endsAt?: string | null; anonymous?: boolean }) => api('/polls', { method: 'POST', body: data }),
+  update: (id: string, data: { question?: string; options?: string[]; target?: 'ALL' | 'STUDENTS' | 'STAFF'; endsAt?: string | null; anonymous?: boolean; isActive?: boolean }) => api(`/polls/${id}`, { method: 'PUT', body: data }),
   vote: (id: string, option: string) => api(`/polls/${id}/vote`, { method: 'POST', body: { option } }),
   unvote: (id: string) => api(`/polls/${id}/vote`, { method: 'DELETE' }),
   toggle: (id: string) => api(`/polls/${id}/toggle`, { method: 'PUT' }),
@@ -143,6 +144,15 @@ export const nightApi = {
 
 export const staffApi = {
   all: () => api('/staff'),
+};
+
+// Money given to staff ahead of salary (and taken back later)
+export type StaffAdvanceInput = { staffId?: string; staffName?: string; amount: number; method: PayMethod; reference?: string; note?: string; givenOn?: string };
+export const staffAdvancesApi = {
+  list: (staffId?: string) => api<{ advances: any[]; totals: { given: number; recovered: number; outstanding: number } }>(`/staff-advances${q({ staffId })}`),
+  create: (data: StaffAdvanceInput) => api('/staff-advances', { method: 'POST', body: data }),
+  recover: (id: string, data: { amount?: number; on?: string; note?: string }) => api(`/staff-advances/${id}/recover`, { method: 'POST', body: data }),
+  remove: (id: string) => api(`/staff-advances/${id}`, { method: 'DELETE' }),
 };
 
 export const accountingApi = {

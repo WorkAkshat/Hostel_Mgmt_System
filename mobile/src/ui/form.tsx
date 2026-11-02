@@ -14,7 +14,14 @@ export const Field = ({ label, hint, error, required, children }: { label: strin
   </View>
 );
 
-export const Input = ({ prefix, invalid, style, multiline, ...rest }: TextInputProps & { prefix?: string; invalid?: boolean; ref?: React.Ref<TextInput> }) => (
+export type InputProps = Omit<TextInputProps, 'onChangeText'> & {
+  prefix?: string;
+  invalid?: boolean;
+  ref?: any;
+  onChangeText?: (text: string) => void;
+};
+
+export const Input = ({ prefix, invalid, style, multiline, ...rest }: InputProps) => (
   <View style={[styles.input, multiline && { height: undefined, minHeight: 96, alignItems: 'flex-start', paddingVertical: 10 }, invalid && styles.invalid]}>
     {prefix ? <T w="bold" c={rest.value ? colors.text : colors.text3} style={{ fontSize: 16 }}>{prefix}</T> : null}
     <TextInput
@@ -25,7 +32,7 @@ export const Input = ({ prefix, invalid, style, multiline, ...rest }: TextInputP
       textAlignVertical={multiline ? 'top' : 'center'}
       style={[styles.inputText, multiline && { minHeight: 76 }, style]}
       {...rest}
-      onFocus={(e) => { notifyInputFocus(); rest.onFocus?.(e); }}
+      onFocus={(e: any) => { notifyInputFocus(); rest.onFocus?.(e); }}
     />
   </View>
 );

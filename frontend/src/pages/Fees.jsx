@@ -140,6 +140,8 @@ const Fees = () => {
   /* Stats */
   const totalCollected = invoices.filter(i => i.status === 'PAID').reduce((a, i) => a + (Number(i.amount) || 0), 0);
   const totalOutstanding = invoices.filter(i => i.status === 'UNPAID').reduce((a, i) => a + (Number(i.amount) || 0), 0);
+  const totalDeposits = invoices.filter(i => (i.category === 'DEPOSIT' || i.title?.toLowerCase().includes('deposit')) && i.status === 'PAID').reduce((a, i) => a + (Number(i.amount) || 0), 0);
+  const totalAdvances = invoices.filter(i => (i.category === 'ADVANCE' || i.title?.toLowerCase().includes('advance')) && i.status === 'PAID').reduce((a, i) => a + (Number(i.amount) || 0), 0);
   const paidCount = invoices.filter(i => i.status === 'PAID').length;
   const unpaidCount = invoices.filter(i => i.status === 'UNPAID').length;
 
@@ -149,8 +151,15 @@ const Fees = () => {
       inv.id?.toLowerCase().includes(q) ||
       inv.student?.user?.name?.toLowerCase().includes(q) ||
       inv.student?.rollNumber?.toLowerCase().includes(q) ||
-      String(inv.student?.room?.roomNumber || '').includes(q);
-    const matchesStatus = statusFilter === 'ALL' || inv.status === statusFilter;
+      String(inv.student?.room?.roomNumber || '').includes(q) ||
+      inv.title?.toLowerCase().includes(q);
+    const matchesStatus = statusFilter === 'ALL'
+      ? true
+      : statusFilter === 'DEPOSIT'
+        ? (inv.category === 'DEPOSIT' || inv.title?.toLowerCase().includes('deposit'))
+        : statusFilter === 'ADVANCE'
+          ? (inv.category === 'ADVANCE' || inv.title?.toLowerCase().includes('advance'))
+          : inv.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -290,13 +299,29 @@ const Fees = () => {
             </p>
           </div>
 
-          {/* Admin stats */}
-          {user.role === 'ADMIN' && !loading && (
+          {/* Stats cards in banner */}
+          {!loading && (
             <div className="flex flex-wrap gap-2.5">
-              {[
+              {user.role === 'ADMIN' ? [
                 { label: 'Collected', value: `₹${(totalCollected / 1000).toFixed(0)}K`, sub: `${paidCount} paid`, color: '#4ade80' },
                 { label: 'Outstanding', value: `₹${(totalOutstanding / 1000).toFixed(0)}K`, sub: `${unpaidCount} unpaid`, color: '#f87171' },
-                { label: 'Total Invoices', value: invoices.length, sub: `${Math.round((paidCount / (invoices.length || 1)) * 100)}% paid`, color: '#fff' },
+                { label: 'Security Held', value: `₹${(totalDeposits / 1000).toFixed(0)}K`, sub: 'Refundable', color: '#6ee7b7' },
+                { label: 'Advance Held', value: `₹${(totalAdvances / 1000).toFixed(0)}K`, sub: 'Balance', color: '#c084fc' },
+              ].map(s => (
+                <div key={s.label}
+                  className="flex items-center gap-3 rounded-2xl px-4 py-3"
+                  style={{ background: 'rgba(255,255,255,0.13)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.22)' }}
+                >
+                  <div>
+                    <div className="text-[20px] font-bold leading-none" style={{ color: s.color }}>{s.value}</div>
+                    <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.7)' }}>{s.label}</div>
+                    <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.5)' }}>{s.sub}</div>
+                  </div>
+                </div>
+              )) : [
+                { label: 'Amount Due', value: `₹${totalOutstanding.toLocaleString('en-IN')}`, sub: `${unpaidCount} pending`, color: totalOutstanding > 0 ? '#f87171' : '#4ade80' },
+                { label: 'Security Deposit', value: `₹${totalDeposits.toLocaleString('en-IN')}`, sub: 'Refundable on exit', color: '#6ee7b7' },
+                { label: 'Advance Payment', value: `₹${totalAdvances.toLocaleString('en-IN')}`, sub: 'Balance on record', color: '#c084fc' },
               ].map(s => (
                 <div key={s.label}
                   className="flex items-center gap-3 rounded-2xl px-4 py-3"
@@ -362,9 +387,11 @@ const Fees = () => {
         />
         <div className="flex gap-2">
           <select className="form-input w-auto flex-1 sm:w-[180px] cursor-pointer" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-            <option value="ALL">All statuses</option>
+            <option value="ALL">All bills</option>
             <option value="PAID">Paid only</option>
             <option value="UNPAID">Unpaid / pending</option>
+            <option value="DEPOSIT">Security deposits</option>
+            <option value="ADVANCE">Advance payments</option>
           </select>
         </div>
       </div>

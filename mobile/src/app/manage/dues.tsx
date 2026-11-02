@@ -26,19 +26,25 @@ export default function PendingDues() {
   useEffect(() => { if (params.charge) { setCharging(true); router.setParams({ charge: undefined }); } }, [params.charge]);
 
   const people = useMemo(() => {
-    const map: Record<string, { student: any; total: number; overdue: number; count: number; oldest: string | Date }> = {};
-    bills.filter((b) => b.state !== 'paid' && onFloor(b.student?.room || { floorNumber: b.floor }, floor)).forEach((b) => {
-      const p = (map[b.studentId] ||= { student: b.student, total: 0, overdue: 0, count: 0, oldest: b.due });
-      p.total += b.amount;
-      p.count += 1;
-      if (b.state === 'overdue') p.overdue += b.amount;
-      if (new Date(b.due) < new Date(p.oldest)) p.oldest = b.due;
+    const map: Record<string, { student: any; total: number; overdue: number; count: number; oldest: string | Date; deposit: number; advance: number }> = {};
+    bills.filter((b) => onFloor(b.student?.room || { floorNumber: b.floor }, floor)).forEach((b) => {
+      const p = (map[b.studentId] ||= { student: b.student, total: 0, overdue: 0, count: 0, oldest: b.due, deposit: 0, advance: 0 });
+      if (b.state === 'paid') {
+        if (b.category === 'DEPOSIT') p.deposit += b.amount;
+        if (b.category === 'ADVANCE') p.advance += b.amount;
+      } else {
+        p.total += b.amount;
+        p.count += 1;
+        if (b.state === 'overdue') p.overdue += b.amount;
+        if (new Date(b.due) < new Date(p.oldest)) p.oldest = b.due;
+      }
     });
-    return Object.entries(map).map(([id, p]) => ({ id, ...p })).sort((a, b) => (b.overdue - a.overdue) || (b.total - a.total));
+    return Object.entries(map).map(([id, p]) => ({ id, ...p })).filter((p) => p.total > 0).sort((a, b) => (b.overdue - a.overdue) || (b.total - a.total));
   }, [bills, floor]);
 
   const total = people.reduce((a, p) => a + p.total, 0);
   const overdueTotal = people.reduce((a, p) => a + p.overdue, 0);
+  const totalAdvance = people.reduce((a, p) => a + (p.advance || 0), 0);
   const late = people.filter((p) => p.overdue > 0);
   const s = q.trim().toLowerCase();
   const shown = (filter === 'overdue' ? late : people).filter((p) => !s || [p.student?.user?.name, p.student?.rollNumber, p.student?.room?.roomNumber].some((v) => v && String(v).toLowerCase().includes(s)));
@@ -48,7 +54,12 @@ export default function PendingDues() {
       right={<Button title="Charge" icon={Plus} small onPress={() => setCharging(true)} />}>
       <FloorChips />
       <View style={styles.strip}>
-        {[{ k: 'Total due', v: rupees(total), c: colors.sun900 }, { k: 'Residents', v: String(people.length), c: colors.sun900 }, { k: 'Overdue', v: rupees(overdueTotal), c: overdueTotal ? colors.danger : colors.sun900 }].map((x, i) => (
+        {[
+          { k: 'Total due', v: rupees(total), c: colors.sun900 },
+          { k: 'Residents', v: String(people.length), c: colors.sun900 },
+          { k: 'Overdue', v: rupees(overdueTotal), c: overdueTotal ? colors.danger : colors.sun900 },
+          { k: 'Adv. held', v: rupees(totalAdvance), c: colors.brand700 },
+        ].map((x, i) => (
           <View key={x.k} style={[styles.cell, i > 0 && styles.cellLine]}>
             <T v="h2" c={x.c} numberOfLines={1} adjustsFontSizeToFit>{x.v}</T>
             <T v="caption" c={colors.sun800}>{x.k}</T>
@@ -65,7 +76,7 @@ export default function PendingDues() {
           <ListRow
             leading={<Avatar name={p.student?.user?.name} tone={p.overdue ? 'danger' : 'sun'} />}
             title={p.student?.user?.name || 'Resident'}
-            sub={`Room ${p.student?.room?.roomNumber || '—'} · ${plural(p.count, 'bill')}`}
+            sub={`Room ${p.student?.room?.roomNumber || '—'} · ${plural(p.count, 'bill')}${p.advance > 0 ? ` · Adv: ${rupees(p.advance)}` : ''}${p.deposit > 0 ? ` · Dep: ${rupees(p.deposit)}` : ''}`}
             right={
               <View style={{ alignItems: 'flex-end', gap: 4 }}>
                 <T v="title" w="bold" c={p.overdue ? colors.danger : colors.text}>{rupees(p.total)}</T>
