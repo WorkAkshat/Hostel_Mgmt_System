@@ -8,7 +8,7 @@ import { useData } from '../lib/query';
 import { priceFor } from '../lib/hostel';
 import { colors, radius, shadow } from '../ui/theme';
 import { Avatar, Badge, Button, Chips, Press, Row, T } from '../ui/primitives';
-import { Input, SearchInput } from '../ui/form';
+import { DateTimeField, Field, Input, SearchInput } from '../ui/form';
 import { Loading, useToast } from '../ui/feedback';
 import { Sheet } from '../ui/Sheet';
 import { rupees } from '../lib/format';
@@ -40,6 +40,7 @@ export default function AssignRoomSheet({
 
   const [selectedStudentId, setSelectedStudentId] = useState<string>('');
   const [selectedRoomId, setSelectedRoomId] = useState<string>('');
+  const [changeDate, setChangeDate] = useState<Date | null>(new Date());
   const [studentQ, setStudentQ] = useState('');
   const [roomFloor, setRoomFloor] = useState<string>('all');
   const [busy, setBusy] = useState(false);
@@ -49,6 +50,7 @@ export default function AssignRoomSheet({
     if (!open) return;
     setSelectedStudentId(student?.id || '');
     setSelectedRoomId(room?.id || student?.roomId || '');
+    setChangeDate(student?.roomAssignedAt ? new Date(student.roomAssignedAt) : new Date());
     setStudentQ('');
     setRoomFloor('all');
     setBusy(false);
@@ -114,7 +116,10 @@ export default function AssignRoomSheet({
     setBusy(true);
     setError(null);
     try {
-      await studentsApi.update(activeStudent.id, { roomId: selectedRoomId || null });
+      await studentsApi.update(activeStudent.id, {
+        roomId: selectedRoomId || null,
+        roomAssignedAt: selectedRoomId ? (changeDate ? changeDate.toISOString() : new Date().toISOString()) : null,
+      });
       if (selectedRoomId && activeRoom) {
         toast.success('Room assigned', `Room ${activeRoom.roomNumber} assigned to ${activeStudent.user?.name || 'Resident'}`);
       } else {
@@ -331,6 +336,19 @@ export default function AssignRoomSheet({
             )}
           </View>
         )}
+        {/* 3. Effective date if room selected */}
+        {selectedRoomId ? (
+          <View style={{ gap: 6, marginTop: 4 }}>
+            <Field label="Effective date of room change / allocation" hint="Date when the resident started or changed into this room">
+              <DateTimeField
+                label="Effective date"
+                value={changeDate}
+                onChange={setChangeDate}
+                withTime={false}
+              />
+            </Field>
+          </View>
+        ) : null}
       </View>
     </Sheet>
   );

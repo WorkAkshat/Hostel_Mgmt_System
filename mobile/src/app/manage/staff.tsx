@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { Banknote, CircleCheck, Contact, HandCoins, Landmark, MessageCircle, Phone, Plus, ScrollText, Smartphone, Trash2, Undo2 } from 'lucide-react-native';
+import { Banknote, CircleCheck, Contact, HandCoins, Landmark, MessageCircle, Phone, Plus, ScrollText, Smartphone, Trash2, Undo2, UserPlus } from 'lucide-react-native';
 import { staffAdvancesApi, staffApi, type PayMethod } from '../../api';
 import { asList } from '../../api/client';
 import { useData } from '../../lib/query';
@@ -33,12 +33,15 @@ const personKey = (a: any) => (a.staffId ? `s:${a.staffId}` : `n:${String(a.staf
 // Staff directory — call or WhatsApp in one tap — plus salary advances:
 // give an advance, then take it back (fully or in parts) from salary.
 export default function Staff() {
+  const qc = useQueryClient();
+  const toast = useToast();
   const staff = useData(['staff'], staffApi.all);
   const adv = useData(['staff-advances'], () => staffAdvancesApi.list());
   const [tab, setTab] = useState<'people' | 'advances'>('people');
   const [q, setQ] = useState('');
   const [giving, setGiving] = useState<Person | 'new' | null>(null);
   const [viewing, setViewing] = useState<Person | null>(null);
+  const [addingStaff, setAddingStaff] = useState(false);
 
   const advances = asList(adv.data?.advances);
   const totals = adv.data?.totals || { given: 0, recovered: 0, outstanding: 0 };
@@ -61,7 +64,12 @@ export default function Staff() {
 
   return (
     <Screen title="Staff" subtitle={`${people.length} staff · salary advances`} back tabBar={false} onRefresh={() => Promise.all([staff.refetch(), adv.refetch()])}
-      right={<Button title="Advance" icon={Plus} small onPress={() => setGiving('new')} />}>
+      right={
+        <Row gap={6}>
+          <Button title="Add staff" icon={UserPlus} kind="brand" small onPress={() => setAddingStaff(true)} />
+          <Button title="Advance" icon={HandCoins} kind="secondary" small onPress={() => setGiving('new')} />
+        </Row>
+      }>
       {/* Advances at a glance */}
       <Card tone={totals.outstanding > 0 ? 'sun' : undefined} style={{ gap: 10 }}>
         <Row>
@@ -81,11 +89,16 @@ export default function Staff() {
 
       <Segmented value={tab} onChange={setTab} options={[{ value: 'people', label: 'Staff' }, { value: 'advances', label: `Advances${advances.length ? ` (${advances.length})` : ''}` }]} />
 
+      <Row gap={10}>
+        <Button title="Add staff" icon={UserPlus} kind="brand" onPress={() => setAddingStaff(true)} style={{ flex: 1 }} />
+        <Button title="Pay advance" icon={HandCoins} kind="secondary" onPress={() => setGiving('new')} style={{ flex: 1 }} />
+      </Row>
+
       {tab === 'people' ? (
         <>
           {people.length > 5 && <SearchInput value={q} onChange={setQ} placeholder="Name, role or phone" />}
           {staff.error ? <ErrorBox message={(staff.error as Error).message} onRetry={staff.refetch} /> : staff.isLoading ? <Loading rows={4} h={70} /> : list.length === 0 && others.length === 0 ? (
-            <Empty icon={Contact} title="No staff found" text="Add guards, cooks and cleaners from the website." />
+            <Empty icon={Contact} title="No staff found" text="Add guards, cooks, and cleaning staff to your team." action={<Button title="Add staff member" icon={UserPlus} kind="brand" onPress={() => setAddingStaff(true)} />} />
           ) : (
             <>
               {list.map((m: any, i: number) => {
@@ -95,9 +108,10 @@ export default function Staff() {
                 return (
                   <Appear key={m.id} i={i}>
                     <ListRow leading={<Avatar name={m.user?.name} tone={d.tone === 'white' ? 'mint' : d.tone} />} title={m.user?.name}
-                      sub={due > 0 ? `${rupees(due)} advance to recover` : m.designation} meta={[d.label, m.phoneNumber].filter(Boolean).join(' · ')}
+                      sub={m.designation} meta={[d.label, m.phoneNumber, due > 0 ? `${rupees(due)} advance` : ''].filter(Boolean).join(' · ')}
                       onPress={() => setViewing(person)} chevron={false}
-                      actions={<Row gap={6}><IconButton icon={MessageCircle} label="WhatsApp" tone="success" size={34} onPress={() => whatsapp(m.phoneNumber)} /><IconButton icon={Phone} label="Call" tone="mint" size={34} onPress={() => call(m.phoneNumber)} /></Row>} />
+                      right={due > 0 ? <Badge label={`${rupees(due)} due`} tone="warning" /> : undefined}
+                      actions={<Row gap={6}><IconButton icon={HandCoins} label="Give advance" tone={due > 0 ? 'sun' : 'mint'} size={34} onPress={() => setGiving(person)} /><IconButton icon={MessageCircle} label="WhatsApp" tone="success" size={34} onPress={() => whatsapp(m.phoneNumber)} /><IconButton icon={Phone} label="Call" tone="mint" size={34} onPress={() => call(m.phoneNumber)} /></Row>} />
                   </Appear>
                 );
               })}
@@ -126,6 +140,7 @@ export default function Staff() {
 
       <GiveAdvance open={!!giving} person={giving === 'new' ? null : giving} staff={people} onClose={() => setGiving(null)} />
       <PersonSheet person={viewing} advances={viewing ? advances.filter((a: any) => personKey(a) === viewing.key) : []} onClose={() => setViewing(null)} onGive={(p) => { setViewing(null); setGiving(p); }} />
+      <AddStaffSheet open={addingStaff} onClose={() => setAddingStaff(false)} />
     </Screen>
   );
 }
@@ -254,6 +269,124 @@ const PersonSheet = ({ person, advances, onClose, onGive }: { person: Person | n
       <Confirm open={!!removing} title="Remove this advance?" message={removing ? `${rupees(removing.amount)} given to ${removing.staffName} on ${fmtDate(removing.givenOn)}. Use this only for an entry made by mistake.` : ''} confirmLabel="Remove" danger
         onConfirm={async () => { await staffAdvancesApi.remove(removing.id); toast.success('Entry removed'); await refresh(qc); }} onClose={() => setRemoving(null)} />
     </>
+  );
+};
+
+// ── Register a new staff member ──
+const AddStaffSheet = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [name, setName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [department, setDepartment] = useState('Security');
+  const [designation, setDesignation] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('password123');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName('');
+    setPhoneNumber('');
+    setDepartment('Security');
+    setDesignation('');
+    setEmail('');
+    setPassword('password123');
+    setError(null);
+    setBusy(false);
+  }, [open]);
+
+  const save = async () => {
+    if (!name.trim()) return setError('Please enter staff name.');
+    const cleanPhone = phoneNumber.replace(/\D/g, '').slice(0, 10);
+    if (cleanPhone.length !== 10) return setError('Please enter a valid 10-digit phone number.');
+    if (!designation.trim()) return setError('Please enter role/designation (e.g. Head Female Guard, Cook, Sweeper).');
+
+    const cleanEmail = email.trim() || `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}${cleanPhone.slice(-4)}@haripushppg.com`;
+
+    setBusy(true);
+    setError(null);
+    try {
+      await staffApi.create({
+        name: name.trim(),
+        phoneNumber: cleanPhone,
+        department,
+        designation: designation.trim(),
+        email: cleanEmail,
+        password: password || 'password123',
+      });
+      toast.success('Staff added', `${name.trim()} added. Login email: ${cleanEmail}`);
+      await qc.invalidateQueries({ queryKey: ['staff'] });
+      onClose();
+    } catch (e: any) {
+      setError(e.message || 'Could not add staff member.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const DEPT_OPTIONS = [
+    { value: 'Security', label: 'Security' },
+    { value: 'Mess', label: 'Mess / Kitchen' },
+    { value: 'Cleaning', label: 'Cleaning' },
+    { value: 'Maintenance', label: 'Maintenance' },
+    { value: 'Warden', label: 'Warden office' },
+  ];
+
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Add staff member"
+      subtitle="Guards, cooks, cleaners & maintenance crew"
+      footer={<Button title="Save staff member" icon={UserPlus} kind="brand" onPress={save} loading={busy} full />}
+    >
+      <View style={{ gap: 12 }}>
+        <Field label="Full name" required>
+          <Input value={name} onChangeText={setName} placeholder="e.g. Sunita Devi" />
+        </Field>
+
+        <Field label="Phone number" required hint="10-digit mobile number">
+          <Input
+            value={phoneNumber}
+            onChangeText={(v) => setPhoneNumber(v.replace(/\D/g, '').slice(0, 10))}
+            keyboardType="phone-pad"
+            placeholder="9876543210"
+            prefix="+91"
+          />
+        </Field>
+
+        <Field label="Department" required>
+          <Choices
+            value={department}
+            onChange={setDepartment}
+            options={DEPT_OPTIONS}
+            columns={2}
+          />
+        </Field>
+
+        <Field label="Role / Designation" required hint="e.g. Head Female Guard, Guard, Cook, Sweeper">
+          <Input value={designation} onChangeText={setDesignation} placeholder="e.g. Head Female Guard" />
+        </Field>
+
+        <Field label="Login email (optional)" hint="Used to sign in. Auto-generated if left empty.">
+          <Input
+            value={email}
+            onChangeText={setEmail}
+            placeholder="e.g. sunita@haripushppg.com"
+            autoCapitalize="none"
+            keyboardType="email-address"
+          />
+        </Field>
+
+        <Field label="Login password" hint="Default: password123">
+          <Input value={password} onChangeText={setPassword} placeholder="password123" />
+        </Field>
+
+        {error && <ErrorBox message={error} />}
+      </View>
+    </Sheet>
   );
 };
 

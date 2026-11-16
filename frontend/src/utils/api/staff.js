@@ -19,3 +19,9 @@ export const remove = (id) => {
 
 // data: { name, department, designation, phoneNumber }
 export const update = (id, data) => client(`/staff/${id}`, { method: 'PUT', body: data });
+
+// Staff advances
+export const getAdvances = (staffId) => client(`/staff-advances${staffId ? `?staffId=${staffId}` : ''}`);
+export const createAdvance = (data) => client('/staff-advances', { method: 'POST', body: data });
+export const recoverAdvance = (id, data) => client(`/staff-advances/${id}/recover`, { method: 'POST', body: data });
+export const removeAdvance = (id) => client(`/staff-advances/${id}`, { method: 'DELETE' });

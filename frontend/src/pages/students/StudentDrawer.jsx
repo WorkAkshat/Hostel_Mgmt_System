@@ -85,16 +85,16 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview,
     }
   };
 
-  const s = student;
+  const s = { ...student, ...(details || {}) };
   const status = s ? STUDENT_STATUS[s.status] || STUDENT_STATUS.CHECKED_IN : null;
   const room = s?.room;
   const unpaid = (details?.invoices || []).filter((i) => i.status === 'UNPAID');
   const dues = unpaid.reduce((sum, i) => sum + (i.amount || 0), 0);
   const depositPaid = (details?.invoices || [])
-    .filter((i) => (i.category === 'DEPOSIT' || i.title?.toLowerCase().includes('deposit')) && i.status === 'PAID')
+    .filter((i) => (i.category === 'DEPOSIT' || /security|deposit/i.test(i.title || '')) && i.status === 'PAID')
     .reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
   const advancePaid = (details?.invoices || [])
-    .filter((i) => (i.category === 'ADVANCE' || i.title?.toLowerCase().includes('advance')) && i.status === 'PAID')
+    .filter((i) => (i.category === 'ADVANCE' || /advance/i.test(i.title || '')) && i.status === 'PAID')
     .reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
   const pendingLeaves = (details?.leaveRequests || []).filter((l) => l.status === 'PENDING').length;
   const openComplaints = (details?.complaints || []).filter((c) => c.status !== 'RESOLVED').length;
@@ -273,7 +273,7 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview,
           </div>
 
           {/* ─── Security Deposit & Advance Status ─── */}
-          {details && (depositPaid > 0 || advancePaid > 0) && (
+          {details && (
             <div className="grid grid-cols-2 gap-2 mt-3">
               <div className="rounded-xl p-3 bg-brand-50 border border-brand-100 flex flex-col justify-between">
                 <div className="text-[11px] font-semibold text-brand-700 flex items-center gap-1">
@@ -282,7 +282,7 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview,
                 <div className="text-[17px] font-bold text-brand-900 mt-1">
                   ₹{depositPaid.toLocaleString('en-IN')}
                 </div>
-                <div className="text-[10px] text-brand-600 mt-0.5">Refundable on exit</div>
+                <div className="text-[10px] text-brand-600 mt-0.5">{depositPaid > 0 ? 'Refundable on exit' : 'None recorded'}</div>
               </div>
               <div className="rounded-xl p-3 bg-lilac-50 border border-lilac-100 flex flex-col justify-between">
                 <div className="text-[11px] font-semibold text-lilac-700 flex items-center gap-1">
@@ -291,7 +291,7 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview,
                 <div className="text-[17px] font-bold text-lilac-900 mt-1">
                   ₹{advancePaid.toLocaleString('en-IN')}
                 </div>
-                <div className="text-[10px] text-lilac-600 mt-0.5">Balance on record</div>
+                <div className="text-[10px] text-lilac-600 mt-0.5">{advancePaid > 0 ? 'Balance on record' : 'No advance recorded'}</div>
               </div>
             </div>
           )}
@@ -303,14 +303,46 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview,
                 <button
                   type="button"
                   onClick={() => onAssignRoom(s)}
-                  className="text-[12px] font-semibold text-brand-700 hover:text-brand-800 bg-transparent border-none cursor-pointer flex items-center gap-1.5"
+                  className="btn-secondary h-7 px-2.5 text-[12px] font-medium flex items-center gap-1.5 shadow-sm"
                 >
-                  <BedDouble size={14} /> {room ? 'Change room' : 'Assign room'}
+                  <BedDouble size={13} /> {room ? 'Change room' : 'Assign room'}
                 </button>
               )
             }
           >
+            {room ? (
+              <div className="p-3 mb-2 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
+                    <BedDouble size={18} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[14px] font-bold text-emerald-950 truncate">
+                      Room {room.roomNumber} <span className="text-[12px] font-normal text-emerald-700">({room.block || 'Main'} · Floor {room.floorNumber})</span>
+                    </div>
+                    <div className="text-[11px] font-semibold text-emerald-800 mt-0.5 truncate">
+                      🗓️ {s.roomAssignedAt ? `Room changed on ${fmtDate(s.roomAssignedAt)}` : s.dateOfJoining ? `Room allotted on ${fmtDate(s.dateOfJoining)}` : 'Active room'}
+                    </div>
+                  </div>
+                </div>
+                {onAssignRoom && (
+                  <button
+                    type="button"
+                    onClick={() => onAssignRoom(s)}
+                    className="btn-primary h-8 px-3 text-[12px] font-semibold flex items-center gap-1.5 shadow-sm shrink-0"
+                  >
+                    <BedDouble size={13} /> Change room
+                  </button>
+                )}
+              </div>
+            ) : null}
+
             <Row label="Room">{room && `Room ${room.roomNumber}${room.block ? ` · ${room.block}` : ''}`}</Row>
+            {room && (
+              <Row label={s.roomAssignedAt ? "Room changed date" : "Room allotted date"}>
+                <span className="font-semibold text-emerald-800">{fmtDate(s.roomAssignedAt || s.dateOfJoining || s.createdAt || new Date())}</span>
+              </Row>
+            )}
             <Row label="Floor">{room?.floorNumber && `Floor ${room.floorNumber}`}</Row>
             <Row label="Sharing">{room && `${priceFor(room.sharingType).label} · ${room.isAc ? 'AC' : 'Non-AC'}`}</Row>
             <Row label="Monthly fee">{room && `₹${priceFor(room.sharingType).total.toLocaleString('en-IN')}`}</Row>
@@ -331,6 +363,47 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview,
               </div>
             )}
           </Section>
+
+          {/* Room History Section */}
+          {((s.roomHistory && s.roomHistory.length > 0) || room) && (
+            <Section title="Room History">
+              <div className="flex flex-col gap-2">
+                {((s.roomHistory && s.roomHistory.length > 0) ? s.roomHistory : [{
+                  id: 'initial',
+                  fromRoomNo: null,
+                  toRoomNo: room?.roomNumber,
+                  changedAt: s.roomAssignedAt || s.dateOfJoining || s.createdAt,
+                  reason: 'Initial allotment',
+                  changedBy: 'Warden',
+                }]).map((h, idx) => {
+                  const title = h.fromRoomNo && h.toRoomNo
+                    ? `Room ${h.fromRoomNo} → Room ${h.toRoomNo}`
+                    : h.toRoomNo
+                    ? `Allocated Room ${h.toRoomNo}`
+                    : `Removed from Room ${h.fromRoomNo || ''}`;
+                  return (
+                    <div key={h.id || idx} className="p-2.5 rounded-xl bg-gray-50 border border-[var(--border-color)] flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                          <BedDouble size={15} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-semibold text-[var(--text-color)] truncate">{title}</div>
+                          <div className="text-[11px] text-[var(--text-secondary)] truncate">
+                            {h.reason || 'Room change'}
+                            {h.changedBy ? ` · by ${h.changedBy}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                        {fmtDate(h.changedAt)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
 
           <Section title="Contact">
             <Row label="Email">{s.user?.email}</Row>

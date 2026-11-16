@@ -86,6 +86,8 @@ export const visitorsApi = {
 export const messApi = {
   menu: () => api('/mess/menu'),
   saveMenu: (menu: unknown) => api('/mess/menu', { method: 'POST', body: menu }),
+  mealSettings: () => api('/mess/meal-settings'),
+  saveMealSettings: (meals: unknown) => api('/mess/meal-settings', { method: 'PUT', body: { meals } }),
   stats: () => api('/mess/stats'),
   kitchen: (date?: string) => api(`/mess/cook-dashboard${q({ date })}`),
   myAttendance: () => api('/mess/my-attendance'),
@@ -124,6 +126,7 @@ export type ChargeCategory = 'FINE' | 'DAMAGE' | 'DEPOSIT' | 'LATE_FEE' | 'EXTRA
 export const demandNotesApi = {
   all: (params: { month?: string; floorNumber?: string | number } = {}) => api(`/demand-notes${q(params)}`),
   companyConfig: () => api('/demand-notes/company-config'),
+  updateElectricityRate: (rate: number) => api('/demand-notes/electricity-rate', { method: 'PUT', body: { rate } }),
   recordPayment: (id: string, payment: Payment) => api(`/demand-notes/${id}/mark-paid`, { method: 'PATCH', body: payment }),
   generate: (billingMonth: string, floorNumber?: number) => api('/demand-notes/generate', { method: 'POST', body: { billingMonth, floorNumber } }),
   // Draft → sent: residents only see a note after this
@@ -144,6 +147,10 @@ export const nightApi = {
 
 export const staffApi = {
   all: () => api('/staff'),
+  create: (data: { name: string; email: string; password?: string; department: string; designation: string; phoneNumber: string }) =>
+    api('/staff', { method: 'POST', body: data }),
+  update: (id: string, data: Record<string, unknown>) => api(`/staff/${id}`, { method: 'PUT', body: data }),
+  remove: (id: string) => api(`/staff/${id}`, { method: 'DELETE' }),
 };
 
 // Money given to staff ahead of salary (and taken back later)

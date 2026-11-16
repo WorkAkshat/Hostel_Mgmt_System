@@ -23,7 +23,11 @@ const getAllStudents = async (req, res) => {
             avatar: true
           }
         },
-        room: true
+        room: true,
+        roomHistory: {
+          orderBy: { changedAt: 'desc' },
+          take: 5
+        }
       },
       orderBy: { id: 'asc' }
     };
@@ -81,7 +85,10 @@ const getStudentById = async (req, res) => {
         leaveRequests: true,
         invoices: true,
         demandNotes: true,
-        visitors: true
+        visitors: true,
+        roomHistory: {
+          orderBy: { changedAt: 'desc' }
+        }
       }
     });
 
@@ -186,25 +193,41 @@ const createStudent = async (req, res) => {
           dob: dob ? new Date(dob) : null,
           dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : null,
           roomId: roomId || null,
+          roomAssignedAt: roomId ? (dateOfJoining ? new Date(dateOfJoining) : new Date()) : null,
           status: 'CHECKED_IN'
         },
         include: {
-          room: true
+          room: true,
+          roomHistory: {
+            orderBy: { changedAt: 'desc' }
+          }
         }
       });
 
-      // Update room status to FULL if occupancy reaches sharing limit
+      // Update room status to FULL if occupancy reaches sharing limit & log history
       if (roomId) {
         const updatedRoom = await tx.room.findUnique({
           where: { id: roomId },
           include: { students: true }
         });
-        if (updatedRoom.students.length >= updatedRoom.sharingType) {
+        if (updatedRoom && updatedRoom.students.length >= updatedRoom.sharingType) {
           await tx.room.update({
             where: { id: roomId },
             data: { status: 'FULL' }
           });
         }
+        await tx.roomHistory.create({
+          data: {
+            studentId: student.id,
+            fromRoomId: null,
+            toRoomId: roomId,
+            fromRoomNo: null,
+            toRoomNo: updatedRoom ? updatedRoom.roomNumber : null,
+            changedAt: dateOfJoining ? new Date(dateOfJoining) : new Date(),
+            reason: 'Initial room allotment',
+            changedBy: req.user?.name || (req.user?.role === 'ADMIN' ? 'Warden' : 'System')
+          }
+        });
       }
 
       return student;
@@ -229,6 +252,7 @@ const updateStudent = async (req, res) => {
     phoneNumber,
     parentContact,
     roomId,
+    roomAssignedAt,
     status,
     dateOfJoining,
     maritalStatus,
@@ -275,6 +299,7 @@ const updateStudent = async (req, res) => {
 
       // 2. Check and handle Room change
       let targetRoomId = student.roomId;
+      let targetRoomAssignedAt = student.roomAssignedAt;
       if (roomId !== undefined && roomId !== student.roomId) {
         // If student is leaving an old room, update that old room status to AVAILABLE
         if (student.roomId) {
@@ -301,6 +326,7 @@ const updateStudent = async (req, res) => {
           }
 
           targetRoomId = roomId;
+          targetRoomAssignedAt = roomAssignedAt ? new Date(roomAssignedAt) : new Date();
 
           // Update room to FULL if target room is now filled
           if (currentOccupancyCount + 1 >= newRoom.sharingType) {
@@ -311,7 +337,37 @@ const updateStudent = async (req, res) => {
           }
         } else {
           targetRoomId = null;
+          targetRoomAssignedAt = null;
         }
+
+        // Record room change in RoomHistory
+        const changerName = req.user?.name || (req.user?.role === 'ADMIN' ? 'Warden' : 'System');
+        const oldRoomNo = student.room?.roomNumber || null;
+        const newRoomNo = newRoom ? newRoom.roomNumber : null;
+        let changeReason = req.body.reason;
+        if (!changeReason) {
+          if (targetRoomId && student.roomId) {
+            changeReason = `Changed room from Room ${oldRoomNo || 'previous'} to Room ${newRoomNo || targetRoomId}`;
+          } else if (targetRoomId) {
+            changeReason = `Assigned to Room ${newRoomNo || targetRoomId}`;
+          } else {
+            changeReason = `Removed from Room ${oldRoomNo || 'previous'}`;
+          }
+        }
+        await tx.roomHistory.create({
+          data: {
+            studentId: student.id,
+            fromRoomId: student.roomId || null,
+            toRoomId: targetRoomId || null,
+            fromRoomNo: oldRoomNo,
+            toRoomNo: newRoomNo,
+            changedAt: targetRoomAssignedAt || new Date(),
+            reason: changeReason,
+            changedBy: changerName
+          }
+        });
+      } else if (roomAssignedAt !== undefined && student.roomId) {
+        targetRoomAssignedAt = roomAssignedAt ? new Date(roomAssignedAt) : student.roomAssignedAt;
       }
 
       // 3. Update student details
@@ -322,6 +378,7 @@ const updateStudent = async (req, res) => {
           parentContact: parentContact || student.parentContact,
           status: status || student.status,
           roomId: targetRoomId,
+          roomAssignedAt: targetRoomAssignedAt,
           dateOfJoining: dateOfJoining ? new Date(dateOfJoining) : student.dateOfJoining,
           maritalStatus: maritalStatus !== undefined ? maritalStatus : student.maritalStatus,
           fatherName: fatherName !== undefined ? fatherName : student.fatherName,
@@ -344,7 +401,10 @@ const updateStudent = async (req, res) => {
               email: true
             }
           },
-          room: true
+          room: true,
+          roomHistory: {
+            orderBy: { changedAt: 'desc' }
+          }
         }
       });
     });

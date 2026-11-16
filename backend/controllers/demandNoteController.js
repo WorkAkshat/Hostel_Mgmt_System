@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 const { logActivity } = require('../utils/activityLogger');
 const { COMPANY_CONFIG, FEE_STRUCTURE, generateDemandNoteNumber, numberToWords } = require('../config/companyConfig');
 
-const PAYMENT_METHODS = ['CASH', 'UPI', 'BANK', 'CHEQUE'];
+const PAYMENT_METHODS = ['CASH', 'UPI', 'BANK', 'CHEQUE', 'ADVANCE'];
 
 // Current billing month as YYYY-MM based on 10-to-10 cycle:
 // If today is before the 10th, the active cycle is from the 10th of the previous month.
@@ -64,12 +64,31 @@ const generateDemandNotes = async (req, res) => {
     const generated = [];
     const sequenceCounts = {};
 
+    const totalCycleDays = Math.max(1, Math.round((cycleEnd.getTime() - cycleStart.getTime()) / (1000 * 60 * 60 * 24)));
+
     for (const student of students) {
       if (!student.room) continue;
 
       const fNum = student.room.floorNumber || 1;
       const companyInfo = COMPANY_CONFIG[fNum] || COMPANY_CONFIG[1];
-      const sharingFee = FEE_STRUCTURE.hostel[student.room.sharingType] || FEE_STRUCTURE.hostel[2];
+      const baseSharingFee = FEE_STRUCTURE.hostel[student.room.sharingType] || FEE_STRUCTURE.hostel[2];
+      const baseMessFee = FEE_STRUCTURE.mess;
+
+      // 10-to-10 month proration for residents joining mid-cycle
+      const joinDate = student.dateOfJoining ? new Date(student.dateOfJoining) : (student.roomAssignedAt ? new Date(student.roomAssignedAt) : null);
+      let sharingFee = baseSharingFee;
+      let messTotal = baseMessFee;
+      let isProrated = false;
+      let daysActive = totalCycleDays;
+
+      if (joinDate && joinDate > cycleStart && joinDate < cycleEnd) {
+        daysActive = Math.max(1, Math.round((cycleEnd.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24)));
+        if (daysActive < totalCycleDays) {
+          sharingFee = Math.round((baseSharingFee / totalCycleDays) * daysActive);
+          messTotal = Math.round((baseMessFee / totalCycleDays) * daysActive);
+          isProrated = true;
+        }
+      }
 
       const reading = student.room.electricityReadings?.[0];
       // The room meter is shared, so its bill is split equally between the residents
@@ -81,7 +100,6 @@ const generateDemandNotes = async (req, res) => {
       const currReading = reading ? reading.currentReading : 0;
 
       const hostelTotal = sharingFee + elecAmt;
-      const messTotal = FEE_STRUCTURE.mess;
       const grandTotal = hostelTotal + messTotal;
 
       if (!sequenceCounts[companyInfo.notePrefix]) sequenceCounts[companyInfo.notePrefix] = 0;
@@ -132,6 +150,18 @@ const generateDemandNotes = async (req, res) => {
         }
       });
 
+      // Get student's Security Deposit and Advance records
+      const studentInvoices = await prisma.invoice.findMany({
+        where: { studentId: student.id, status: 'PAID' },
+        select: { category: true, title: true, amount: true }
+      });
+      const depositPaid = studentInvoices
+        .filter((i) => i.category === 'DEPOSIT' || /security|deposit/i.test(i.title || ''))
+        .reduce((sum, i) => sum + (i.amount || 0), 0);
+      const advancePaid = studentInvoices
+        .filter((i) => i.category === 'ADVANCE' || /advance/i.test(i.title || ''))
+        .reduce((sum, i) => sum + (i.amount || 0), 0);
+
       generated.push({
         id: demandNote.id,
         noteNumber,
@@ -143,14 +173,21 @@ const generateDemandNotes = async (req, res) => {
         sharingType: student.room.sharingType,
         companyName: companyInfo.companyName,
         hostelFee: sharingFee,
+        baseHostelFee: baseSharingFee,
         electricityUnits: elecUnits,
         electricityRate: elecRate,
         electricityAmount: elecAmt,
         prevReading,
         currReading,
         messFee: messTotal,
+        baseMessFee: baseMessFee,
         totalAmount: grandTotal,
         amountInWords: numberToWords(grandTotal),
+        isProrated,
+        daysActive,
+        totalCycleDays,
+        depositPaid,
+        advancePaid,
       });
     }
 
@@ -220,10 +257,25 @@ const getDemandNotes = async (req, res) => {
       ids.forEach((row, i) => { sequence[row.id] = i + 1; });
     }
 
+    // Fetch all paid invoices for students in these notes to get deposit & advance
+    const studentIds = [...new Set(demandNotes.map((n) => n.studentId))];
+    const studentInvoices = studentIds.length > 0 ? await prisma.invoice.findMany({
+      where: { studentId: { in: studentIds }, status: 'PAID' },
+      select: { studentId: true, category: true, title: true, amount: true }
+    }) : [];
+
     const enriched = demandNotes.map((note) => {
       const fNum = note.floorNumber || 1;
       const companyInfo = COMPANY_CONFIG[fNum] || COMPANY_CONFIG[1];
       const cateringInfo = COMPANY_CONFIG.catering;
+
+      const myInvoices = studentInvoices.filter((i) => i.studentId === note.studentId);
+      const depositPaid = myInvoices
+        .filter((i) => i.category === 'DEPOSIT' || /security|deposit/i.test(i.title || ''))
+        .reduce((sum, i) => sum + (i.amount || 0), 0);
+      const advancePaid = myInvoices
+        .filter((i) => i.category === 'ADVANCE' || /advance/i.test(i.title || ''))
+        .reduce((sum, i) => sum + (i.amount || 0), 0);
 
       return {
         ...note,
@@ -231,6 +283,8 @@ const getDemandNotes = async (req, res) => {
         amountInWords: numberToWords(note.totalAmount),
         company: companyInfo,
         catering: cateringInfo,
+        depositPaid,
+        advancePaid,
       };
     });
 
@@ -249,6 +303,25 @@ const getCompanyConfig = async (req, res) => {
     companies: COMPANY_CONFIG,
     fees: FEE_STRUCTURE,
   });
+};
+
+// @desc    Update electricity rate per unit
+// @route   PUT /api/v1/demand-notes/electricity-rate
+// @access  Private (Admin / Warden)
+const updateElectricityRate = async (req, res) => {
+  try {
+    const { rate } = req.body;
+    const r = parseFloat(rate);
+    if (isNaN(r) || r < 0) {
+      return res.status(400).json({ message: 'Rate per unit must be a valid number.' });
+    }
+    FEE_STRUCTURE.electricityRate = r;
+    res.json({ message: `Electricity rate updated to ₹${r}/unit`, rate: r });
+    logActivity({ req, action: 'UPDATE', module: 'FEE', description: `Updated electricity rate per unit to ₹${r}`, metadata: { rate: r } });
+  } catch (error) {
+    console.error('Error updating electricity rate:', error);
+    res.status(500).json({ message: 'Server error updating electricity rate' });
+  }
 };
 
 // @desc    Record a payment received against a Demand Note (Warden only)
@@ -335,5 +408,6 @@ module.exports = {
   generateDemandNotes,
   getDemandNotes,
   getCompanyConfig,
+  updateElectricityRate,
   markPaid
 };

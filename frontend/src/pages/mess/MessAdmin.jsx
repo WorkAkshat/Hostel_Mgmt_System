@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChefHat, ChevronRight, Coffee, Cookie, Moon, Soup, UtensilsCrossed } from 'lucide-react';
+import { ChefHat, ChevronRight, Clock, Coffee, Cookie, Moon, Soup, UtensilsCrossed } from 'lucide-react';
 import { mess as messApi, notices as noticesApi, complaints as complaintsApi } from '../../utils/api';
 import ProgressBar from '../../components/ui/ProgressBar';
 import AnimatedNumber from '../../components/ui/AnimatedNumber';
 import { useToast } from '../../components/ui/Toast';
 import { ErrorPanel, PageHeader, SkeletonList } from '../../components/ui/PageStates';
-import { MEALS } from '../../config/hostel';
+import { MEALS, getMergedMeals } from '../../config/hostel';
 import WeeklyMenu from './WeeklyMenu';
 import MessNotices from './MessNotices';
+import MealSettingsModal from './MealSettingsModal';
 import { dayName, mealState, normalizeMenu } from './menuUtils';
 import useLiveRefresh from '../../hooks/useLiveRefresh';
 
@@ -20,18 +21,28 @@ const MessAdmin = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
       setError(null);
-      const [stats, cook, menu, notices, complaints] = await Promise.all([
+      const [stats, cook, menu, mealSettings, notices, complaints] = await Promise.all([
         messApi.getStats().catch(() => null),
         messApi.getCookDashboard().catch(() => null),
         messApi.getMenu(),
+        messApi.getMealSettings().catch(() => null),
         noticesApi.getAll('MESS').catch(() => []),
         complaintsApi.getAll().catch(() => []),
       ]);
-      setData({ stats, cook, menu: normalizeMenu(menu), notices: notices || [], foodComplaints: (complaints || []).filter((c) => c.category === 'Mess & Food' && c.status !== 'RESOLVED').length });
+      const meals = getMergedMeals(mealSettings);
+      setData({
+        stats,
+        cook,
+        menu: normalizeMenu(menu),
+        meals,
+        notices: notices || [],
+        foodComplaints: (complaints || []).filter((c) => c.category === 'Mess & Food' && c.status !== 'RESOLVED').length
+      });
     } catch (err) {
       setError(err.message || 'Could not load the mess.');
     } finally {
@@ -52,6 +63,18 @@ const MessAdmin = () => {
       return true;
     } catch (err) {
       toast.error('Could not save the menu', err.message);
+      return false;
+    }
+  };
+
+  const saveMealSettings = async (meals) => {
+    try {
+      await messApi.updateMealSettings(meals);
+      setData((d) => ({ ...d, meals }));
+      toast.success('Meal settings updated', 'Display names and timings updated across web and mobile.');
+      return true;
+    } catch (err) {
+      toast.error('Could not save meal settings', err.message);
       return false;
     }
   };
@@ -89,13 +112,16 @@ const MessAdmin = () => {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader title="Mess" subtitle={`${today} · ${roster} residents on the roster`}>
+        <button type="button" className="btn-secondary h-10" onClick={() => setSettingsOpen(true)}>
+          <Clock size={16} /> Meal times & names
+        </button>
         <Link to="/admin/cook-dashboard" className="btn-secondary h-10"><ChefHat size={16} /> Kitchen view</Link>
       </PageHeader>
 
       {/* Today */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {MEALS.map((m, i) => {
-          const Icon = MEAL_ICONS[m.key];
+        {(data.meals || MEALS).map((m, i) => {
+          const Icon = MEAL_ICONS[m.key] || Coffee;
           const state = mealState(m.key);
           const expected = data.cook?.expectedMealCounts?.[m.type] ?? roster;
           const skipped = data.cook?.optOutCounts?.[m.type] ?? 0;
@@ -166,7 +192,14 @@ const MessAdmin = () => {
         <MessNotices notices={data.notices} onPost={postNotice} onDelete={deleteNotice} />
       </div>
 
-      <WeeklyMenu menu={data.menu} onSave={saveMenu} />
+      <WeeklyMenu menu={data.menu} onSave={saveMenu} meals={data.meals} onEditSettings={() => setSettingsOpen(true)} />
+
+      <MealSettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        meals={data.meals}
+        onSave={saveMealSettings}
+      />
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Banknote, CircleCheck, Landmark, ScrollText, Smartphone, XCircle } from 'lucide-react-native';
+import { Banknote, CircleCheck, HandCoins, Landmark, ScrollText, Smartphone, XCircle } from 'lucide-react-native';
 import type { Payment, PayMethod } from '../api';
 import { rupees } from '../lib/format';
 import { colors } from '../ui/theme';
@@ -15,6 +15,7 @@ const METHODS = [
   { value: 'UPI', label: 'UPI', icon: Smartphone, ref: 'UPI transaction ID' },
   { value: 'BANK', label: 'Bank', icon: Landmark, ref: 'Bank reference / UTR' },
   { value: 'CHEQUE', label: 'Cheque', icon: ScrollText, ref: 'Cheque number' },
+  { value: 'ADVANCE', label: 'Advance', icon: HandCoins, ref: 'Advance note (optional)' },
 ];
 
 // Warden records money received against a bill
@@ -32,7 +33,7 @@ export default function RecordPayment({ bill, onClose, onSave, onCancelCharge }:
 
   const m = METHODS.find((x) => x.value === method)!;
   const save = async () => {
-    if (method !== 'CASH' && !ref.trim()) return setError(`Enter the ${m.ref.toLowerCase()} so the payment can be traced.`);
+    if (method !== 'CASH' && method !== 'ADVANCE' && !ref.trim()) return setError(`Enter the ${m.ref.toLowerCase()} so the payment can be traced.`);
     if (!date) return setError('Pick the date the money was received.');
     setBusy(true);
     setError(null);
@@ -53,7 +54,7 @@ export default function RecordPayment({ bill, onClose, onSave, onCancelCharge }:
         </Card>
       )}
       <Field label="How was it paid?"><Choices value={method} onChange={(v) => { setMethod(v); setError(null); }} columns={4} options={METHODS.map(({ value, label, icon }) => ({ value, label, icon }))} /></Field>
-      <Field label={m.ref} required={method !== 'CASH'}><Input value={ref} onChangeText={(v) => { setRef(v.slice(0, 40)); setError(null); }} autoCapitalize="characters" /></Field>
+      <Field label={m.ref} required={method !== 'CASH' && method !== 'ADVANCE'}><Input value={ref} onChangeText={(v) => { setRef(v.slice(0, 40)); setError(null); }} autoCapitalize="characters" /></Field>
       <Field label="Received on" required><DateTimeField label="Received on" value={date} onChange={setDate} withTime={false} /></Field>
       <Row gap={6}><T v="caption" c={colors.text3}>The resident gets the receipt in their app right away.</T></Row>
       {error && <ErrorBox message={error} />}

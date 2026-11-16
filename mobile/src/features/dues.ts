@@ -47,7 +47,7 @@ export const CHARGE_TYPES: { value: ChargeCategory; label: string; title: string
   { value: 'DEPOSIT', label: 'Deposit', title: 'Security deposit', ask: true, paid: true },
   { value: 'LATE_FEE', label: 'Late fee', title: 'Late payment fee', ask: true, paid: true },
   { value: 'EXTRA', label: 'Extra service', title: 'Extra service', ask: true, paid: true },
-  { value: 'ADVANCE', label: 'Advance', title: 'Advance payment', ask: false, paid: true },
+  { value: 'ADVANCE', label: 'Advance', title: 'Advance payment', ask: true, paid: true },
   { value: 'OTHER', label: 'Other', title: '', ask: true, paid: true },
 ];
 
@@ -124,8 +124,8 @@ export const duesByStudent = (bills: Bill[]) => {
       s.count += 1;
       if (b.state === 'overdue') s.overdue += b.amount;
     } else {
-      if (b.category === 'DEPOSIT') s.deposit += b.amount;
-      if (b.category === 'ADVANCE') s.advance += b.amount;
+      if (b.category === 'DEPOSIT' || /security|deposit/i.test(b.title || '')) s.deposit += b.amount;
+      if (b.category === 'ADVANCE' || /advance/i.test(b.title || '')) s.advance += b.amount;
     }
   });
   return out;

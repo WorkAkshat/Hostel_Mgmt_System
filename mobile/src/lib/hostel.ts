@@ -46,6 +46,24 @@ export const MEALS = [
   { key: 'dinner', type: 'DINNER', label: 'Dinner', time: '7:00–9:00 PM', window: [1140, 1260] },
 ] as const;
 
+export type MealConfig = {
+  key: string;
+  type: string;
+  label: string;
+  time: string;
+  window?: readonly number[] | number[];
+};
+
+export const getMergedMeals = (customMeals?: any[]): MealConfig[] => {
+  if (Array.isArray(customMeals) && customMeals.length > 0) {
+    return MEALS.map((base) => {
+      const found = customMeals.find((c: any) => c.key === base.key || c.type === base.type);
+      return found ? { ...base, ...found } : base;
+    });
+  }
+  return [...MEALS];
+};
+
 export const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 export const dayName = (d: Date = new Date()) => WEEK_DAYS[(d.getDay() + 6) % 7];
 

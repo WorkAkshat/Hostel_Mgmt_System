@@ -8,7 +8,9 @@ const {
   cancelOptOut,
   getCookDashboard,
   getMessMenu,
-  updateMessMenu
+  updateMessMenu,
+  getMealSettings,
+  updateMealSettings
 } = require('../controllers/messController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -27,5 +29,9 @@ router.get('/cook-dashboard', protect, getCookDashboard);
 // Mess Menu endpoints
 router.get('/menu', protect, getMessMenu);
 router.post('/menu', protect, authorize('ADMIN'), updateMessMenu);
+
+// Meal Timing & Name settings
+router.get('/meal-settings', protect, getMealSettings);
+router.put('/meal-settings', protect, authorize('ADMIN'), updateMealSettings);
 
 module.exports = router;

@@ -70,9 +70,12 @@ export default function StudentBills() {
   const fee = room?.sharingType ? priceFor(room.sharingType) : null;
   const loading = inv.isLoading || notes.isLoading;
 
-  const securityDepositPaid = bills.filter((b) => b.category === 'DEPOSIT' && b.state === 'paid').reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const advancePaid = bills.filter((b) => b.category === 'ADVANCE' && b.state === 'paid').reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const depositDue = bills.filter((b) => b.category === 'DEPOSIT' && b.state !== 'paid').reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const isDepBill = (b: any) => b.category === 'DEPOSIT' || /security|deposit/i.test(b.title || '') || /security|deposit/i.test(b.raw?.category || '') || /security|deposit/i.test(b.raw?.title || '');
+  const isAdvBill = (b: any) => b.category === 'ADVANCE' || /advance/i.test(b.title || '') || /advance/i.test(b.raw?.category || '') || /advance/i.test(b.raw?.title || '');
+
+  const securityDepositPaid = bills.filter((b) => isDepBill(b) && b.state === 'paid').reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const advancePaid = bills.filter((b) => isAdvBill(b) && b.state === 'paid').reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const depositDue = bills.filter((b) => isDepBill(b) && b.state !== 'paid').reduce((s, b) => s + (Number(b.amount) || 0), 0);
 
   const share = async (b: any, mode: 'share' | 'download' = 'share') => {
     setSharing(true);
@@ -125,28 +128,30 @@ export default function StudentBills() {
         </Hero>
       </Appear>
 
-      {(securityDepositPaid > 0 || advancePaid > 0 || depositDue > 0) && (
-        <Appear>
-          <Card style={{ backgroundColor: colors.cream100, borderColor: colors.sun200, gap: 10 }}>
-            <Row gap={8} style={{ alignItems: 'center' }}>
-              <ShieldCheck size={18} color={colors.brand700} />
-              <T v="title" w="bold" style={{ flex: 1 }}>Security & Advance on record</T>
-            </Row>
-            <Row gap={10}>
-              <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border, gap: 2 }}>
-                <T v="caption" c={colors.text3}>Security deposit</T>
-                <T v="title" w="bold" c={securityDepositPaid > 0 ? colors.success : depositDue > 0 ? colors.danger : colors.text}>{rupees(securityDepositPaid || depositDue)}</T>
-                <T v="caption" c={securityDepositPaid > 0 ? colors.success : colors.text3}>{securityDepositPaid > 0 ? 'Paid (Refundable)' : depositDue > 0 ? 'Pending payment' : 'Not required'}</T>
-              </View>
-              <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border, gap: 2 }}>
-                <T v="caption" c={colors.text3}>Advance payment</T>
-                <T v="title" w="bold" c={advancePaid > 0 ? colors.brand700 : colors.text}>{rupees(advancePaid)}</T>
-                <T v="caption" c={advancePaid > 0 ? colors.brand700 : colors.text3}>{advancePaid > 0 ? 'Advance recorded' : 'No advance'}</T>
-              </View>
-            </Row>
-          </Card>
-        </Appear>
-      )}
+      {/* Security Deposit & Advance Status */}
+      <Appear>
+        <Card style={{ backgroundColor: colors.cream100, borderColor: colors.sun200, gap: 10 }}>
+          <Row gap={8} style={{ alignItems: 'center' }}>
+            <ShieldCheck size={18} color={colors.brand700} />
+            <T v="title" w="bold" style={{ flex: 1 }}>Security & Advance on record</T>
+            {(securityDepositPaid > 0 || advancePaid > 0) && (
+              <Badge label="Active" tone="mint" />
+            )}
+          </Row>
+          <Row gap={10}>
+            <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border, gap: 2 }}>
+              <T v="caption" c={colors.text3}>Security deposit</T>
+              <T v="title" w="bold" c={securityDepositPaid > 0 ? colors.success : depositDue > 0 ? colors.danger : colors.text}>{rupees(securityDepositPaid || depositDue)}</T>
+              <T v="caption" c={securityDepositPaid > 0 ? colors.success : colors.text3}>{securityDepositPaid > 0 ? '✓ Paid (Refundable)' : depositDue > 0 ? 'Pending payment' : '₹0 recorded'}</T>
+            </View>
+            <View style={{ flex: 1, backgroundColor: colors.white, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border, gap: 2 }}>
+              <T v="caption" c={colors.text3}>Advance payment</T>
+              <T v="title" w="bold" c={advancePaid > 0 ? colors.brand700 : colors.text}>{rupees(advancePaid)}</T>
+              <T v="caption" c={advancePaid > 0 ? colors.brand700 : colors.text3}>{advancePaid > 0 ? '✓ Advance recorded' : '₹0 recorded'}</T>
+            </View>
+          </Row>
+        </Card>
+      </Appear>
 
       <Chips value={filter} onChange={setFilter} options={[{ value: 'open', label: 'To pay', count: open.length }, { value: 'paid', label: 'Paid', count: bills.length - open.length }]} />
 

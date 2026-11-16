@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { BedDouble, CalendarDays, CircleCheck, Lightbulb, Megaphone, Plus, ShieldCheck, UtensilsCrossed, Wallet, Wrench } from 'lucide-react-native';
 import { dashboardApi, demandNotesApi, feesApi, leavesApi, messApi, noticesApi, pollsApi } from '../../api';
@@ -5,7 +6,7 @@ import { asList } from '../../api/client';
 import { useAuth } from '../../lib/auth';
 import { useData, useRefreshAll } from '../../lib/query';
 import { fmtDate, firstName, greeting, isoDay, rupees, timeAgo } from '../../lib/format';
-import { LEAVE_STATUS, LEAVE_TYPES, MEALS, dayName, mealState, noteDueDate, normalizeMenu } from '../../lib/hostel';
+import { LEAVE_STATUS, LEAVE_TYPES, MEALS, dayName, getMergedMeals, mealState, noteDueDate, normalizeMenu } from '../../lib/hostel';
 import { colors } from '../../ui/theme';
 import { Avatar, Badge, Card, IconTile, Press, Row, Skeleton, T } from '../../ui/primitives';
 import { Hero, HeroCells, QuickActions, onHero } from '../../ui/blocks';
@@ -27,6 +28,8 @@ export default function StudentHome() {
   const notes = useData(['demand-notes'], () => demandNotesApi.all());
   const notices = useData(['notices'], () => noticesApi.all());
   const polls = useData(['polls'], pollsApi.all);
+  const mealSettings = useData(['meal-settings'], messApi.mealSettings);
+  const activeMeals = useMemo(() => getMergedMeals(mealSettings.data), [mealSettings.data]);
 
   const profile = dash.data?.profile;
   const room = profile?.room;
@@ -41,11 +44,14 @@ export default function StudentHome() {
   const due = unpaid.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const nextDue = unpaid.sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime())[0];
 
+  const isDepInv = (i: any) => i.category === 'DEPOSIT' || /security|deposit/i.test(i.title || '') || /security|deposit/i.test(i.note || '');
+  const isAdvInv = (i: any) => i.category === 'ADVANCE' || /advance/i.test(i.title || '') || /advance/i.test(i.note || '');
+
   const depositPaid = asList(invoices.data)
-    .filter((i: any) => i.category === 'DEPOSIT' && i.status === 'PAID')
+    .filter((i: any) => isDepInv(i) && i.status === 'PAID')
     .reduce((s: number, i: any) => s + (Number(i.amount) || 0), 0);
   const advancePaid = asList(invoices.data)
-    .filter((i: any) => i.category === 'ADVANCE' && i.status === 'PAID')
+    .filter((i: any) => isAdvInv(i) && i.status === 'PAID')
     .reduce((s: number, i: any) => s + (Number(i.amount) || 0), 0);
 
   const active = asList(leaves.data).find((l: any) => ['PENDING', 'APPROVED', 'CHECKED_OUT'].includes(l.status));
@@ -105,33 +111,32 @@ export default function StudentHome() {
         </Grid>
       </Appear>
 
-      {(depositPaid > 0 || advancePaid > 0) && (
-        <Appear i={1}>
-          <Press onPress={() => go('/student/bills')} scaleTo={0.98} accessibilityRole="button" accessibilityLabel="View deposits and advance">
-            <Card style={{ paddingVertical: 10, paddingHorizontal: 14, backgroundColor: colors.white, borderColor: colors.mint100, gap: 6 }}>
-              <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                <Row gap={6}>
-                  <ShieldCheck size={16} color={colors.brand700} />
-                  <T v="caption" w="bold" c={colors.brand700}>Security & Advance Held</T>
-                </Row>
-                <T v="caption" c={colors.text3}>View bills ›</T>
+      {/* Security Deposit & Advance Status */}
+      <Appear i={1}>
+        <Press onPress={() => go('/student/bills')} scaleTo={0.98} accessibilityRole="button" accessibilityLabel="View deposits and advance">
+          <Card style={{ paddingVertical: 12, paddingHorizontal: 14, backgroundColor: colors.white, borderColor: colors.border, gap: 8 }}>
+            <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+              <Row gap={6} style={{ alignItems: 'center' }}>
+                <ShieldCheck size={16} color={colors.brand700} />
+                <T v="title" w="bold">Security & Advance on Record</T>
               </Row>
-              <Row gap={16}>
-                <Row gap={4}>
-                  <T v="caption" c={colors.text3}>Security deposit:</T>
-                  <T v="caption" w="bold" c={colors.success}>{rupees(depositPaid)}</T>
-                </Row>
-                {advancePaid > 0 && (
-                  <Row gap={4}>
-                    <T v="caption" c={colors.text3}>Advance:</T>
-                    <T v="caption" w="bold" c={colors.brand700}>{rupees(advancePaid)}</T>
-                  </Row>
-                )}
-              </Row>
-            </Card>
-          </Press>
-        </Appear>
-      )}
+              <T v="caption" c={colors.brand700}>View bills ›</T>
+            </Row>
+            <Row gap={12}>
+              <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 10, padding: 10, gap: 2 }}>
+                <T v="caption" c={colors.text3}>Security deposit</T>
+                <T v="title" w="bold" c={depositPaid > 0 ? colors.success : colors.text}>{rupees(depositPaid)}</T>
+                <T v="caption" c={depositPaid > 0 ? colors.success : colors.text3}>{depositPaid > 0 ? '✓ Paid (Refundable)' : '₹0 recorded'}</T>
+              </View>
+              <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 10, padding: 10, gap: 2 }}>
+                <T v="caption" c={colors.text3}>Advance payment</T>
+                <T v="title" w="bold" c={advancePaid > 0 ? colors.brand700 : colors.text}>{rupees(advancePaid)}</T>
+                <T v="caption" c={advancePaid > 0 ? colors.brand700 : colors.text3}>{advancePaid > 0 ? '✓ In advance' : '₹0 recorded'}</T>
+              </View>
+            </Row>
+          </Card>
+        </Press>
+      </Appear>
 
       {/* Shortcuts */}
       <Appear i={2}>
@@ -147,8 +152,8 @@ export default function StudentHome() {
       <Appear i={3}>
         <Section title="Today's meals" action="Mess" onAction={() => go('/student/mess')}>
           <Card padded={false}>
-            {MEALS.map((m, i) => {
-              const state = mealState(m.window);
+            {activeMeals.map((m, i) => {
+              const state = mealState(m.window || [0, 1440]);
               const skipped = skippedToday.includes(m.type);
               return (
                 <View key={m.key} style={[styles.meal, i > 0 && { borderTopWidth: 1, borderTopColor: colors.border }, state === 'serving' && !skipped && { backgroundColor: colors.cream100 }]}>

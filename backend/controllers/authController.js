@@ -507,7 +507,20 @@ const approveUser = async (req, res) => {
 
           await tx.student.update({
             where: { id: studentRecord.id },
-            data: { roomId }
+            data: { roomId, roomAssignedAt: new Date() }
+          });
+
+          await tx.roomHistory.create({
+            data: {
+              studentId: studentRecord.id,
+              fromRoomId: null,
+              toRoomId: roomId,
+              fromRoomNo: null,
+              toRoomNo: room.roomNumber,
+              changedAt: new Date(),
+              reason: 'Room allocated during registration approval',
+              changedBy: req.user?.name || 'Warden'
+            }
           });
 
           // Mark room full if capacity reached

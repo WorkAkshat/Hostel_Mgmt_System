@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CircleCheck, Gauge, Save } from 'lucide-react';
+import { CircleCheck, Gauge, Pencil, Save } from 'lucide-react';
 import Drawer from '../../components/ui/Drawer';
 import ProgressBar from '../../components/ui/ProgressBar';
 import { SearchBox } from '../../components/ui/PageStates';
 import { useToast } from '../../components/ui/Toast';
-import { electricity as electricityApi } from '../../utils/api';
+import { electricity as electricityApi, demandNotes as demandNotesApi } from '../../utils/api';
 import { rupees } from '../../utils/format';
 import { monthLabel } from './financeUtils';
 
@@ -17,6 +17,16 @@ const MeterReadings = ({ open, onClose, month, rooms, readings, prevReadings, ra
   const [drafts, setDrafts] = useState({});
   const [saving, setSaving] = useState(null);
   const [search, setSearch] = useState('');
+  const [currentRate, setCurrentRate] = useState(rate || 11);
+  const [isEditingRate, setIsEditingRate] = useState(false);
+  const [tempRate, setTempRate] = useState(String(rate || 11));
+
+  useEffect(() => {
+    if (rate) {
+      setCurrentRate(rate);
+      setTempRate(String(rate));
+    }
+  }, [rate]);
 
   const byRoom = useMemo(() => Object.fromEntries(readings.map((r) => [r.roomId, r])), [readings]);
   const prevByRoom = useMemo(() => Object.fromEntries(prevReadings.map((r) => [r.roomId, r])), [prevReadings]);
@@ -24,6 +34,7 @@ const MeterReadings = ({ open, onClose, month, rooms, readings, prevReadings, ra
   useEffect(() => {
     if (!open) return;
     setSearch('');
+    setIsEditingRate(false);
     setDrafts(Object.fromEntries(rooms.map((room) => {
       const saved = byRoom[room.id];
       return [room.id, {
@@ -36,6 +47,20 @@ const MeterReadings = ({ open, onClose, month, rooms, readings, prevReadings, ra
   const set = (roomId, key, value) =>
     setDrafts((d) => ({ ...d, [roomId]: { ...d[roomId], [key]: value.replace(/[^\d.]/g, '').slice(0, 8) } }));
 
+  const saveRate = async () => {
+    const val = parseFloat(tempRate);
+    if (isNaN(val) || val < 0) return toast.error('Invalid rate', 'Please enter a valid rate per unit.');
+    try {
+      await demandNotesApi.updateElectricityRate(val);
+      setCurrentRate(val);
+      setIsEditingRate(false);
+      toast.success('Rate updated', `Electricity rate set to ₹${val}/unit.`);
+      onSaved?.();
+    } catch (e) {
+      toast.error('Could not update rate', e.message);
+    }
+  };
+
   const save = async (room) => {
     const d = drafts[room.id];
     const prev = num(d.prev);
@@ -44,8 +69,8 @@ const MeterReadings = ({ open, onClose, month, rooms, readings, prevReadings, ra
     if (curr < prev) return toast.error(`Room ${room.roomNumber}`, 'Current reading cannot be lower than the previous one.');
     setSaving(room.id);
     try {
-      await electricityApi.submitReading({ roomId: room.id, readingMonth: month, previousReading: prev, currentReading: curr, ratePerUnit: rate });
-      toast.success(`Room ${room.roomNumber} saved`, `${curr - prev} units · ${rupees((curr - prev) * rate)}`);
+      await electricityApi.submitReading({ roomId: room.id, readingMonth: month, previousReading: prev, currentReading: curr, ratePerUnit: currentRate });
+      toast.success(`Room ${room.roomNumber} saved`, `${curr - prev} units · ${rupees((curr - prev) * currentRate)}`);
       onSaved();
     } catch (err) {
       toast.error('Could not save the reading', err.message);
@@ -67,7 +92,46 @@ const MeterReadings = ({ open, onClose, month, rooms, readings, prevReadings, ra
       header={(
         <div>
           <h3 className="text-[17px] font-bold m-0 flex items-center gap-2"><Gauge size={18} className="text-brand-600" /> Meter readings · {monthLabel(month)}</h3>
-          <p className="text-[12px] text-[var(--text-secondary)] m-0 mt-0.5">₹{rate}/unit · each room’s bill is split equally between its residents</p>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className="text-[12px] text-[var(--text-secondary)]">Rate per unit:</span>
+            {isEditingRate ? (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[12px] font-semibold text-brand-700">₹</span>
+                <input
+                  type="number"
+                  step="0.5"
+                  className="w-16 h-7 text-[12px] font-bold px-1.5 py-0 border border-brand-400 rounded-md bg-white focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  value={tempRate}
+                  onChange={(e) => setTempRate(e.target.value)}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={saveRate}
+                  className="btn-primary h-7 px-2 text-[11px] font-semibold rounded-md"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setIsEditingRate(false); setTempRate(String(currentRate)); }}
+                  className="btn-secondary h-7 px-1.5 text-[11px] rounded-md"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEditingRate(true)}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-brand-50 hover:bg-brand-100 text-brand-800 text-[12px] font-bold border border-brand-200 transition-colors cursor-pointer"
+                title="Click to edit rate per unit (e.g. ₹11 to ₹12)"
+              >
+                ₹{currentRate}/unit <Pencil size={11} className="text-brand-600 ml-0.5" />
+              </button>
+            )}
+            <span className="text-[11px] text-[var(--text-tertiary)]">· split equally between room residents</span>
+          </div>
           <div className="mt-3 flex items-center gap-3">
             <div className="flex-1"><ProgressBar value={done} max={rooms.length || 1} tone="brand" height={6} label="Rooms read" /></div>
             <span className="text-[12px] font-semibold whitespace-nowrap">{done} / {rooms.length} rooms</span>
@@ -108,7 +172,7 @@ const MeterReadings = ({ open, onClose, month, rooms, readings, prevReadings, ra
                 </div>
                 {units != null && units >= 0 && (
                   <p className="text-[12px] text-[var(--text-secondary)] m-0 mt-2">
-                    {units} units · <strong>{rupees(units * rate)}</strong>{residents > 1 ? ` · ${rupees((units * rate) / residents)} each` : ''}
+                    {units} units · <strong>{rupees(units * currentRate)}</strong>{residents > 1 ? ` · ${rupees((units * currentRate) / residents)} each` : ''}
                   </p>
                 )}
                 {units != null && units < 0 && <p className="text-[12px] text-[var(--danger)] m-0 mt-2">Current reading is lower than the previous one.</p>}

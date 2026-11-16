@@ -3,7 +3,7 @@ const prisma = new PrismaClient();
 const { logActivity } = require('../utils/activityLogger');
 const { COMPANY_CONFIG, FEE_STRUCTURE } = require('../config/companyConfig');
 
-const PAYMENT_METHODS = ['CASH', 'UPI', 'BANK', 'CHEQUE'];
+const PAYMENT_METHODS = ['CASH', 'UPI', 'BANK', 'CHEQUE', 'ADVANCE'];
 const CHARGE_CATEGORIES = ['FINE', 'DAMAGE', 'DEPOSIT', 'LATE_FEE', 'EXTRA', 'ADVANCE', 'OTHER'];
 const CHARGE_LABELS = { FINE: 'Fine', DAMAGE: 'Damage', DEPOSIT: 'Security deposit', LATE_FEE: 'Late fee', EXTRA: 'Extra service', ADVANCE: 'Advance payment', OTHER: 'Other' };
 
@@ -271,14 +271,27 @@ const generateMonthlyBillingRun = async () => {
     const sharing = student.room.sharingType || student.room.capacity;
     const roomRent = (FEE_STRUCTURE.hostel[sharing] || FEE_STRUCTURE.hostel[2]);
     const messFee = FEE_STRUCTURE.mess;
-    const billingAmount = roomRent + messFee;
+
+    // 10-to-10 month proration if resident joined mid-cycle
+    const totalCycleDays = Math.max(1, Math.round((endOfMonth.getTime() - startOfMonth.getTime()) / (1000 * 60 * 60 * 24)));
+    const joinDate = student.dateOfJoining ? new Date(student.dateOfJoining) : (student.roomAssignedAt ? new Date(student.roomAssignedAt) : null);
+    let finalRent = roomRent;
+    let finalMess = messFee;
+    if (joinDate && joinDate > startOfMonth && joinDate < endOfMonth) {
+      const daysActive = Math.max(1, Math.round((endOfMonth.getTime() - joinDate.getTime()) / (1000 * 60 * 60 * 24)));
+      if (daysActive < totalCycleDays) {
+        finalRent = Math.round((roomRent / totalCycleDays) * daysActive);
+        finalMess = Math.round((messFee / totalCycleDays) * daysActive);
+      }
+    }
+    const billingAmount = finalRent + finalMess;
 
     await prisma.invoice.create({
       data: {
         studentId: student.id,
         amount: billingAmount,
-        rentAmount: roomRent,
-        messAmount: messFee,
+        rentAmount: finalRent,
+        messAmount: finalMess,
         electricityAmount: 0,
         dueDate,
         status: 'UNPAID',

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
+import { Keyboard, Linking, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTopInset } from '../ui/safe';
 import Animated, { FadeIn, FadeInDown, FadeInUp, FadeOut, LinearTransition } from 'react-native-reanimated';
@@ -119,9 +119,17 @@ Server: ${API_URL.replace('/api/v1', '')}` : err.message || 'Could not sign in.'
           </Pressable>
         </Animated.View>
 
-        <T v="caption" c={colors.brand800} center style={{ marginTop: 18, paddingHorizontal: 24 }}>
-          New resident? Register on the website — the warden approves your account.
-        </T>
+        <View style={{ marginTop: 18, alignItems: 'center', gap: 6, paddingHorizontal: 24 }}>
+          <Row gap={6} align="center">
+            <T v="small" c={colors.brand800}>New resident?</T>
+            <Pressable onPress={() => Linking.openURL('https://hms.haripushphostel.in/register')} hitSlop={8}>
+              <T v="small" w="bold" c={colors.brand900} style={{ textDecorationLine: 'underline' }}>Register here</T>
+            </Pressable>
+          </Row>
+          <T v="caption" c={colors.brand700} center>
+            The warden approves your account and allots your room.
+          </T>
+        </View>
       </ScrollView>
 
       <Sheet open={termsOpen} onClose={() => setTermsOpen(false)} title="Before you continue" subtitle="Please read and accept the hostel app terms."

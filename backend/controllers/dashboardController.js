@@ -204,6 +204,10 @@ const getDashboard = async (req, res) => {
         include: {
           user: true,
           room: true,
+          roomHistory: {
+            orderBy: { changedAt: 'desc' },
+            take: 20
+          },
           leaveRequests: {
             orderBy: { createdAt: 'desc' },
             take: 10
@@ -306,7 +310,9 @@ const getDashboard = async (req, res) => {
             floorNumber: student.room.floorNumber,
             sharingType: student.room.sharingType || student.room.capacity,
             isAc: student.room.isAc
-          } : null
+          } : null,
+          roomAssignedAt: student.roomAssignedAt,
+          roomHistory: student.roomHistory || []
         },
         stats: {
           totalLeaves,
@@ -321,6 +327,7 @@ const getDashboard = async (req, res) => {
         leaves: student.leaveRequests,
         complaints: student.complaints,
         invoices: student.invoices,
+        roomHistory: student.roomHistory || [],
         messAttendance: student.messAttendance,
         documents,
         latestPoll: formattedLatestPoll

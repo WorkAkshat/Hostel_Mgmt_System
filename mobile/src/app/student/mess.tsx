@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { ChevronDown, CircleCheck, Megaphone, MessageSquareWarning, Undo2 } from 'lucide-react-native';
@@ -6,7 +6,7 @@ import { messApi, noticesApi } from '../../api';
 import { asList } from '../../api/client';
 import { useData } from '../../lib/query';
 import { fmtDate, isoDay, timeAgo } from '../../lib/format';
-import { MEALS, WEEK_DAYS, dayName, mealState, normalizeMenu } from '../../lib/hostel';
+import { MEALS, WEEK_DAYS, dayName, getMergedMeals, mealState, normalizeMenu } from '../../lib/hostel';
 import { colors } from '../../ui/theme';
 import { Badge, Button, Card, IconTile, Row, Segmented, T, tap } from '../../ui/primitives';
 import { ErrorBox, Loading, useToast } from '../../ui/feedback';
@@ -20,6 +20,8 @@ export default function StudentMess() {
   const qc = useQueryClient();
   const toast = useToast();
   const menu = useData(['menu'], messApi.menu, { interval: 300_000 });
+  const mealSettings = useData(['meal-settings'], messApi.mealSettings);
+  const activeMeals = useMemo(() => getMergedMeals(mealSettings.data), [mealSettings.data]);
   const skips = useData(['my-opt-outs'], messApi.myOptOuts);
   const logs = useData(['my-mess-attendance'], messApi.myAttendance);
   const notices = useData(['notices', 'MESS'], () => noticesApi.all('MESS'));
@@ -36,9 +38,9 @@ export default function StudentMess() {
   const ateToday = asList(logs.data).filter((l: any) => l.date === isoDay()).map((l: any) => l.mealType);
 
   // The meal being served now, or the next one (tomorrow's breakfast late at night)
-  const nowMeal = MEALS.find((m) => mealState(m.window) !== 'over');
-  const next = nowMeal ? { meal: nowMeal, day: dayName(), serving: mealState(nowMeal.window) === 'serving' } : { meal: MEALS[0], day: dayName(new Date(Date.now() + 86400000)), serving: false };
-  const NextIcon = MEAL_ICONS[next.meal.key];
+  const nowMeal = activeMeals.find((m) => mealState(m.window || [0, 1440]) !== 'over');
+  const next = nowMeal ? { meal: nowMeal, day: dayName(), serving: mealState(nowMeal.window || [0, 1440]) === 'serving' } : { meal: activeMeals[0], day: dayName(new Date(Date.now() + 86400000)), serving: false };
+  const NextIcon = (MEAL_ICONS as any)[next.meal.key];
   const month = isoDay().slice(0, 7);
   const skippedMonth = skipList.filter((o: any) => String(o.date).startsWith(month)).length;
   const ateMonth = asList(logs.data).filter((l: any) => String(l.date).startsWith(month)).length;
@@ -82,9 +84,9 @@ export default function StudentMess() {
       {menu.error ? <ErrorBox message={(menu.error as Error).message} onRetry={menu.refetch} /> : !week ? <Loading rows={4} h={76} /> : (
         <View style={{ gap: 10 }}>
           <T v="small" c={colors.text3}>{fmtDate(date, { weekday: 'long' })} · counts are for this month</T>
-          {MEALS.map((m, i) => {
-            const Icon = MEAL_ICONS[m.key];
-            const state = mealState(m.window, date);
+          {activeMeals.map((m, i) => {
+            const Icon = (MEAL_ICONS as any)[m.key];
+            const state = mealState(m.window || [0, 1440], date);
             const record = skipList.find((o: any) => o.date === key && o.mealType === m.type);
             const ate = which === 'today' && ateToday.includes(m.type);
             return (
@@ -135,7 +137,7 @@ export default function StudentMess() {
                   </Pressable>
                   {open && (
                     <View style={styles.dayBody}>
-                      {MEALS.map((m) => (
+                      {activeMeals.map((m) => (
                         <Row key={m.key} align="flex-start">
                           <T v="small" w="semibold" style={{ width: 82 }}>{m.label}</T>
                           <T v="small" c={colors.text2} style={{ flex: 1 }}>{week[d]?.[m.key] || '—'}</T>

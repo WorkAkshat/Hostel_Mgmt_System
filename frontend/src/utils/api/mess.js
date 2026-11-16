@@ -37,3 +37,7 @@ export const getMenu = () => client('/mess/menu');
 export const updateMenu = (menu) => client('/mess/menu', { method: 'POST', body: menu });
 
 export const getMyOptOuts = () => client('/mess/my-opt-outs');
+
+export const getMealSettings = () => client('/mess/meal-settings');
+
+export const updateMealSettings = (meals) => client('/mess/meal-settings', { method: 'PUT', body: { meals } });

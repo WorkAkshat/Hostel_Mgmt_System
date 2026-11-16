@@ -78,4 +78,14 @@ export const MEALS = [
   { key: 'dinner', type: 'DINNER', label: 'Dinner', time: '7:00–9:00 PM' },
 ];
 
+export const getMergedMeals = (customMeals) => {
+  if (Array.isArray(customMeals) && customMeals.length > 0) {
+    return MEALS.map((base) => {
+      const found = customMeals.find((c) => c.key === base.key || c.type === base.type);
+      return found ? { ...base, ...found } : base;
+    });
+  }
+  return [...MEALS];
+};
+
 export const WEEK_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];

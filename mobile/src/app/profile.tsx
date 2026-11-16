@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { CircleCheck, Clock, FilePen, IdCard, ShieldCheck, Upload, XCircle } from 'lucide-react-native';
+import { BedDouble, CircleCheck, Clock, FilePen, IdCard, ShieldCheck, Upload, XCircle } from 'lucide-react-native';
 import { dashboardApi, studentsApi } from '../api';
 import { asList } from '../api/client';
 import { useAuth } from '../lib/auth';
@@ -88,6 +88,42 @@ export default function Profile() {
               <Info label="Monthly fee" value={s.room ? `₹${priceFor(s.room.sharingType).total.toLocaleString('en-IN')} · ${priceFor(s.room.sharingType).label}` : ''} />
             </Card>
           </Section>
+
+          {/* Room History */}
+          {((s.roomHistory && s.roomHistory.length > 0) || s.room) && (
+            <Section title="Room history">
+              <Card padded={false}>
+                {((s.roomHistory && s.roomHistory.length > 0) ? s.roomHistory : [{
+                  id: 'initial',
+                  fromRoomNo: null,
+                  toRoomNo: s.room?.roomNumber,
+                  changedAt: s.roomAssignedAt || s.dateOfJoining || s.createdAt,
+                  reason: 'Current room allotment',
+                }]).map((h: any, idx: number, arr: any[]) => {
+                  const title = h.fromRoomNo && h.toRoomNo
+                    ? `Room ${h.fromRoomNo} → Room ${h.toRoomNo}`
+                    : h.toRoomNo
+                    ? `Allocated Room ${h.toRoomNo}`
+                    : `Moved out of Room ${h.fromRoomNo || ''}`;
+                  return (
+                    <View key={h.id || idx}>
+                      <Row style={{ padding: 12, alignItems: 'center' }} gap={10}>
+                        <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: colors.mint100, alignItems: 'center', justifyContent: 'center' }}>
+                          <BedDouble size={16} color={colors.brand700} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <T v="title" w="bold">{title}</T>
+                          <T v="caption" c={colors.text3}>{h.reason || 'Room change'}</T>
+                        </View>
+                        <Badge label={fmtDate(h.changedAt)} tone="mint" />
+                      </Row>
+                      {idx < arr.length - 1 && <Divider />}
+                    </View>
+                  );
+                })}
+              </Card>
+            </Section>
+          )}
 
           <Section title="ID documents" action="Add" onAction={() => setAddingDoc(true)}>
             {asList(docs.data).length === 0 ? (

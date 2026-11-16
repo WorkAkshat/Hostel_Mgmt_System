@@ -48,6 +48,7 @@ model Student {
   roomId         String?
   room           Room?          @relation(fields: [roomId], references: [id])
   bedId          String?        // Specific Bed ID e.g. "101-A", "104-Single"
+  roomAssignedAt DateTime?      // Date when room was assigned or changed
   profilePic     String?
   
   // Registration Personal Details
@@ -76,6 +77,7 @@ model Student {
   nightAttendances NightAttendance[]
   messAttendance   MessAttendance[]
   suggestions      Suggestion[]
+  roomHistory      RoomHistory[]
 }
 
 model Staff {
@@ -120,6 +122,26 @@ model Room {
   bedMapping          String               @default("[]") // JSON string of bed IDs e.g. ["101-A", "101-B", "101-C"]
   students            Student[]
   electricityReadings ElectricityReading[]
+  historyFrom         RoomHistory[]        @relation("FromRoomHistory")
+  historyTo           RoomHistory[]        @relation("ToRoomHistory")
+}
+
+model RoomHistory {
+  id          String    @id @default(uuid())
+  studentId   String
+  student     Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  fromRoomId  String?
+  fromRoom    Room?     @relation("FromRoomHistory", fields: [fromRoomId], references: [id])
+  toRoomId    String?
+  toRoom      Room?     @relation("ToRoomHistory", fields: [toRoomId], references: [id])
+  fromRoomNo  String?
+  toRoomNo    String?
+  changedAt   DateTime  @default(now())
+  reason      String?
+  changedBy   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([studentId])
 }
 
 model LeaveRequest {

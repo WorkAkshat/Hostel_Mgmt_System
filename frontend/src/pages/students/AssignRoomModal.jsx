@@ -20,6 +20,7 @@ const AssignRoomModal = ({
   const toast = useToast();
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [selectedRoomId, setSelectedRoomId] = useState('');
+  const [changeDate, setChangeDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [studentSearch, setStudentSearch] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -28,6 +29,7 @@ const AssignRoomModal = ({
     if (!isOpen) return;
     setSelectedStudentId(initialStudent?.id || '');
     setSelectedRoomId(initialRoom?.id || initialStudent?.roomId || '');
+    setChangeDate(initialStudent?.roomAssignedAt ? new Date(initialStudent.roomAssignedAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
     setStudentSearch('');
     setError(null);
     setSaving(false);
@@ -97,7 +99,10 @@ const AssignRoomModal = ({
     setError(null);
 
     try {
-      await studentsApi.update(currentStudent.id, { roomId: selectedRoomId || null });
+      await studentsApi.update(currentStudent.id, {
+        roomId: selectedRoomId || null,
+        roomAssignedAt: selectedRoomId ? (changeDate ? new Date(changeDate).toISOString() : new Date().toISOString()) : null,
+      });
       if (selectedRoomId && currentRoom) {
         toast.success(
           `Room ${currentRoom.roomNumber} assigned`,
@@ -274,6 +279,24 @@ const AssignRoomModal = ({
             </div>
             <span className="text-[12px] font-semibold text-sun-800 shrink-0">
               {Math.max(0, capacityOf(currentRoom) - (currentRoom.students || []).filter((s) => s.id !== currentStudent?.id).length)} bed(s) available
+            </span>
+          </div>
+        )}
+
+        {/* Change / Effective date if room is selected */}
+        {selectedRoomId && (
+          <div className="flex flex-col gap-1.5 p-3 rounded-xl bg-gray-50 border border-[var(--border-color)]">
+            <label className="text-[12px] font-semibold text-[var(--text-color)]">
+              Room Change / Allocation Date
+            </label>
+            <input
+              type="date"
+              value={changeDate}
+              onChange={(e) => setChangeDate(e.target.value)}
+              className="h-9 px-3 rounded-lg border border-[var(--border-color)] bg-white text-[13px] text-[var(--text-color)] focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            />
+            <span className="text-[11px] text-[var(--text-secondary)]">
+              Date from which resident moved into or changed this room.
             </span>
           </div>
         )}

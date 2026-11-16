@@ -302,6 +302,59 @@ const DEFAULT_MENU = {
   Sunday:    { breakfast: 'Dosa + Chutney + Sambar', lunch: 'Special Thali (Puri, Dal, Sabzi, Sweet)', snacks: 'French Fries + Sauce', dinner: 'Veg Pulao + Butter Naan + Raita' },
 };
 
+const DEFAULT_MEALS = [
+  { key: 'breakfast', type: 'BREAKFAST', label: 'Breakfast', time: '7:30–9:00 AM', window: [450, 540] },
+  { key: 'lunch', type: 'LUNCH', label: 'Lunch', time: '12:30–2:00 PM', window: [750, 840] },
+  { key: 'snacks', type: 'SNACKS', label: 'Snacks', time: '4:30–5:30 PM', window: [990, 1050] },
+  { key: 'dinner', type: 'DINNER', label: 'Dinner', time: '7:00–9:00 PM', window: [1140, 1260] },
+];
+
+const getMealSettings = async (req, res) => {
+  try {
+    const setting = await prisma.appSetting.findUnique({
+      where: { key: 'mess_meals' }
+    });
+    if (!setting) {
+      return res.json(DEFAULT_MEALS);
+    }
+    const meals = JSON.parse(setting.value);
+    res.json(meals);
+  } catch (error) {
+    console.error('Error fetching meal settings:', error);
+    res.status(500).json({ message: 'Server error retrieving meal settings' });
+  }
+};
+
+const updateMealSettings = async (req, res) => {
+  try {
+    const meals = req.body.meals || req.body;
+    if (!Array.isArray(meals) || meals.length === 0) {
+      return res.status(400).json({ message: 'Meals must be an array of meal configurations' });
+    }
+
+    const cleanMeals = meals.map(m => ({
+      key: m.key,
+      type: m.type || m.key.toUpperCase(),
+      label: m.label || m.key,
+      time: m.time || '',
+      window: Array.isArray(m.window) ? m.window : [0, 1440]
+    }));
+
+    await prisma.appSetting.upsert({
+      where: { key: 'mess_meals' },
+      update: { value: JSON.stringify(cleanMeals) },
+      create: { key: 'mess_meals', value: JSON.stringify(cleanMeals) }
+    });
+
+    res.json({ message: 'Meal settings updated successfully', meals: cleanMeals });
+
+    logActivity({ req, action: 'UPDATE', module: 'MESS', description: `Updated mess meal timings and names`, targetType: 'AppSetting' });
+  } catch (error) {
+    console.error('Error updating meal settings:', error);
+    res.status(500).json({ message: 'Server error saving meal settings' });
+  }
+};
+
 const getMessMenu = async (req, res) => {
   try {
     if (!fs.existsSync(MENU_FILE_PATH)) {
@@ -341,5 +394,7 @@ module.exports = {
   cancelOptOut,
   getCookDashboard,
   getMessMenu,
-  updateMessMenu
+  updateMessMenu,
+  getMealSettings,
+  updateMealSettings
 };

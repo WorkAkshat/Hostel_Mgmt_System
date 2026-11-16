@@ -9,8 +9,8 @@ import { useData } from '../../lib/query';
 import { fmtDate, monthKey, monthLabel, plural, rupees, shiftMonth } from '../../lib/format';
 import { BILL_STATUS, billState, noteDueDate } from '../../lib/hostel';
 import { colors } from '../../ui/theme';
-import { Avatar, Badge, Button, Card, Chips, IconButton, Progress, Row, Segmented, T } from '../../ui/primitives';
-import { Input, money } from '../../ui/form';
+import { Avatar, Badge, Button, Card, Chips, IconButton, Press, Progress, Row, Segmented, T } from '../../ui/primitives';
+import { Field, Input, money } from '../../ui/form';
 import { Confirm, Empty, ErrorBox, Loading, useToast } from '../../ui/feedback';
 import { Appear, Grid, Screen, Stat } from '../../ui/layout';
 import { Hero, HeroCells, onHero } from '../../ui/blocks';
@@ -18,6 +18,7 @@ import { FloorChips, onFloor, useFloor } from '../../features/floor';
 import MonthStepper from '../../features/MonthStepper';
 import RecordPayment from '../../features/RecordPayment';
 import { downloadBill, shareBill } from '../../features/receipt';
+import { Sheet } from '../../ui/Sheet';
 
 export default function DemandNotes() {
   const params = useLocalSearchParams<{ tab?: 'notes' | 'meters' }>();
@@ -165,7 +166,12 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
   const readings = useData(['readings', month], () => electricityApi.readings({ month }), { interval: false });
   const prev = useData(['readings', shiftMonth(month, -1)], () => electricityApi.readings({ month: shiftMonth(month, -1) }), { interval: false });
   const config = useData(['company-config'], demandNotesApi.companyConfig, { interval: false });
-  const rate = Number(config.data?.fees?.electricityRate) || 11;
+  const defaultRate = Number(config.data?.fees?.electricityRate) || 11;
+  const [customRate, setCustomRate] = useState<string>('');
+  const [rateSheetOpen, setRateSheetOpen] = useState(false);
+  const [savingRate, setSavingRate] = useState(false);
+  const currentRate = customRate !== '' ? (parseFloat(customRate) || defaultRate) : defaultRate;
+
   const [draft, setDraft] = useState<Record<string, { prev: string; curr: string }>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [finishing, setFinishing] = useState<'send' | 'review' | null>(null);
@@ -208,8 +214,8 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
     if (c < p) return toast.error(`Room ${room.roomNumber}`, 'Current reading cannot be lower than the previous one.');
     setBusy(room.id);
     try {
-      await electricityApi.submit({ roomId: room.id, readingMonth: month, previousReading: p, currentReading: c, ratePerUnit: rate });
-      toast.success(`Room ${room.roomNumber} saved`, `${c - p} units · ${rupees((c - p) * rate)}`);
+      await electricityApi.submit({ roomId: room.id, readingMonth: month, previousReading: p, currentReading: c, ratePerUnit: currentRate });
+      toast.success(`Room ${room.roomNumber} saved`, `${c - p} units · ${rupees((c - p) * currentRate)}`);
       await qc.invalidateQueries({ queryKey: ['readings', month] });
     } catch (e: any) { toast.error('Could not save', e.message); } finally { setBusy(null); }
   };
@@ -218,7 +224,13 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
   return (
     <>
       <Card style={{ gap: 8 }}>
-        <Row style={{ justifyContent: 'space-between' }}><T v="title">{done} of {list.length} rooms read</T><T v="caption" c={colors.text3}>₹{rate}/unit</T></Row>
+        <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <T v="title">{done} of {list.length} rooms read</T>
+          <Press onPress={() => setRateSheetOpen(true)} scaleTo={0.96} style={{ backgroundColor: colors.mint100, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Zap size={13} color={colors.brand700} />
+            <T v="caption" w="bold" c={colors.brand700}>₹{currentRate}/unit · Edit</T>
+          </Press>
+        </Row>
         <Progress value={done} max={list.length || 1} color={done === list.length && done ? colors.brand500 : colors.sun400} />
         <T v="caption" c={colors.text3}>The room bill is split equally between its residents.</T>
       </Card>
@@ -240,7 +252,7 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
               <Button title="Save" icon={Save} small kind={changed ? 'primary' : 'secondary'} disabled={!changed} loading={busy === room.id} onPress={() => save(room)} style={{ height: 48 }} />
             </Row>
             {units != null && (units >= 0
-              ? <Row gap={6}><Zap size={13} color={colors.sun800} /><T v="caption" c={colors.text2}>{units} units · {rupees(units * rate)}{(room.students || []).length > 1 ? ` · ${rupees((units * rate) / room.students.length)} each` : ''}</T></Row>
+              ? <Row gap={6}><Zap size={13} color={colors.sun800} /><T v="caption" c={colors.text2}>{units} units · {rupees(units * currentRate)}{(room.students || []).length > 1 ? ` · ${rupees((units * currentRate) / room.students.length)} each` : ''}</T></Row>
               : <T v="caption" c={colors.danger}>Current reading is lower than the previous one.</T>)}
           </Card>
         );
@@ -261,6 +273,50 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
       <Confirm open={confirmFinish} title={`Send ${monthLabel(month)} bills?`}
         message={`${floor === 'all' ? 'All floors' : `Floor ${floor}`}: bills are calculated from these readings and sent to every checked-in resident.${done < list.length ? ` ${list.length - done} room(s) have no reading yet — they get no electricity charge.` : ''}`}
         confirmLabel="Calculate & send" onConfirm={() => finish(true)} onClose={() => setConfirmFinish(false)} />
+
+      <Sheet
+        open={rateSheetOpen}
+        onClose={() => setRateSheetOpen(false)}
+        title="Electricity rate per unit"
+        subtitle="Used to calculate room electricity bills"
+        footer={
+          <Button
+            title={`Set rate to ₹${customRate || currentRate}/unit`}
+            icon={Zap}
+            kind="brand"
+            loading={savingRate}
+            onPress={async () => {
+              const r = Number(customRate || currentRate);
+              if (!(r >= 0)) return toast.error('Enter a valid rate');
+              setSavingRate(true);
+              try {
+                await demandNotesApi.updateElectricityRate(r);
+                toast.success('Rate updated', `Electricity rate set to ₹${r}/unit.`);
+                await qc.invalidateQueries({ queryKey: ['company-config'] });
+                setRateSheetOpen(false);
+              } catch (e: any) {
+                toast.error('Could not update rate', e.message);
+              } finally {
+                setSavingRate(false);
+              }
+            }}
+            full
+          />
+        }
+      >
+        <Field label="Rate per unit (₹/unit)" required hint="e.g. 11, 12, or 12.5">
+          <Input
+            prefix="₹"
+            value={customRate !== '' ? customRate : String(currentRate)}
+            onChangeText={(v) => setCustomRate(money(v))}
+            keyboardType="decimal-pad"
+            placeholder="11"
+          />
+        </Field>
+        <T v="caption" c={colors.text3}>
+          All room meter readings will be multiplied by this rate (Units × ₹{customRate || currentRate}).
+        </T>
+      </Sheet>
     </>
   );
 };

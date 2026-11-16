@@ -10,6 +10,9 @@ export const getAll = async (params = {}) => {
 
 export const getCompanyConfig = async () => client('/demand-notes/company-config');
 
+export const updateElectricityRate = async (rate) =>
+  client('/demand-notes/electricity-rate', { method: 'PUT', body: { rate } });
+
 // Draft → sent. Residents only see a note after this. data: { ids } or { month, floorNumber }
 export const send = async (data) => client('/demand-notes/send', { method: 'POST', body: data });
 

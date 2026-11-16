@@ -49,9 +49,16 @@ export default function StudentDetail() {
   const unpaid = bills.filter((b) => b.state !== 'paid').sort((a, b) => new Date(a.due).getTime() - new Date(b.due).getTime());
   const due = unpaid.reduce((a, b) => a + b.amount, 0);
   const overdue = unpaid.filter((b) => b.state === 'overdue').reduce((a, b) => a + b.amount, 0);
-  const depositPaid = bills.filter((b) => b.category === 'DEPOSIT' && b.state === 'paid').reduce((a, b) => a + b.amount, 0);
-  const advancePaid = bills.filter((b) => b.category === 'ADVANCE' && b.state === 'paid').reduce((a, b) => a + b.amount, 0);
-  const depositDue = bills.filter((b) => b.category === 'DEPOSIT' && b.state !== 'paid').reduce((a, b) => a + b.amount, 0);
+  const isDep = (b: any) => b.category === 'DEPOSIT' || /security|deposit/i.test(b.title || '') || /security|deposit/i.test(b.raw?.category || '') || /security|deposit/i.test(b.raw?.title || '');
+  const isAdv = (b: any) => b.category === 'ADVANCE' || /advance/i.test(b.title || '') || /advance/i.test(b.raw?.category || '') || /advance/i.test(b.raw?.title || '');
+  const sInvoices = s.invoices || [];
+  const sDepPaid = sInvoices.filter((i: any) => (i.category === 'DEPOSIT' || /security|deposit/i.test(i.title || '')) && i.status === 'PAID').reduce((a: number, b: any) => a + Number(b.amount || 0), 0);
+  const sAdvPaid = sInvoices.filter((i: any) => (i.category === 'ADVANCE' || /advance/i.test(i.title || '')) && i.status === 'PAID').reduce((a: number, b: any) => a + Number(b.amount || 0), 0);
+  const sDepDue = sInvoices.filter((i: any) => (i.category === 'DEPOSIT' || /security|deposit/i.test(i.title || '')) && i.status !== 'PAID').reduce((a: number, b: any) => a + Number(b.amount || 0), 0);
+
+  const depositPaid = Math.max(bills.filter((b) => isDep(b) && b.state === 'paid').reduce((a, b) => a + b.amount, 0), sDepPaid);
+  const advancePaid = Math.max(bills.filter((b) => isAdv(b) && b.state === 'paid').reduce((a, b) => a + b.amount, 0), sAdvPaid);
+  const depositDue = Math.max(bills.filter((b) => isDep(b) && b.state !== 'paid').reduce((a, b) => a + b.amount, 0), sDepDue);
   const lastPaid = bills.find((b) => b.state === 'paid');
   const next = unpaid[0];
   const leaves = [...(s.leaveRequests || [])].sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -131,6 +138,11 @@ export default function StudentDetail() {
                 <View style={{ flex: 1 }}>
                   <T v="title" w="bold">Room {s.room.roomNumber}</T>
                   <T v="caption" c={colors.text3}>Floor {s.room.floorNumber} · {priceFor(s.room.sharingType).label}{s.room.isAc ? ' · AC' : ''}</T>
+                  {(s.roomAssignedAt || s.dateOfJoining) ? (
+                    <T v="caption" c={colors.text3} style={{ marginTop: 2 }}>
+                      {s.roomAssignedAt ? `Changed on ${fmtDate(s.roomAssignedAt)}` : `Since ${fmtDate(s.dateOfJoining)}`}
+                    </T>
+                  ) : null}
                 </View>
               </Row>
               <Button
@@ -181,20 +193,43 @@ export default function StudentDetail() {
                 <T v="caption" c={colors.success}>{lastPaid ? `Last payment ${fmtDate(lastPaid.paidAt || '', { year: 'numeric' })} · ${rupees(lastPaid.amount)}` : 'No outstanding fees'}</T>
               </View>
             </Row>
-            {(depositPaid > 0 || advancePaid > 0) && (
-              <View style={[styles.moneyRow, { borderTopWidth: 1, borderTopColor: 'rgba(36,100,96,0.15)', paddingTop: 8, marginTop: 4 }]}>
-                <View style={styles.moneyCell}>
-                  <T v="caption" c={colors.text3}>Security deposit</T>
-                  <T v="title" w="bold" c={colors.success}>{rupees(depositPaid)}</T>
-                </View>
-                <View style={[styles.moneyCell, { borderLeftWidth: 1, borderLeftColor: colors.border }]}>
-                  <T v="caption" c={colors.text3}>Advance payment</T>
-                  <T v="title" w="bold" c={advancePaid > 0 ? colors.brand700 : colors.text3}>{rupees(advancePaid)}</T>
-                </View>
-              </View>
-            )}
           </Card>
         )}
+      </Appear>
+
+      {/* Security Deposit & Advance Balance - Always Visible */}
+      <Appear i={1}>
+        <Card style={{ gap: 10, backgroundColor: colors.white, borderColor: colors.border }}>
+          <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <Row gap={8} style={{ alignItems: 'center' }}>
+              <ShieldCheck size={18} color={colors.brand700} />
+              <T v="title" w="bold">Security & Advance Balance</T>
+            </Row>
+            {(depositPaid > 0 || advancePaid > 0) && (
+              <Badge label="Active" tone="mint" />
+            )}
+          </Row>
+          <Row gap={10}>
+            <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border, gap: 2 }}>
+              <T v="caption" c={colors.text3}>Security deposit</T>
+              <T v="title" w="bold" c={depositPaid > 0 ? colors.success : depositDue > 0 ? colors.danger : colors.text}>
+                {rupees(depositPaid || depositDue)}
+              </T>
+              <T v="caption" c={depositPaid > 0 ? colors.success : depositDue > 0 ? colors.danger : colors.text3}>
+                {depositPaid > 0 ? '✓ Paid (Refundable)' : depositDue > 0 ? 'Pending payment' : '₹0 recorded'}
+              </T>
+            </View>
+            <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 12, padding: 12, borderWidth: 1, borderColor: colors.border, gap: 2 }}>
+              <T v="caption" c={colors.text3}>Advance payment</T>
+              <T v="title" w="bold" c={advancePaid > 0 ? colors.brand700 : colors.text}>
+                {rupees(advancePaid)}
+              </T>
+              <T v="caption" c={advancePaid > 0 ? colors.brand700 : colors.text3}>
+                {advancePaid > 0 ? '✓ In advance' : '₹0 recorded'}
+              </T>
+            </View>
+          </Row>
+        </Card>
       </Appear>
 
       <Appear i={1}>
@@ -258,11 +293,59 @@ export default function StudentDetail() {
               <Info k="College / company" v={s.coachingCollege} /><Divider />
               <Info k="Address" v={[s.permanentAddress, s.state, s.pincode].filter(Boolean).join(', ')} /><Divider />
               <Info k="Blood group" v={s.bloodGroup} /><Divider />
+              {s.room ? (
+                <>
+                  <Info k="Room assigned" v={s.roomAssignedAt ? fmtDate(s.roomAssignedAt, { year: 'numeric' }) : (s.dateOfJoining ? fmtDate(s.dateOfJoining, { year: 'numeric' }) : '—')} />
+                  <Divider />
+                </>
+              ) : null}
               <Info k="Joined" v={s.dateOfJoining ? fmtDate(s.dateOfJoining, { year: 'numeric' }) : ''} />
             </View>
           )}
         </Card>
       </Appear>
+
+      {/* Room History */}
+      {((s.roomHistory && s.roomHistory.length > 0) || s.room) && (
+        <Appear i={4}>
+          <Section title={`Room history · ${(s.roomHistory && s.roomHistory.length > 0) ? s.roomHistory.length : 1}`}>
+            <Card padded={false}>
+              {((s.roomHistory && s.roomHistory.length > 0) ? s.roomHistory : [{
+                id: 'initial',
+                fromRoomNo: null,
+                toRoomNo: s.room?.roomNumber,
+                changedAt: s.roomAssignedAt || s.dateOfJoining || s.createdAt,
+                reason: 'Current room allotment',
+                changedBy: 'Warden',
+              }]).map((h: any, idx: number, arr: any[]) => {
+                const titleText = h.fromRoomNo && h.toRoomNo
+                  ? `Room ${h.fromRoomNo} → Room ${h.toRoomNo}`
+                  : h.toRoomNo
+                  ? `Allocated Room ${h.toRoomNo}`
+                  : `Removed from Room ${h.fromRoomNo || 'room'}`;
+                return (
+                  <View key={h.id || idx}>
+                    <Row style={{ padding: 12, alignItems: 'center' }} gap={10}>
+                      <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: colors.mint100, alignItems: 'center', justifyContent: 'center' }}>
+                        <BedDouble size={16} color={colors.brand700} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <T v="title" w="bold">{titleText}</T>
+                        <T v="caption" c={colors.text3}>
+                          {h.reason || 'Room change'}
+                          {h.changedBy ? ` · by ${h.changedBy}` : ''}
+                        </T>
+                      </View>
+                      <Badge label={fmtDate(h.changedAt)} tone="mint" />
+                    </Row>
+                    {idx < arr.length - 1 && <Divider />}
+                  </View>
+                );
+              })}
+            </Card>
+          </Section>
+        </Appear>
+      )}
 
       {leaves.length > 0 && (
         <Section title={`Leaves · ${plural(leaves.length, 'request')}`}>

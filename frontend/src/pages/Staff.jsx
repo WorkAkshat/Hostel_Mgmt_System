@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChefHat, Eye, EyeOff, Mail, Pencil, Phone, Shield, ShieldAlert, ShieldCheck, Sparkles, Trash2, UserPlus, Users, Wrench } from 'lucide-react';
+import { ChefHat, Eye, EyeOff, HandCoins, Mail, Pencil, Phone, Shield, ShieldAlert, ShieldCheck, Sparkles, Trash2, UserPlus, Users, Wrench } from 'lucide-react';
 import { staff as staffApi } from '../utils/api';
 import CustomModal from '../components/CustomModal';
 import Avatar from '../components/ui/Avatar';
@@ -132,6 +132,103 @@ const StaffFormModal = ({ open, member, onClose, onSubmit }) => {
   );
 };
 
+const StaffAdvanceModal = ({ open, member, staff, onClose, onSuccess }) => {
+  const [who, setWho] = useState('');
+  const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('CASH');
+  const [reference, setReference] = useState('');
+  const [note, setNote] = useState('');
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setWho(member?.id || staff[0]?.id || '');
+    setAmount('');
+    setMethod('CASH');
+    setReference('');
+    setNote('');
+    setDate(new Date().toISOString().slice(0, 10));
+    setError(null);
+  }, [open, member, staff]);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!who) return setError('Please choose a staff member.');
+    const amt = Number(amount);
+    if (!(amt > 0)) return setError('Enter a valid amount.');
+    setSaving(true);
+    try {
+      await staffApi.createAdvance({
+        staffId: who,
+        amount: amt,
+        method,
+        reference: reference.trim(),
+        note: note.trim(),
+        givenOn: date,
+      });
+      onSuccess?.();
+      onClose();
+    } catch (err) {
+      setError(err.message || 'Could not record advance.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedName = member ? member.user?.name : staff.find((s) => s.id === who)?.user?.name;
+
+  return (
+    <CustomModal isOpen={open} onClose={onClose} title={selectedName ? `Give advance to ${selectedName}` : 'Pay advance to staff'}>
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        {!member && (
+          <Field label="Staff member" required htmlFor="adv-staff">
+            <select id="adv-staff" className="form-input" value={who} onChange={(e) => setWho(e.target.value)}>
+              {staff.map((s) => (
+                <option key={s.id} value={s.id}>{s.user?.name} ({s.designation} · {s.department})</option>
+              ))}
+            </select>
+          </Field>
+        )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Amount" required htmlFor="adv-amount">
+            <input id="adv-amount" className="form-input" type="number" min="1" placeholder="₹0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
+          </Field>
+          <Field label="Date given" required htmlFor="adv-date">
+            <input id="adv-date" className="form-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </Field>
+        </div>
+        <Field label="Payment method" required htmlFor="adv-method">
+          <select id="adv-method" className="form-input" value={method} onChange={(e) => setMethod(e.target.value)}>
+            <option value="CASH">Cash</option>
+            <option value="UPI">UPI</option>
+            <option value="BANK">Bank transfer</option>
+            <option value="CHEQUE">Cheque</option>
+          </select>
+        </Field>
+        {method !== 'CASH' && (
+          <Field label="Reference" htmlFor="adv-ref" hint="UTR / transaction or cheque number">
+            <input id="adv-ref" className="form-input" placeholder="e.g. UPI Ref / UTR" value={reference} onChange={(e) => setReference(e.target.value)} />
+          </Field>
+        )}
+        <Field label="Note (optional)" htmlFor="adv-note">
+          <input id="adv-note" className="form-input" placeholder="e.g. Festival advance, to be deducted next month" value={note} onChange={(e) => setNote(e.target.value)} />
+        </Field>
+
+        {error && <p className="text-[13px] text-red-600 m-0">{error}</p>}
+
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4 border-t border-[var(--border-color)]">
+          <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>Cancel</button>
+          <button type="submit" className="btn-primary" disabled={saving}>
+            <HandCoins size={15} /> {saving ? 'Recording…' : 'Save advance'}
+          </button>
+        </div>
+      </form>
+    </CustomModal>
+  );
+};
+
 const Staff = () => {
   const toast = useToast();
   const [staff, setStaff] = useState([]);
@@ -140,6 +237,7 @@ const Staff = () => {
   const [dept, setDept] = useState('all');
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState(undefined); // undefined = closed, null = new, object = edit
+  const [givingAdvance, setGivingAdvance] = useState(undefined); // undefined = closed, null = select, object = edit
   const [removing, setRemoving] = useState(null);
 
   const load = useCallback(async () => {
@@ -197,7 +295,10 @@ const Staff = () => {
   return (
     <div className="flex flex-col gap-5">
       <PageHeader title="Staff" subtitle={loading ? 'Loading…' : `${staff.length} people · ${Object.keys(counts).length} departments`}>
-        <button className="btn-primary" onClick={() => setEditing(null)}><UserPlus size={17} /> Add staff</button>
+        <div className="flex gap-2">
+          <button className="btn-secondary" onClick={() => setGivingAdvance(null)}><HandCoins size={16} /> Pay advance</button>
+          <button className="btn-primary" onClick={() => setEditing(null)}><UserPlus size={17} /> Add staff</button>
+        </div>
       </PageHeader>
 
       {error && <ErrorPanel message={error} onRetry={() => { setLoading(true); load(); }} />}
@@ -252,6 +353,7 @@ const Staff = () => {
                     </a>
                   </div>
                   <div className="flex gap-2 mt-auto pt-3 border-t border-[var(--border-color)]">
+                    <button className="btn-secondary h-9 px-3 text-[13px]" onClick={() => setGivingAdvance(m)} title="Pay advance"><HandCoins size={14} /> Advance</button>
                     <a href={`tel:${m.phoneNumber}`} className="btn-brand h-9 px-3 text-[13px] flex-1 no-underline"><Phone size={14} /> Call</a>
                     <button className="btn-secondary h-9 px-3 text-[13px]" onClick={() => setEditing(m)} aria-label={`Edit ${m.user?.name}`}><Pencil size={14} /></button>
                     <button className="btn-secondary h-9 px-3 text-[13px] hover:!text-[var(--danger)] hover:!border-[var(--danger)]" onClick={() => setRemoving(m)} aria-label={`Remove ${m.user?.name}`}><Trash2 size={14} /></button>
@@ -264,6 +366,7 @@ const Staff = () => {
       )}
 
       <StaffFormModal open={editing !== undefined} member={editing} onClose={() => setEditing(undefined)} onSubmit={save} />
+      <StaffAdvanceModal open={givingAdvance !== undefined} member={givingAdvance} staff={staff} onClose={() => setGivingAdvance(undefined)} onSuccess={() => toast.success('Advance recorded', 'Staff salary advance saved successfully.')} />
       <ConfirmDialog
         open={Boolean(removing)}
         title={`Remove ${removing?.user?.name}?`}
