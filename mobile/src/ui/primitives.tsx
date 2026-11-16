@@ -8,7 +8,9 @@ import { colors, fonts, radius, shadow, Tone, tones } from './theme';
 
 export const tap = (style: 'light' | 'medium' = 'light') => {
   if (Platform.OS === 'web') return;
-  Haptics.impactAsync(style === 'light' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+  try {
+    Haptics.impactAsync(style === 'light' ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+  } catch {}
 };
 
 // ── Text ──

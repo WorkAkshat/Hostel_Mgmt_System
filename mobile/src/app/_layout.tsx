@@ -12,7 +12,7 @@ import {
 import { AuthProvider, useAuth } from '../lib/auth';
 import { queryClient, useAppFocusRefetch } from '../lib/query';
 import { trackPath } from '../lib/nav';
-import { ToastProvider } from '../ui/feedback';
+import { ErrorBoundary, ToastProvider } from '../ui/feedback';
 import { colors } from '../ui/theme';
 import OfflineBanner from '../features/OfflineBanner';
 
@@ -77,10 +77,12 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
             <ToastProvider>
-              {/* Always show the clock / battery with dark icons over the app's light header */}
-              <StatusBar style="dark" hidden={false} />
-              {Platform.OS === 'android' && <RNStatusBar backgroundColor="transparent" barStyle="dark-content" {...({ translucent: true } as any)} />}
-              <Navigator />
+              <ErrorBoundary>
+                {/* Always show the clock / battery with dark icons over the app's light header */}
+                <StatusBar style="dark" hidden={false} />
+                {Platform.OS === 'android' && <RNStatusBar backgroundColor="transparent" barStyle="dark-content" {...({ translucent: true } as any)} />}
+                <Navigator />
+              </ErrorBoundary>
             </ToastProvider>
           </AuthProvider>
         </QueryClientProvider>

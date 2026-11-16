@@ -16,7 +16,7 @@ const TabBar = makeTabBar({ index: House, leaves: CalendarDays, mess: UtensilsCr
 
 export default function StudentTabs() {
   return (
-    <Tabs tabBar={(p) => <TabBar {...p} />} screenOptions={{ headerShown: false, animation: 'shift', freezeOnBlur: true, sceneStyle: { backgroundColor: colors.bg } }}>
+    <Tabs tabBar={(p) => <TabBar {...p} />} screenOptions={{ headerShown: false, animation: 'none', freezeOnBlur: false, sceneStyle: { backgroundColor: colors.bg } }}>
       <Tabs.Screen name="index" options={{ title: 'Home' }} />
       <Tabs.Screen name="leaves" options={{ title: 'Leaves' }} />
       <Tabs.Screen name="mess" options={{ title: 'Mess' }} />

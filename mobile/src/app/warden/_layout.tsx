@@ -23,7 +23,7 @@ const TabBar = makeTabBar({ index: House, requests: ClipboardCheck, residents: U
 
 export default function WardenTabs() {
   return (
-    <Tabs tabBar={(p) => <TabBar {...p} />} screenOptions={{ headerShown: false, animation: 'shift', freezeOnBlur: true, sceneStyle: { backgroundColor: colors.bg } }}>
+    <Tabs tabBar={(p) => <TabBar {...p} />} screenOptions={{ headerShown: false, animation: 'none', freezeOnBlur: false, sceneStyle: { backgroundColor: colors.bg } }}>
       <Tabs.Screen name="index" options={{ title: 'Home' }} />
       <Tabs.Screen name="requests" options={{ title: 'Requests' }} />
       <Tabs.Screen name="residents" options={{ title: 'Residents' }} />

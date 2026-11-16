@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useCallback, useContext, useRef, useState } from 'react';
+import { Component, createContext, ReactNode, useCallback, useContext, useRef, useState } from 'react';
 import { Platform, StatusBar as RNStatusBar, StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -110,6 +110,35 @@ export const Loading = ({ rows = 3, h = 84 }: { rows?: number; h?: number }) => 
     {Array.from({ length: rows }).map((_, i) => <Skeleton key={i} h={h} />)}
   </View>
 );
+
+export class ErrorBoundary extends Component<{ children: ReactNode; fallback?: (error: Error, reset: () => void) => ReactNode }, { hasError: boolean; error: Error | null }> {
+  state: { hasError: boolean; error: Error | null } = { hasError: false, error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: any) {
+    console.error('App ErrorBoundary caught:', error, info);
+  }
+  reset = () => {
+    this.setState({ hasError: false, error: null });
+  };
+  render() {
+    if (this.state.hasError) {
+      if (this.props.fallback && this.state.error) {
+        return this.props.fallback(this.state.error, this.reset);
+      }
+      return (
+        <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center', padding: 24, gap: 14 }}>
+          <CircleAlert size={48} color={colors.danger} />
+          <T v="h2" center>Something went wrong</T>
+          <T v="small" c={colors.text2} center>{this.state.error?.message || 'An unexpected error occurred.'}</T>
+          <Button title="Try again" icon={RefreshCw} onPress={this.reset} />
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export const toneOf = (t: Tone) => tones[t];
 

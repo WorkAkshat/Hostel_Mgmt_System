@@ -54,10 +54,14 @@ export const makeTabBar = (icons: Record<string, LucideIcon>, useBadges: () => R
                 accessibilityState={{ selected: focused }}
                 accessibilityLabel={label}
                 onPress={() => {
-                  const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                  if (!focused && !e.defaultPrevented) {
-                    tap();
-                    navigation.navigate(route.name, route.params);
+                  try {
+                    const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                    if (!focused && !e.defaultPrevented) {
+                      try { tap(); } catch {}
+                      navigation.navigate(route.name, route.params);
+                    }
+                  } catch (err) {
+                    console.warn('Tab press error:', err);
                   }
                 }}
                 onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
