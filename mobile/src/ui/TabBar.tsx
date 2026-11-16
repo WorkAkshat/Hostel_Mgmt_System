@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import type { LucideIcon } from 'lucide-react-native';
@@ -19,7 +20,8 @@ const noBadges = (): Record<string, number> => ({});
 const PAD = 6;
 
 export const makeTabBar = (icons: Record<string, LucideIcon>, useBadges: () => Record<string, number> = noBadges) =>
-  function TabBar({ state, descriptors, navigation }: any) {
+  function TabBar(props: any) {
+    const { state, descriptors, navigation, emitter, navigateToTab } = props;
     const insets = useSafeAreaInsets();
     const badges = useBadges();
     const typing = useKeyboardTop() != null;
@@ -55,16 +57,41 @@ export const makeTabBar = (icons: Record<string, LucideIcon>, useBadges: () => R
                 accessibilityLabel={label}
                 onPress={() => {
                   try {
-                    const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-                    if (!focused && !e.defaultPrevented) {
-                      try { tap(); } catch {}
-                      navigation.navigate(route.name, route.params);
+                    tap();
+                    if (emitter?.emit) {
+                      const e = emitter.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                      if (e?.defaultPrevented) return;
+                    } else if (navigation?.emit) {
+                      const e = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+                      if (e?.defaultPrevented) return;
+                    }
+
+                    if (!focused) {
+                      if (typeof navigateToTab === 'function') {
+                        navigateToTab(route.key);
+                      } else if (navigation?.navigate) {
+                        navigation.navigate(route.name, route.params);
+                      } else {
+                        router.navigate(route.name as any);
+                      }
                     }
                   } catch (err) {
                     console.warn('Tab press error:', err);
+                    try {
+                      if (typeof navigateToTab === 'function') {
+                        navigateToTab(route.key);
+                      } else {
+                        router.navigate(route.name as any);
+                      }
+                    } catch {}
                   }
                 }}
-                onLongPress={() => navigation.emit({ type: 'tabLongPress', target: route.key })}
+                onLongPress={() => {
+                  try {
+                    if (emitter?.emit) emitter.emit({ type: 'tabLongPress', target: route.key });
+                    else if (navigation?.emit) navigation.emit({ type: 'tabLongPress', target: route.key });
+                  } catch {}
+                }}
                 style={styles.item}
               >
                 <TabIcon icon={icons[route.name]} focused={focused} badge={badges[route.name]} />
