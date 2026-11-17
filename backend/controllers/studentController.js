@@ -300,6 +300,7 @@ const updateStudent = async (req, res) => {
       // 2. Check and handle Room change
       let targetRoomId = student.roomId;
       let targetRoomAssignedAt = student.roomAssignedAt;
+      let newRoom = null;
       if (roomId !== undefined && roomId !== student.roomId) {
         // If student is leaving an old room, update that old room status to AVAILABLE
         if (student.roomId) {
@@ -311,7 +312,7 @@ const updateStudent = async (req, res) => {
 
         // If assigning to a new room, check room capacity
         if (roomId) {
-          const newRoom = await tx.room.findUnique({
+          newRoom = await tx.room.findUnique({
             where: { id: roomId },
             include: { students: true }
           });
