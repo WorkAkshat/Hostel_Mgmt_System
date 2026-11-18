@@ -9,7 +9,7 @@ import { go } from '../../lib/nav';
 export default function StaffAccount() {
   const { user } = useAuth();
   return (
-    <Screen title="Profile" subtitle="Your details and help">
+    <Screen title="Profile" subtitle="Your details and help" back>
       <Appear>
         <ProfileHero name={user?.name} line1={user?.staffDetails?.designation || 'Staff'} line2={user?.email} pill={user?.staffDetails?.department || 'Staff'} />
       </Appear>

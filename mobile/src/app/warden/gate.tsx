@@ -14,7 +14,7 @@ export default function WardenGate() {
     if (params.tab) { setRequest({ tab: params.tab }); router.setParams({ tab: undefined }); }
   }, [params.tab]);
   return (
-    <Screen title="Gate Movement" subtitle="Approved leaves, daily passes & visitors" right={<Bell />}>
+    <Screen title="Gate Movement" subtitle="Approved leaves, daily passes & visitors" back right={<Bell />}>
       <GateBoard request={request} />
     </Screen>
   );

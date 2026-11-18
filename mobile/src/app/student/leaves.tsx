@@ -64,7 +64,7 @@ export default function StudentLeaves() {
   const late = list.filter((l: any) => l.status === 'CHECKED_OUT' && new Date(l.endDate) < new Date());
 
   return (
-    <Screen title="Leaves" subtitle="Your gate passes" onRefresh={refetch}
+    <Screen title="Leaves" subtitle="Your gate passes" back onRefresh={refetch}
       right={<Button title="Apply" icon={Plus} small onPress={() => setApplying(true)} />}
     >
       {late.length > 0 && (

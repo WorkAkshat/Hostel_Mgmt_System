@@ -55,7 +55,7 @@ const GROUPS = [
 export default function WardenMore() {
   const { user } = useAuth();
   return (
-    <Screen title="More" subtitle="Everything else you manage">
+    <Screen title="More" subtitle="Everything else you manage" back>
       <Appear>
         <ProfileHero name={user?.name} line1={user?.email} line2={user?.companyName} pill={user?.assignedFloor ? `Floor ${user.assignedFloor} warden` : 'Chief warden'} />
       </Appear>

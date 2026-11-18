@@ -17,7 +17,7 @@ export default function StudentMe() {
   const p = dash.data?.profile;
 
   return (
-    <Screen title="Me" subtitle="Your profile, help and settings" onRefresh={dash.refetch}>
+    <Screen title="Me" subtitle="Your profile, help and settings" back onRefresh={dash.refetch}>
       <Appear>
         <ProfileHero
           name={user?.name}

@@ -63,7 +63,7 @@ export default function StudentMess() {
   };
 
   return (
-    <Screen title="Mess" subtitle="Menu and meal skips" onRefresh={() => Promise.all([menu.refetch(), skips.refetch(), logs.refetch(), notices.refetch()])}>
+    <Screen title="Mess" subtitle="Menu and meal skips" back onRefresh={() => Promise.all([menu.refetch(), skips.refetch(), logs.refetch(), notices.refetch()])}>
       <Appear>
         <Hero gradient={next.serving ? 'sun' : 'brand'}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>

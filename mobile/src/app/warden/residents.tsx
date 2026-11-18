@@ -31,7 +31,7 @@ export default function Residents() {
   useEffect(() => { if (params.tab) { setTab(params.tab); router.setParams({ tab: undefined }); } }, [params.tab]);
 
   return (
-    <Screen title="Residents" subtitle="Students, rooms and beds" right={<Bell />}>
+    <Screen title="Residents" subtitle="Students, rooms and beds" back right={<Bell />}>
       <Segmented value={tab} onChange={setTab} options={[{ value: 'students', label: 'Students' }, { value: 'rooms', label: 'Rooms & beds' }]} />
       <FloorChips />
       {tab === 'students' ? (

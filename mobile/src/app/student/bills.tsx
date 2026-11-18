@@ -103,7 +103,7 @@ export default function StudentBills() {
   };
 
   return (
-    <Screen title="Bills" subtitle="What's due and your receipts" onRefresh={() => Promise.all([inv.refetch(), notes.refetch(), claims.refetch(), payDetails.refetch()])}>
+    <Screen title="Bills" subtitle="What's due and your receipts" back onRefresh={() => Promise.all([inv.refetch(), notes.refetch(), claims.refetch(), payDetails.refetch()])}>
       {inv.error ? <ErrorBox message={(inv.error as Error).message} onRetry={inv.refetch} /> : null}
 
       <Appear>
