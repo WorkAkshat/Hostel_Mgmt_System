@@ -66,7 +66,10 @@ export default function PendingDues() {
           </View>
         ))}
       </View>
-      <Chips value={filter} onChange={setFilter} options={[{ value: 'all', label: 'Everyone', count: people.length }, { value: 'overdue', label: 'Overdue', count: late.length }]} />
+      <Chips value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All pending', count: people.length }, { value: 'overdue', label: 'Overdue (Late)', count: late.length }]} />
+      <T v="caption" c={filter === 'overdue' ? colors.danger : colors.text3} style={{ marginTop: 2, marginBottom: 4, paddingHorizontal: 4 }}>
+        {filter === 'overdue' ? 'Showing residents whose bill due date has passed' : 'Showing all residents with unpaid fee bills or demand notes'}
+      </T>
       {people.length > 4 && <SearchInput value={q} onChange={setQ} placeholder="Name, roll no. or room" />}
 
       {error ? <ErrorBox message={(error as Error).message} onRetry={refetch} /> : isLoading ? <Loading rows={4} h={70} /> : shown.length === 0 ? (

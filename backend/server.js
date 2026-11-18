@@ -31,6 +31,7 @@ const activityLogRoutes = require('./routes/activityLogRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
 const staffAdvanceRoutes = require('./routes/staffAdvanceRoutes');
+const galleryRoutes = require('./routes/galleryRoutes');
 
 const app = express();
 
@@ -141,6 +142,8 @@ app.use('/api/activity-logs', activityLogRoutes);
 app.use('/api/v1/payments', paymentRoutes);
 app.use('/api/v1/inventory', inventoryRoutes);
 app.use('/api/v1/staff-advances', staffAdvanceRoutes);
+app.use('/api/v1/gallery', galleryRoutes);
+app.use('/api/gallery', galleryRoutes);
 
 // Health Check Endpoint
 app.get('/api/v1/health', (req, res) => {

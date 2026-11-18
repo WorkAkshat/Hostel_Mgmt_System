@@ -200,3 +200,10 @@ export const inventoryApi = {
   movements: (id: string) => api(`/inventory/items/${id}/movements`),
   move: (id: string, data: { type: 'IN' | 'OUT' | 'ADJUST'; quantity: number; unitCost?: number | null; note?: string; date?: string }) => api(`/inventory/items/${id}/movements`, { method: 'POST', body: data }),
 };
+
+export const galleryApi = {
+  all: () => api('/gallery'),
+  add: (data: { title: string; description?: string; category?: string; mediaType?: string; url: string }) => api('/gallery', { method: 'POST', body: data }),
+  remove: (id: string) => api(`/gallery/${id}`, { method: 'DELETE' }),
+  helpline: () => api('/gallery/helpline'),
+};

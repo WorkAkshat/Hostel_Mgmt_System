@@ -1,4 +1,4 @@
-import { Boxes, CirclePlus, QrCode, Vote, Wallet, Activity, ChartColumn, Contact, Gauge, HandCoins, Lightbulb, Megaphone, Moon, NotebookPen, UtensilsCrossed, Wrench } from 'lucide-react-native';
+import { Boxes, CirclePlus, QrCode, Vote, Wallet, Activity, ChartColumn, Contact, Gauge, HandCoins, Images, Lightbulb, Megaphone, Moon, NotebookPen, ShieldCheck, UtensilsCrossed, Wrench } from 'lucide-react-native';
 import { useAuth } from '../../lib/auth';
 import { Appear, Screen } from '../../ui/layout';
 import { Menu, MenuItem } from '../../ui/blocks';
@@ -16,6 +16,13 @@ const GROUPS = [
       { icon: Megaphone, tone: 'mint' as const, title: 'Announcements', sub: 'Tell residents & staff', go: '/notices' },
       { icon: Vote, tone: 'lilac' as const, title: 'Polls', sub: 'Ask anything, everyone votes', go: '/polls' },
       { icon: Lightbulb, tone: 'sun' as const, title: 'Suggestions', sub: 'Ideas from students', go: '/suggestions' },
+    ],
+  },
+  {
+    title: 'Hostel Tour & Support',
+    items: [
+      { icon: Images, tone: 'mint' as const, title: 'PG Photos & Videos', sub: 'Upload room views & facilities for students', go: '/manage/gallery' },
+      { icon: ShieldCheck, tone: 'lilac' as const, title: 'Helpline & Rules', sub: '24x7 contacts & hostel guidelines', go: '/manage/helpline' },
     ],
   },
   {

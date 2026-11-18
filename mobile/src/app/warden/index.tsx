@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import {
-  Boxes, CalendarCheck, CircleCheck, QrCode, CalendarX, ChartColumn, ClipboardList, Contact, DoorOpen, Gauge, HandCoins, IdCard, Megaphone, Moon, NotebookPen, ShoppingBasket, Vote, UserCheck, UserPen, UtensilsCrossed, Wallet, Wrench,
+  Boxes, CalendarCheck, CircleCheck, QrCode, CalendarX, ChartColumn, ClipboardList, Contact, DoorOpen, Gauge, HandCoins, IdCard, LayoutGrid, Megaphone, Moon, NotebookPen, ShoppingBasket, Vote, UserCheck, UserPen, UtensilsCrossed, Wallet, Wrench,
 } from 'lucide-react-native';
 import { authApi, complaintsApi, floorsApi, inventoryApi, leavesApi, noticesApi, paymentsApi, pollsApi, reportsApi, studentsApi, visitorsApi } from '../../api';
 import { asList } from '../../api/client';
@@ -16,6 +17,7 @@ import Bell from '../../features/Bell';
 import { PollTeaser } from '../../features/PollCard';
 import { FloorChips, onFloor, useFloor, useFloors } from '../../features/floor';
 import { go } from '../../lib/nav';
+import { Sheet } from '../../ui/Sheet';
 
 export default function WardenHome() {
   const { user } = useAuth();
@@ -60,7 +62,11 @@ export default function WardenHome() {
   const dueStudents = new Set(unpaidBills.map((b) => b.studentId)).size;
   const overdueStudents = new Set(unpaidBills.filter((b) => b.state === 'overdue').map((b) => b.studentId)).size;
 
+  const [quickOpen, setQuickOpen] = useState(false);
+  const urgentNotices = asList(notices.data).filter((n: any) => n.category === 'URGENT' || n.priority === 'URGENT' || n.isUrgent);
+
   const attention = [
+    { n: urgentNotices.length, icon: Megaphone, tone: 'danger' as const, title: 'Urgent announcements', sub: urgentNotices.slice(0, 2).map((n: any) => n.title).join(' · ') || 'Urgent notice requires attention', go: '/notices' },
     { n: lowStock.length, icon: ShoppingBasket, tone: 'danger' as const, title: lowStock.some((l) => l.out) ? 'Groceries finished / low' : 'Groceries running low', sub: lowStock.slice(0, 3).map((l) => `${l.name}${l.percent != null ? ` ${l.percent}%` : ''}`).join(', ') + (lowStock.length > 3 ? '…' : ''), go: '/manage/inventory' },
     { n: asList(regs.data).length, icon: UserCheck, tone: 'danger' as const, title: 'New joiners', sub: 'Approve and give a room', go: '/warden/requests?tab=registrations' },
     { n: floorsWithoutUpi, icon: QrCode, tone: 'mint' as const, title: 'Add UPI for bills', sub: 'So residents can pay in the app', go: '/manage/payment-settings' },
@@ -73,7 +79,24 @@ export default function WardenHome() {
   ].filter((a) => a.n > 0);
 
   return (
-    <Screen title={`Hi, ${firstName(user?.name)} 👋`} subtitle={`${greeting()} · ${user?.assignedFloor ? `Floor ${user.assignedFloor} warden` : 'Chief warden'}`} left={<Press onPress={() => go('/warden/more')} scaleTo={0.9} accessibilityRole="button" accessibilityLabel="My profile" style={{ borderRadius: 24, borderWidth: 2, borderColor: colors.white }}><Avatar name={user?.name} uri={undefined} size={44} tone="mint" /></Press>} right={<Bell />} onRefresh={refreshAll}>
+    <Screen
+      title={`Hi, ${firstName(user?.name)} 👋`}
+      subtitle={`${greeting()} · ${user?.assignedFloor ? `Floor ${user.assignedFloor} warden` : 'Chief warden'}`}
+      left={
+        <Press onPress={() => go('/profile')} scaleTo={0.9} accessibilityRole="button" accessibilityLabel="My profile" style={{ borderRadius: 24, borderWidth: 2, borderColor: colors.white }}>
+          <Avatar name={user?.name} uri={undefined} size={44} tone="mint" />
+        </Press>
+      }
+      right={
+        <Row gap={8} style={{ alignItems: 'center' }}>
+          <Press onPress={() => setQuickOpen(true)} scaleTo={0.92} accessibilityRole="button" accessibilityLabel="Quick actions" style={styles.quickBtn}>
+            <LayoutGrid size={20} color={colors.brand700} />
+          </Press>
+          <Bell />
+        </Row>
+      }
+      onRefresh={refreshAll}
+    >
       <FloorChips />
 
       <Appear>
@@ -162,6 +185,19 @@ export default function WardenHome() {
         </Section>
       </Appear>
 
+      <Sheet open={quickOpen} onClose={() => setQuickOpen(false)} title="Quick actions" subtitle="Shortcuts for daily hostel operations">
+        <QuickActions items={[
+          { icon: Moon, tone: 'lilac', label: 'Roll call', onPress: () => { setQuickOpen(false); go('/manage/roll-call'); } },
+          { icon: HandCoins, tone: 'sun', label: 'Payment', onPress: () => { setQuickOpen(false); go('/manage/fees'); } },
+          { icon: Gauge, tone: 'peach', label: 'Meters', onPress: () => { setQuickOpen(false); go('/manage/demand-notes?tab=meters'); } },
+          { icon: Megaphone, tone: 'mint', label: 'Announce', onPress: () => { setQuickOpen(false); go({ pathname: '/notices', params: { new: '1' } }); } },
+          { icon: UtensilsCrossed, tone: 'peach', label: 'Kitchen', onPress: () => { setQuickOpen(false); go('/manage/mess'); } },
+          { icon: NotebookPen, tone: 'lilac', label: 'Expense', onPress: () => { setQuickOpen(false); go('/manage/expenses'); } },
+          { icon: Vote, tone: 'mint', label: 'Poll', onPress: () => { setQuickOpen(false); go({ pathname: '/polls', params: { new: '1' } }); } },
+          { icon: Boxes, tone: 'sun', label: 'Stock', onPress: () => { setQuickOpen(false); go('/manage/inventory'); } },
+        ]} />
+      </Sheet>
+
     </Screen>
   );
 }
@@ -170,4 +206,5 @@ const styles = StyleSheet.create({
   dues: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.cream100, borderRadius: 16, borderWidth: 1, borderColor: colors.sun200, padding: 12 },
   duesClear: { backgroundColor: colors.successBg, borderColor: colors.successBg },
   count: { minWidth: 30, height: 28, borderRadius: 14, backgroundColor: colors.sun300, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 9 },
+  quickBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.mint100, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.mint200 },
 });

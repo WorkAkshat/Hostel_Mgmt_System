@@ -37,7 +37,7 @@ export default function Requests() {
   const counts = { leaves: pendingLeaves.length, registrations: asList(regs.data).length, profile: asList(reqs.data).filter((r: any) => r.status === 'PENDING').length, documents: asList(docs.data).length, payments: asList(pays.data).length };
 
   return (
-    <Screen title="Requests" subtitle="Waiting for your decision" right={<Bell />} onRefresh={() => Promise.all([leaves.refetch(), regs.refetch(), reqs.refetch(), docs.refetch(), pays.refetch()])}>
+    <Screen title="Requests" subtitle="Waiting for your decision" back={true} right={<Bell />} onRefresh={() => Promise.all([leaves.refetch(), regs.refetch(), reqs.refetch(), docs.refetch(), pays.refetch()])}>
       <TileTabs value={tab} onChange={setTab} items={[
         { value: 'leaves', label: 'Leaves', icon: CalendarDays, tone: 'lilac', count: counts.leaves },
         { value: 'payments', label: 'Payments', icon: HandCoins, tone: 'sun', count: counts.payments },

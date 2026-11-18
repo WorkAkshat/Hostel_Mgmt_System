@@ -14,8 +14,7 @@ export default function WardenGate() {
     if (params.tab) { setRequest({ tab: params.tab }); router.setParams({ tab: undefined }); }
   }, [params.tab]);
   return (
-    <Screen title="Gate" subtitle="Exits, returns and visitors" right={<Bell />}>
-      <ListRow icon={Moon} tone="lilac" title="Night roll call" sub="Mark who's in the hostel tonight" onPress={() => go('/manage/roll-call')} />
+    <Screen title="Gate Movement" subtitle="Approved leaves, daily passes & visitors" right={<Bell />}>
       <GateBoard request={request} />
     </Screen>
   );

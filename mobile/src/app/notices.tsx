@@ -17,8 +17,8 @@ import { Sheet } from '../ui/Sheet';
 import PollNudge from '../features/PollNudge';
 import { go } from '../lib/nav';
 
-const CATEGORIES = [{ value: 'GENERAL', label: 'General' }, { value: 'MESS', label: 'Mess' }, { value: 'URGENT', label: 'Urgent' }];
-const AUDIENCE: { value: 'ALL' | 'STUDENTS' | 'STAFF'; label: string }[] = [{ value: 'ALL', label: 'Everyone' }, { value: 'STUDENTS', label: 'Residents' }, { value: 'STAFF', label: 'Staff' }];
+const CATEGORIES = [{ value: 'GENERAL', label: 'General Notice' }, { value: 'URGENT', label: 'Urgent (Shows on Home)' }];
+const AUDIENCE: { value: 'ALL' | 'STUDENTS' | 'STAFF'; label: string }[] = [{ value: 'ALL', label: 'Everyone' }, { value: 'STUDENTS', label: 'Residents only' }, { value: 'STAFF', label: 'Staff only' }];
 
 export default function Notices() {
   const { user } = useAuth();
@@ -50,8 +50,7 @@ export default function Notices() {
                   <T v="title">{n.title}</T>
                   <T v="caption" c={colors.text3}>{n.postedBy ? `${n.postedBy} · ` : ''}{timeAgo(n.createdAt)}</T>
                 </View>
-                {n.category && n.category !== 'GENERAL' ? <Badge label={n.category === 'MESS' ? 'Mess' : n.category === 'URGENT' ? 'Urgent' : n.category} tone={n.category === 'URGENT' ? 'danger' : 'peach'} /> : null}
-                {admin && n.target && n.target !== 'ALL' ? <Badge label={n.target === 'STAFF' ? 'Staff' : 'Residents'} tone="lilac" /> : null}
+                {n.category === 'URGENT' ? <Badge label="Urgent alert" tone="danger" /> : null}
                 {admin && <IconButton icon={Trash2} label="Delete notice" tone="danger" size={34} onPress={() => setRemoving(n)} />}
               </Row>
               <T c={colors.text2}>{n.content}</T>

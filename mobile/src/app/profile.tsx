@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { BedDouble, CircleCheck, Clock, FilePen, IdCard, ShieldCheck, Upload, XCircle } from 'lucide-react-native';
+import { BedDouble, CircleCheck, Clock, FilePen, IdCard, Images, ShieldCheck, Upload, XCircle } from 'lucide-react-native';
 import { dashboardApi, studentsApi } from '../api';
 import { asList } from '../api/client';
 import { useAuth } from '../lib/auth';
@@ -12,9 +12,11 @@ import { colors } from '../ui/theme';
 import { Avatar, Badge, Button, Card, Divider, IconTile, Row, T } from '../ui/primitives';
 import { Choices, Field, Input, digits } from '../ui/form';
 import { ErrorBox, Loading, useToast } from '../ui/feedback';
-import { Screen, Section } from '../ui/layout';
+import { Appear, ListRow, Screen, Section } from '../ui/layout';
 import { Sheet } from '../ui/Sheet';
 import ProfileHero from '../features/ProfileHero';
+import AccountSettings from '../features/AccountSettings';
+import { go } from '../lib/nav';
 
 const EDITABLE = [
   { key: 'phoneNumber', label: 'Your phone', kind: 'phone' },
@@ -38,13 +40,54 @@ const Info = ({ label, value }: { label: string; value?: string | null }) => (
 
 export default function Profile() {
   const { user } = useAuth();
-  const dash = useData(['dashboard'], dashboardApi.get, { enabled: !user?.studentDetails?.id });
+  const isStudent = user?.role === 'STUDENT';
+  const dash = useData(['dashboard'], dashboardApi.get, { enabled: isStudent && !user?.studentDetails?.id });
   const id = user?.studentDetails?.id || dash.data?.profile?.id;
-  const student = useData(['student', id], () => studentsApi.byId(id), { enabled: !!id });
-  const requests = useData(['my-profile-requests'], studentsApi.myProfileRequests);
-  const docs = useData(['my-documents', id], () => studentsApi.studentDocuments(id), { enabled: !!id });
+  const student = useData(['student', id], () => studentsApi.byId(id), { enabled: isStudent && !!id });
+  const requests = useData(['my-profile-requests'], studentsApi.myProfileRequests, { enabled: isStudent });
+  const docs = useData(['my-documents', id], () => studentsApi.studentDocuments(id), { enabled: isStudent && !!id });
   const [editing, setEditing] = useState(false);
   const [addingDoc, setAddingDoc] = useState(false);
+
+  if (!isStudent) {
+    return (
+      <Screen title="My profile" subtitle="Account details & settings" back tabBar={false}>
+        <Appear>
+          <ProfileHero
+            name={user?.name}
+            line1={user?.email}
+            line2={user?.phoneNumber || 'Hari Pushp Tower'}
+            pill={user?.assignedFloor ? `Floor ${user.assignedFloor} Warden` : user?.role === 'ADMIN' ? 'Chief Warden' : 'Staff'}
+          />
+        </Appear>
+
+        <Appear i={1}>
+          <Section title="Account details">
+            <Card padded style={{ paddingVertical: 4 }}>
+              <Info label="Full Name" value={user?.name} /><Divider />
+              <Info label="Email address" value={user?.email} /><Divider />
+              <Info label="Role" value={user?.role === 'ADMIN' ? 'Chief Warden / Administrator' : 'Staff Member'} /><Divider />
+              <Info label="Hostel" value="Hari Pushp Tower (Sector 4, Jaipur)" />
+            </Card>
+          </Section>
+        </Appear>
+
+        <Appear i={2}>
+          <Section title="Quick actions">
+            <Card padded={false}>
+              <ListRow icon={Images} tone="mint" title="PG Photos & Videos" sub="Upload room photos and hostel tour" onPress={() => go('/manage/gallery')} />
+              <Divider />
+              <ListRow icon={ShieldCheck} tone="lilac" title="Helpline & Rules" sub="24x7 support & hostel guidelines" onPress={() => go('/manage/helpline')} />
+            </Card>
+          </Section>
+        </Appear>
+
+        <Appear i={3}>
+          <AccountSettings />
+        </Appear>
+      </Screen>
+    );
+  }
 
   const s = student.data;
   const pending = asList(requests.data).find((r: any) => r.status === 'PENDING');

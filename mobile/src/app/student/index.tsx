@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BedDouble, CalendarDays, CircleCheck, Lightbulb, Megaphone, Plus, ShieldCheck, UtensilsCrossed, Wallet, Wrench } from 'lucide-react-native';
+import { BedDouble, CalendarDays, CircleCheck, Images, Lightbulb, Megaphone, Plus, ShieldCheck, UtensilsCrossed, Wallet, Wrench } from 'lucide-react-native';
 import { dashboardApi, demandNotesApi, feesApi, leavesApi, messApi, noticesApi, pollsApi } from '../../api';
 import { asList } from '../../api/client';
 import { useAuth } from '../../lib/auth';
@@ -142,9 +142,9 @@ export default function StudentHome() {
       <Appear i={2}>
         <QuickActions items={[
             { icon: Plus, tone: 'sun', label: 'Apply leave', onPress: () => go({ pathname: '/student/leaves', params: { apply: '1' } }) },
+            { icon: Images, tone: 'mint', label: 'Hostel tour', onPress: () => go('/manage/gallery') },
+            { icon: ShieldCheck, tone: 'lilac', label: 'Helpline', onPress: () => go('/manage/helpline') },
             { icon: Wrench, tone: 'peach', label: 'Complaint', onPress: () => go({ pathname: '/helpdesk', params: { new: '1' } }) },
-            { icon: Lightbulb, tone: 'lilac', label: 'Suggest', onPress: () => go('/suggestions') },
-            { icon: Megaphone, tone: 'mint', label: 'News', onPress: () => go('/notices') },
           ]} />
       </Appear>
 
