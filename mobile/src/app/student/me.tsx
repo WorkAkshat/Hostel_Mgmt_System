@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, Lightbulb, Megaphone, Receipt, UserRound, UtensilsCrossed, Vote, Wrench } from 'lucide-react-native';
+import { Bell, CalendarDays, Images, Lightbulb, Megaphone, Receipt, ShieldCheck, UserRound, UtensilsCrossed, Vote, Wrench } from 'lucide-react-native';
 import { dashboardApi } from '../../api';
 import { useAuth } from '../../lib/auth';
 import { useData } from '../../lib/query';
@@ -45,6 +45,8 @@ export default function StudentMe() {
 
       <Appear i={2}>
         <Menu title="Help & updates">
+          <MenuItem icon={ShieldCheck} tone="lilac" title="Helpline & Rules" sub="24x7 emergency contacts & hostel guidelines" onPress={() => go('/manage/helpline')} />
+          <MenuItem icon={Images} tone="mint" title="Hostel Tour" sub="Photos & videos of rooms and facilities" onPress={() => go('/manage/gallery')} />
           <MenuItem icon={Bell} tone="sun" title="Notifications" sub="Leave, bill and complaint updates" right={unread ? <Badge label={`${unread} new`} tone="danger" /> : undefined} onPress={() => go('/notifications')} />
           <MenuItem icon={Wrench} tone="peach" title="Complaints" sub="Report a problem in your room" onPress={() => go('/helpdesk')} />
           <MenuItem icon={Lightbulb} tone="lilac" title="Suggestions" sub="Ideas to make the hostel better" onPress={() => go('/suggestions')} />
