@@ -31,6 +31,7 @@ export default function GalleryScreen() {
   const [cat, setCat] = useState('ALL');
   const [adding, setAdding] = useState(false);
   const [deleting, setDeleting] = useState<any>(null);
+  const [viewing, setViewing] = useState<any>(null);
 
   const items = useMemo(() => {
     const list = asList(mediaQuery.data);
@@ -64,19 +65,21 @@ export default function GalleryScreen() {
         items.map((item: any, i: number) => (
           <Appear key={item.id} i={i}>
             <Card style={{ padding: 0, overflow: 'hidden', gap: 0, marginBottom: 14 }}>
-              <View style={styles.mediaContainer}>
-                <Image
-                  source={{ uri: item.url }}
-                  style={styles.image}
-                  resizeMode="cover"
-                />
-                <View style={styles.badgeOverlay}>
-                  <Badge
-                    label={item.mediaType === 'VIDEO' ? 'Video Tour' : item.category}
-                    tone={item.mediaType === 'VIDEO' ? 'danger' : 'mint'}
+              <Press onPress={() => setViewing(item)} scaleTo={0.99}>
+                <View style={styles.mediaContainer}>
+                  <Image
+                    source={{ uri: item.url }}
+                    style={styles.image}
+                    resizeMode="cover"
                   />
+                  <View style={styles.badgeOverlay}>
+                    <Badge
+                      label={item.mediaType === 'VIDEO' ? 'Video Tour' : item.category}
+                      tone={item.mediaType === 'VIDEO' ? 'danger' : 'mint'}
+                    />
+                  </View>
                 </View>
-              </View>
+              </Press>
 
               <View style={{ padding: 14, gap: 6 }}>
                 <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -123,6 +126,23 @@ export default function GalleryScreen() {
         }}
         onClose={() => setDeleting(null)}
       />
+
+      {viewing && (
+        <Sheet
+          open={!!viewing}
+          onClose={() => setViewing(null)}
+          title={viewing.title}
+          subtitle={viewing.category === 'ROOMS' ? 'Room views' : viewing.category === 'MESS' ? 'Mess & Food' : viewing.category === 'BUILDING' ? 'Building' : 'Common Area'}
+          footer={viewing.mediaType === 'VIDEO' ? <Button title="Play Video Tour" icon={Film} onPress={() => Linking.openURL(viewing.url)} full /> : undefined}
+        >
+          <View style={{ width: '100%', height: 260, borderRadius: 14, overflow: 'hidden', backgroundColor: colors.bgTertiary, marginBottom: 12 }}>
+            <Image source={{ uri: viewing.url }} style={{ width: '100%', height: '100%' }} resizeMode="contain" />
+          </View>
+          {viewing.description ? (
+            <T c={colors.text2} style={{ lineHeight: 20 }}>{viewing.description}</T>
+          ) : null}
+        </Sheet>
+      )}
     </Screen>
   );
 }
