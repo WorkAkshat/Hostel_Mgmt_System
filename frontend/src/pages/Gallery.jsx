@@ -1,17 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Image as ImageIcon, Plus, Trash2, Upload, Film, X, Check, BedDouble, UtensilsCrossed, Building2, Sparkles } from 'lucide-react';
+import { Image as ImageIcon, Plus, Trash2, Upload, Film, X, Check, BedDouble, UtensilsCrossed, Building2, Sparkles, Pencil, Settings2 } from 'lucide-react';
 import { galleryApi } from '../utils/api/gallery';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
 import { EmptyPanel, ErrorPanel, PageHeader, SkeletonList } from '../components/ui/PageStates';
 
-const CATEGORIES = [
-  { value: 'ALL', label: 'All Photos & Videos' },
+const DEFAULT_CATEGORIES = [
   { value: 'ROOMS', label: 'Rooms & Beds' },
   { value: 'MESS', label: 'Mess & Food' },
   { value: 'BUILDING', label: 'Building & Gate' },
   { value: 'COMMON_AREA', label: 'Common Areas' },
+];
+
+const DEFAULT_TYPES = [
+  { value: 'IMAGE', label: 'Photo' },
+  { value: 'VIDEO', label: 'Video Tour' },
 ];
 
 export default function Gallery() {
@@ -20,10 +24,14 @@ export default function Gallery() {
   const toast = useToast();
 
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [types, setTypes] = useState(DEFAULT_TYPES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('ALL');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
 
   // Form states
@@ -36,12 +44,23 @@ export default function Gallery() {
   const [uploading, setUploading] = useState(false);
   const [formError, setFormError] = useState(null);
 
-  const loadGallery = useCallback(async () => {
+  // Category & Type quick add in modal
+  const [showNewCatInput, setShowNewCatInput] = useState(false);
+  const [newCatLabel, setNewCatLabel] = useState('');
+  const [showNewTypeInput, setShowNewTypeInput] = useState(false);
+  const [newTypeLabel, setNewTypeLabel] = useState('');
+
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await galleryApi.all();
-      setItems(res?.data || res || []);
+      const [mediaRes, metaRes] = await Promise.all([
+        galleryApi.all().catch(() => []),
+        galleryApi.meta().catch(() => null),
+      ]);
+      setItems(mediaRes?.data || mediaRes || []);
+      if (metaRes?.categories?.length) setCategories(metaRes.categories);
+      if (metaRes?.types?.length) setTypes(metaRes.types);
     } catch (err) {
       setError(err.message || 'Failed to load gallery');
     } finally {
@@ -50,8 +69,8 @@ export default function Gallery() {
   }, []);
 
   useEffect(() => {
-    loadGallery();
-  }, [loadGallery]);
+    loadData();
+  }, [loadData]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files?.[0];
@@ -103,11 +122,29 @@ export default function Gallery() {
       setDescription('');
       setFileData(null);
       setFileName('');
-      loadGallery();
+      loadData();
     } catch (err) {
       setFormError(err.message || 'Could not upload media');
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingItem) return;
+    try {
+      await galleryApi.update(editingItem.id, {
+        title: editingItem.title.trim(),
+        description: editingItem.description?.trim() || '',
+        category: editingItem.category,
+        mediaType: editingItem.mediaType,
+      });
+      toast.success('Updated', 'Photo category and details updated');
+      setEditingItem(null);
+      loadData();
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not update photo');
     }
   };
 
@@ -125,10 +162,62 @@ export default function Gallery() {
     }
   };
 
+  const handleAddCategory = async () => {
+    if (!newCatLabel.trim()) return;
+    try {
+      const res = await galleryApi.addCategory(newCatLabel.trim());
+      setCategories((prev) => [...prev, res.data || res || { value: newCatLabel.trim().toUpperCase(), label: newCatLabel.trim() }]);
+      setCategory(res.value || newCatLabel.trim().toUpperCase());
+      setNewCatLabel('');
+      setShowNewCatInput(false);
+      toast.success('Category added');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not add category');
+    }
+  };
+
+  const handleDeleteCategory = async (val) => {
+    if (!window.confirm(`Delete category "${val}"?`)) return;
+    try {
+      await galleryApi.removeCategory(val);
+      setCategories((prev) => prev.filter((c) => c.value !== val));
+      toast.success('Category removed');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not delete category');
+    }
+  };
+
+  const handleAddType = async () => {
+    if (!newTypeLabel.trim()) return;
+    try {
+      const res = await galleryApi.addType(newTypeLabel.trim());
+      setTypes((prev) => [...prev, res.data || res || { value: newTypeLabel.trim().toUpperCase(), label: newTypeLabel.trim() }]);
+      setMediaType(res.value || newTypeLabel.trim().toUpperCase());
+      setNewTypeLabel('');
+      setShowNewTypeInput(false);
+      toast.success('Media type added');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not add type');
+    }
+  };
+
+  const handleDeleteType = async (val) => {
+    if (!window.confirm(`Delete type "${val}"?`)) return;
+    try {
+      await galleryApi.removeType(val);
+      setTypes((prev) => prev.filter((t) => t.value !== val));
+      toast.success('Type removed');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not delete type');
+    }
+  };
+
   const filteredItems = items.filter((item) => {
     if (activeTab === 'ALL') return true;
     return item.category === activeTab;
   });
+
+  const tabOptions = [{ value: 'ALL', label: 'All Photos & Videos' }, ...categories];
 
   return (
     <div className="space-y-6">
@@ -140,19 +229,29 @@ export default function Gallery() {
           </p>
         </div>
         {isAdmin && (
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium shadow-sm transition-all self-start sm:self-auto cursor-pointer"
-          >
-            <Plus size={18} />
-            <span>Upload Photo / Video</span>
-          </button>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => setShowManageModal(true)}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-all cursor-pointer text-sm"
+              title="Manage Categories & Types"
+            >
+              <Settings2 size={16} />
+              <span>Categories & Types</span>
+            </button>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl font-medium shadow-sm transition-all cursor-pointer text-sm"
+            >
+              <Plus size={18} />
+              <span>Upload Photo / Video</span>
+            </button>
+          </div>
         )}
       </div>
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {CATEGORIES.map((tab) => {
+        {tabOptions.map((tab) => {
           const active = activeTab === tab.value;
           return (
             <button
@@ -174,74 +273,99 @@ export default function Gallery() {
       {loading ? (
         <SkeletonList rows={4} />
       ) : error ? (
-        <ErrorPanel message={error} onRetry={loadGallery} />
+        <ErrorPanel message={error} onRetry={loadData} />
       ) : filteredItems.length === 0 ? (
         <EmptyPanel
           icon={ImageIcon}
           title="No photos in this category"
-          description={isAdmin ? 'Click "Upload Photo / Video" to add pictures from your gallery.' : 'Photos will be added here soon.'}
+          description={isAdmin ? 'Click "Upload Photo / Video" to add pictures from your computer.' : 'Photos will be added here soon.'}
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence mode="popLayout">
-            {filteredItems.map((item) => (
-              <motion.div
-                key={item.id}
-                layout
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col"
-              >
-                <div className="relative aspect-video bg-slate-100 overflow-hidden group">
-                  {item.mediaType === 'VIDEO' ? (
-                    <video
-                      src={item.url}
-                      controls
-                      className="w-full h-full object-cover"
-                      poster={item.thumbnail}
-                    />
-                  ) : (
-                    <img
-                      src={item.url}
-                      alt={item.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                  )}
+            {filteredItems.map((item) => {
+              const catLabel = categories.find((c) => c.value === item.category)?.label || item.category;
+              const typeLabel = types.find((t) => t.value === item.mediaType)?.label || (item.mediaType === 'VIDEO' ? 'Video Tour' : 'Photo');
+              return (
+                <motion.div
+                  key={item.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col"
+                >
+                  <div className="relative aspect-video bg-slate-100 overflow-hidden group">
+                    {item.mediaType === 'VIDEO' ? (
+                      <video
+                        src={item.url}
+                        controls
+                        className="w-full h-full object-cover"
+                        poster={item.thumbnail}
+                      />
+                    ) : (
+                      <img
+                        src={item.url}
+                        alt={item.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    )}
 
-                  <span className="absolute top-3 left-3 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-sm text-slate-800 shadow-sm">
-                    {item.mediaType === 'VIDEO' ? '🎥 Video Tour' : item.category}
-                  </span>
+                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-sm text-slate-800 shadow-sm">
+                        {catLabel}
+                      </span>
+                      {item.mediaType === 'VIDEO' && (
+                        <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-red-600 text-white shadow-sm">
+                          🎥 Video Tour
+                        </span>
+                      )}
+                    </div>
 
-                  {isAdmin && (
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      disabled={deletingId === item.id}
-                      className="absolute top-3 right-3 p-2 bg-red-600/90 hover:bg-red-700 text-white rounded-xl shadow-sm transition-all cursor-pointer opacity-90 hover:opacity-100"
-                      title="Delete photo"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-bold text-[var(--text-primary)] text-base">{item.title}</h3>
-                    {item.description && (
-                      <p className="text-sm text-[var(--text-secondary)] mt-1 line-clamp-2">
-                        {item.description}
-                      </p>
+                    {isAdmin && (
+                      <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                        <button
+                          onClick={() => setEditingItem({ ...item })}
+                          className="p-2 bg-white/90 hover:bg-white text-slate-800 rounded-xl shadow-sm transition-all cursor-pointer"
+                          title="Edit category or type"
+                        >
+                          <Pencil size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          disabled={deletingId === item.id}
+                          className="p-2 bg-red-600/90 hover:bg-red-700 text-white rounded-xl shadow-sm transition-all cursor-pointer"
+                          title="Delete photo"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     )}
                   </div>
-                  <div className="mt-3 pt-3 border-t border-[var(--border-color)] text-xs text-[var(--text-tertiary)] flex items-center justify-between">
-                    <span>Hari Pushp PG</span>
-                    <span>{new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-1">
+                        <h3 className="font-bold text-[var(--text-primary)] text-base truncate">{item.title}</h3>
+                        <span className="text-[11px] font-semibold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-md shrink-0">
+                          {typeLabel}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="text-sm text-[var(--text-secondary)] mt-1 line-clamp-2">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-[var(--border-color)] text-xs text-[var(--text-tertiary)] flex items-center justify-between">
+                      <span>Hari Pushp PG</span>
+                      <span>{new Date(item.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</span>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
       )}
@@ -305,20 +429,92 @@ export default function Gallery() {
                 </label>
               </div>
 
+              {/* Category selector + quick add */}
               <div>
-                <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
-                  Category <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm font-medium outline-none focus:border-brand-500"
-                >
-                  <option value="ROOMS">Rooms & Beds</option>
-                  <option value="MESS">Mess & Food</option>
-                  <option value="BUILDING">Building & Security</option>
-                  <option value="COMMON_AREA">Common Areas</option>
-                </select>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-sm font-semibold text-[var(--text-primary)]">
+                    Category <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCatInput(!showNewCatInput)}
+                    className="text-xs font-semibold text-brand-600 hover:text-brand-700 cursor-pointer"
+                  >
+                    {showNewCatInput ? 'Cancel' : '+ New Category'}
+                  </button>
+                </div>
+                {showNewCatInput ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      type="text"
+                      value={newCatLabel}
+                      onChange={(e) => setNewCatLabel(e.target.value)}
+                      placeholder="e.g. Library, Gym, Terrace"
+                      className="flex-1 px-3 py-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCategory}
+                      className="px-3 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold"
+                    >
+                      Add
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm font-medium outline-none focus:border-brand-500"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.value} value={c.value}>{c.label}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* Media Type selector + quick add */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-sm font-semibold text-[var(--text-primary)]">
+                    Media Type <span className="text-red-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewTypeInput(!showNewTypeInput)}
+                    className="text-xs font-semibold text-brand-600 hover:text-brand-700 cursor-pointer"
+                  >
+                    {showNewTypeInput ? 'Cancel' : '+ New Type'}
+                  </button>
+                </div>
+                {showNewTypeInput ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      type="text"
+                      value={newTypeLabel}
+                      onChange={(e) => setNewTypeLabel(e.target.value)}
+                      placeholder="e.g. 360 View, Floor Plan"
+                      className="flex-1 px-3 py-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddType}
+                      className="px-3 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold"
+                    >
+                      Add
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={mediaType}
+                    onChange={(e) => setMediaType(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm font-medium outline-none focus:border-brand-500"
+                  >
+                    {types.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                )}
               </div>
 
               <div>
@@ -371,6 +567,197 @@ export default function Gallery() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Photo Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] max-w-lg w-full p-6 shadow-xl space-y-4 animate-scale-up">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">Edit Photo Category & Type</h2>
+              <button
+                onClick={() => setEditingItem(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="w-full h-36 rounded-xl overflow-hidden bg-slate-100">
+                <img src={editingItem.url} alt="Preview" className="w-full h-full object-cover" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+                  Category
+                </label>
+                <select
+                  value={editingItem.category}
+                  onChange={(e) => setEditingItem({ ...editingItem, category: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm font-medium outline-none focus:border-brand-500"
+                >
+                  {categories.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+                  Media Type
+                </label>
+                <select
+                  value={editingItem.mediaType}
+                  onChange={(e) => setEditingItem({ ...editingItem, mediaType: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm font-medium outline-none focus:border-brand-500"
+                >
+                  {types.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={editingItem.title}
+                  onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm outline-none focus:border-brand-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-[var(--text-primary)] mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editingItem.description || ''}
+                  onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                  rows={2}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm outline-none focus:border-brand-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand-600 hover:bg-brand-700 text-white shadow-sm transition-all cursor-pointer"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Categories & Types Modal */}
+      {showManageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] max-w-lg w-full p-6 shadow-xl space-y-5 animate-scale-up max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+              <h2 className="text-lg font-bold text-[var(--text-primary)]">Manage Categories & Types</h2>
+              <button
+                onClick={() => setShowManageModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold text-[var(--text-primary)] mb-2">Categories</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newCatLabel}
+                    onChange={(e) => setNewCatLabel(e.target.value)}
+                    placeholder="New category name (e.g. Library, Gym)…"
+                    className="flex-1 px-3 py-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCategory}
+                    className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  {categories.map((c) => (
+                    <div key={c.value} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl text-sm">
+                      <span className="font-medium text-slate-800">{c.label}</span>
+                      <button
+                        onClick={() => handleDeleteCategory(c.value)}
+                        className="text-red-500 hover:text-red-700 p-1 cursor-pointer"
+                        title="Delete category"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-[var(--border-color)]">
+                <h3 className="text-sm font-bold text-[var(--text-primary)] mb-2">Media Types</h3>
+                <div className="flex items-center gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={newTypeLabel}
+                    onChange={(e) => setNewTypeLabel(e.target.value)}
+                    placeholder="New type name (e.g. 360 View)…"
+                    className="flex-1 px-3 py-2 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddType}
+                    className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-semibold cursor-pointer"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="space-y-1.5">
+                  {types.map((t) => (
+                    <div key={t.value} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl text-sm">
+                      <span className="font-medium text-slate-800">{t.label}</span>
+                      <button
+                        onClick={() => handleDeleteType(t.value)}
+                        className="text-red-500 hover:text-red-700 p-1 cursor-pointer"
+                        title="Delete type"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-[var(--border-color)]">
+              <button
+                type="button"
+                onClick={() => setShowManageModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}

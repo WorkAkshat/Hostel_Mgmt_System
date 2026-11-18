@@ -3,6 +3,48 @@ const path = require('path');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const GALLERY_FILE = path.join(DATA_DIR, 'gallery.json');
+const META_FILE = path.join(DATA_DIR, 'gallery_meta.json');
+
+const DEFAULT_META = {
+  categories: [
+    { value: 'ROOMS', label: 'Rooms' },
+    { value: 'MESS', label: 'Mess & Food' },
+    { value: 'BUILDING', label: 'Building' },
+    { value: 'COMMON_AREA', label: 'Common Area' }
+  ],
+  types: [
+    { value: 'IMAGE', label: 'Photo' },
+    { value: 'VIDEO', label: 'Video Tour' }
+  ]
+};
+
+const loadMeta = () => {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(META_FILE)) {
+      fs.writeFileSync(META_FILE, JSON.stringify(DEFAULT_META, null, 2));
+      return DEFAULT_META;
+    }
+    const data = fs.readFileSync(META_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (err) {
+    console.error('Error loading gallery meta:', err);
+    return DEFAULT_META;
+  }
+};
+
+const saveMeta = (meta) => {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(META_FILE, JSON.stringify(meta, null, 2));
+  } catch (err) {
+    console.error('Error saving gallery meta:', err);
+  }
+};
 
 const INITIAL_MEDIA = [
   {
@@ -168,6 +210,117 @@ const deleteMedia = (req, res) => {
   }
 };
 
+// @desc    Update media item (category, type, title, description)
+// @route   PUT /api/v1/gallery/:id
+// @access  Private (Admin / Warden)
+const updateMedia = (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, category, mediaType } = req.body;
+    let mediaList = loadMedia();
+    const idx = mediaList.findIndex(m => m.id === id);
+    if (idx === -1) {
+      return res.status(404).json({ message: 'Media not found' });
+    }
+    if (title) mediaList[idx].title = title.trim();
+    if (description !== undefined) mediaList[idx].description = description.trim();
+    if (category) mediaList[idx].category = category.trim().toUpperCase();
+    if (mediaType) mediaList[idx].mediaType = mediaType;
+    saveMedia(mediaList);
+    res.json(mediaList[idx]);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating media item' });
+  }
+};
+
+// @desc    Get gallery metadata (categories & media types)
+// @route   GET /api/v1/gallery/meta
+// @access  Public / Authenticated
+const getGalleryMeta = (req, res) => {
+  try {
+    const meta = loadMeta();
+    res.json(meta);
+  } catch (error) {
+    res.status(500).json({ message: 'Error loading metadata' });
+  }
+};
+
+// @desc    Add new category
+// @route   POST /api/v1/gallery/categories
+// @access  Private (Admin / Warden)
+const addCategory = (req, res) => {
+  try {
+    const { value, label } = req.body;
+    if (!label) return res.status(400).json({ message: 'Category label is required' });
+    const cleanLabel = label.trim();
+    const cleanValue = (value || cleanLabel.replace(/[^a-zA-Z0-9]/g, '_')).toUpperCase();
+    
+    const meta = loadMeta();
+    if (meta.categories.some(c => c.value === cleanValue)) {
+      return res.status(400).json({ message: 'Category already exists' });
+    }
+    const newCat = { value: cleanValue, label: cleanLabel };
+    meta.categories.push(newCat);
+    saveMeta(meta);
+    res.status(201).json(newCat);
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding category' });
+  }
+};
+
+// @desc    Delete category
+// @route   DELETE /api/v1/gallery/categories/:value
+// @access  Private (Admin / Warden)
+const deleteCategory = (req, res) => {
+  try {
+    const { value } = req.params;
+    const meta = loadMeta();
+    meta.categories = meta.categories.filter(c => c.value !== value.toUpperCase());
+    saveMeta(meta);
+    res.json({ message: 'Category removed successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting category' });
+  }
+};
+
+// @desc    Add new media type
+// @route   POST /api/v1/gallery/types
+// @access  Private (Admin / Warden)
+const addType = (req, res) => {
+  try {
+    const { value, label } = req.body;
+    if (!label) return res.status(400).json({ message: 'Type label is required' });
+    const cleanLabel = label.trim();
+    const cleanValue = (value || cleanLabel.replace(/[^a-zA-Z0-9]/g, '_')).toUpperCase();
+    
+    const meta = loadMeta();
+    if (meta.types.some(t => t.value === cleanValue)) {
+      return res.status(400).json({ message: 'Type already exists' });
+    }
+    const newType = { value: cleanValue, label: cleanLabel };
+    meta.types.push(newType);
+    saveMeta(meta);
+    res.status(201).json(newType);
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding type' });
+  }
+};
+
+// @desc    Delete media type
+// @route   DELETE /api/v1/gallery/types/:value
+// @access  Private (Admin / Warden)
+const deleteType = (req, res) => {
+  try {
+    const { value } = req.params;
+    const meta = loadMeta();
+    meta.types = meta.types.filter(t => t.value !== value.toUpperCase());
+    saveMeta(meta);
+    res.json({ message: 'Type removed successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting type' });
+  }
+};
+
 // @desc    Get 24x7 helpline & rules
 // @route   GET /api/v1/gallery/helpline
 // @access  Public / Authenticated
@@ -192,7 +345,13 @@ const getHelplineAndRules = (req, res) => {
 
 module.exports = {
   getGallery,
+  getGalleryMeta,
   addMedia,
+  updateMedia,
   deleteMedia,
+  addCategory,
+  deleteCategory,
+  addType,
+  deleteType,
   getHelplineAndRules
 };

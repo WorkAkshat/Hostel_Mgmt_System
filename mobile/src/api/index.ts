@@ -203,7 +203,13 @@ export const inventoryApi = {
 
 export const galleryApi = {
   all: () => api('/gallery'),
+  meta: () => api('/gallery/meta'),
   add: (data: { title: string; description?: string; category?: string; mediaType?: string; url?: string; fileData?: string }) => api('/gallery', { method: 'POST', body: data }),
+  update: (id: string, data: { title?: string; description?: string; category?: string; mediaType?: string }) => api(`/gallery/${id}`, { method: 'PUT', body: data }),
   remove: (id: string) => api(`/gallery/${id}`, { method: 'DELETE' }),
+  addCategory: (label: string, value?: string) => api('/gallery/categories', { method: 'POST', body: { label, value } }),
+  removeCategory: (value: string) => api(`/gallery/categories/${value}`, { method: 'DELETE' }),
+  addType: (label: string, value?: string) => api('/gallery/types', { method: 'POST', body: { label, value } }),
+  removeType: (value: string) => api(`/gallery/types/${value}`, { method: 'DELETE' }),
   helpline: () => api('/gallery/helpline'),
 };
