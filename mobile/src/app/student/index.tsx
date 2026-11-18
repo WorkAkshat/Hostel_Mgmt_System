@@ -114,24 +114,51 @@ export default function StudentHome() {
       {/* Security Deposit & Advance Status */}
       <Appear i={1}>
         <Press onPress={() => go('/student/bills')} scaleTo={0.98} accessibilityRole="button" accessibilityLabel="View deposits and advance">
-          <Card style={{ paddingVertical: 12, paddingHorizontal: 14, backgroundColor: colors.white, borderColor: colors.border, gap: 8 }}>
+          <Card style={{ paddingVertical: 12, paddingHorizontal: 14, backgroundColor: colors.white, borderColor: colors.border, gap: 10 }}>
             <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <Row gap={6} style={{ alignItems: 'center' }}>
+              <Row gap={6} style={{ alignItems: 'center', flex: 1, marginRight: 8 }}>
                 <ShieldCheck size={16} color={colors.brand700} />
-                <T v="title" w="bold">Security & Advance on Record</T>
+                <T v="title" w="bold" numberOfLines={1} style={{ flex: 1 }}>Security & Advance</T>
               </Row>
-              <T v="caption" c={colors.brand700}>View bills ›</T>
+              <View style={{ backgroundColor: colors.mint50, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, borderWidth: 1, borderColor: colors.mint200 }}>
+                <T v="caption" w="bold" c={colors.brand700}>View bills ›</T>
+              </View>
             </Row>
-            <Row gap={12}>
+            <Row gap={10}>
               <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 10, padding: 10, gap: 2 }}>
                 <T v="caption" c={colors.text3}>Security deposit</T>
                 <T v="title" w="bold" c={depositPaid > 0 ? colors.success : colors.text}>{rupees(depositPaid)}</T>
-                <T v="caption" c={depositPaid > 0 ? colors.success : colors.text3}>{depositPaid > 0 ? '✓ Paid (Refundable)' : '₹0 recorded'}</T>
+                <T v="caption" c={depositPaid > 0 ? colors.success : colors.text3} numberOfLines={1}>{depositPaid > 0 ? '✓ Paid' : '₹0 recorded'}</T>
               </View>
               <View style={{ flex: 1, backgroundColor: colors.bg, borderRadius: 10, padding: 10, gap: 2 }}>
                 <T v="caption" c={colors.text3}>Advance payment</T>
                 <T v="title" w="bold" c={advancePaid > 0 ? colors.brand700 : colors.text}>{rupees(advancePaid)}</T>
-                <T v="caption" c={advancePaid > 0 ? colors.brand700 : colors.text3}>{advancePaid > 0 ? '✓ In advance' : '₹0 recorded'}</T>
+                <T v="caption" c={advancePaid > 0 ? colors.brand700 : colors.text3} numberOfLines={1}>{advancePaid > 0 ? '✓ Recorded' : '₹0 recorded'}</T>
+              </View>
+            </Row>
+          </Card>
+        </Press>
+      </Appear>
+
+      {/* Hostel Tour Feature Card */}
+      <Appear i={2}>
+        <Press onPress={() => go('/manage/gallery')} scaleTo={0.98} accessibilityRole="button" accessibilityLabel="Hostel tour and room photos">
+          <Card style={{ backgroundColor: colors.mint50, borderColor: colors.brand200, paddingVertical: 14, paddingHorizontal: 16 }}>
+            <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+              <Row gap={12} style={{ alignItems: 'center', flex: 1, paddingRight: 8 }}>
+                <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.mint200 }}>
+                  <Images size={22} color={colors.brand700} />
+                </View>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Row gap={6} align="center">
+                    <T v="title" w="bold" c={colors.brand900}>Hostel Tour & Rooms</T>
+                    <Badge label="Tour" tone="mint" />
+                  </Row>
+                  <T v="caption" c={colors.text2} numberOfLines={1}>Room views, mess & facilities</T>
+                </View>
+              </Row>
+              <View style={{ backgroundColor: colors.white, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: colors.brand300 }}>
+                <T v="caption" w="bold" c={colors.brand700}>Explore ›</T>
               </View>
             </Row>
           </Card>
@@ -140,12 +167,14 @@ export default function StudentHome() {
 
       {/* Shortcuts */}
       <Appear i={2}>
-        <QuickActions items={[
+        <Section title="Quick actions">
+          <QuickActions items={[
             { icon: Plus, tone: 'sun', label: 'Apply leave', onPress: () => go({ pathname: '/student/leaves', params: { apply: '1' } }) },
             { icon: Images, tone: 'mint', label: 'Hostel tour', onPress: () => go('/manage/gallery') },
             { icon: ShieldCheck, tone: 'lilac', label: 'Helpline', onPress: () => go('/manage/helpline') },
             { icon: Wrench, tone: 'peach', label: 'Complaint', onPress: () => go({ pathname: '/helpdesk', params: { new: '1' } }) },
           ]} />
+        </Section>
       </Appear>
 
       {/* Today's meals */}

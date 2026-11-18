@@ -28,7 +28,8 @@ import {
   CircleCheck,
   Building2,
   BedDouble,
-  UserCheck
+  UserCheck,
+  Images
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import {
@@ -269,6 +270,31 @@ const StudentDashboard = () => {
           </div>
         </Link>
       </div>
+
+      {/* Hostel Tour & PG Gallery Banner */}
+      <Link
+        to="/student/gallery"
+        className="glass-card glass-card-interactive p-4 sm:p-5 flex items-center justify-between gap-4 bg-gradient-to-r from-mint-50 to-emerald-50/50 border border-brand-200 group"
+      >
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-12 h-12 rounded-2xl bg-white border border-brand-200 flex items-center justify-center text-brand-700 shadow-xs shrink-0 group-hover:scale-105 transition-transform">
+            <Images size={24} />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h3 className="text-[15px] sm:text-[16px] font-bold text-brand-900 m-0">PG Photos & Hostel Tour</h3>
+              <span className="badge badge-success text-[10px] font-bold uppercase">Photos & Videos</span>
+            </div>
+            <p className="text-[12px] sm:text-[13px] text-brand-700 font-medium m-0 mt-0.5 truncate">
+              Explore rooms, attached washrooms, mess dining & building amenities
+            </p>
+          </div>
+        </div>
+        <div className="btn-secondary h-9 px-4 text-[12px] font-bold shrink-0 bg-white border-brand-200 text-brand-800 flex items-center gap-1 shadow-xs">
+          <span>Explore Tour</span>
+          <ChevronRight size={14} />
+        </div>
+      </Link>
 
       {/* 3. Main Split Sections (Today's Menu & Invoices) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
