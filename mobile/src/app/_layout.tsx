@@ -50,6 +50,8 @@ function Navigator() {
           <Stack.Screen name="staff" />
         </Stack.Protected>
         <Stack.Protected guard={!!user}>
+          <Stack.Screen name="gallery" />
+          <Stack.Screen name="helpline" />
           <Stack.Screen name="helpdesk" />
           <Stack.Screen name="suggestions" />
           <Stack.Screen name="notices" />

@@ -142,22 +142,19 @@ export default function StudentHome() {
 
       {/* Hostel Tour Feature Card */}
       <Appear i={2}>
-        <Press onPress={() => go('/manage/gallery')} scaleTo={0.98} accessibilityRole="button" accessibilityLabel="Hostel tour and room photos">
+        <Press onPress={() => go('/gallery')} scaleTo={0.98} accessibilityRole="button" accessibilityLabel="Hostel tour and room photos">
           <Card style={{ backgroundColor: colors.mint50, borderColor: colors.brand200, paddingVertical: 14, paddingHorizontal: 16 }}>
             <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <Row gap={12} style={{ alignItems: 'center', flex: 1, paddingRight: 8 }}>
+              <Row gap={12} style={{ alignItems: 'center', flex: 1, paddingRight: 10 }}>
                 <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.mint200 }}>
                   <Images size={22} color={colors.brand700} />
                 </View>
                 <View style={{ flex: 1, gap: 2 }}>
-                  <Row gap={6} align="center">
-                    <T v="title" w="bold" c={colors.brand900}>Hostel Tour & Rooms</T>
-                    <Badge label="Tour" tone="mint" />
-                  </Row>
+                  <T v="title" w="bold" c={colors.brand900} numberOfLines={1}>Hostel Tour & Rooms</T>
                   <T v="caption" c={colors.text2} numberOfLines={1}>Room views, mess & facilities</T>
                 </View>
               </Row>
-              <View style={{ backgroundColor: colors.white, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, borderColor: colors.brand300 }}>
+              <View style={{ backgroundColor: colors.white, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, borderWidth: 1, borderColor: colors.brand300 }}>
                 <T v="caption" w="bold" c={colors.brand700}>Explore ›</T>
               </View>
             </Row>
@@ -170,8 +167,8 @@ export default function StudentHome() {
         <Section title="Quick actions">
           <QuickActions items={[
             { icon: Plus, tone: 'sun', label: 'Apply leave', onPress: () => go({ pathname: '/student/leaves', params: { apply: '1' } }) },
-            { icon: Images, tone: 'mint', label: 'Hostel tour', onPress: () => go('/manage/gallery') },
-            { icon: ShieldCheck, tone: 'lilac', label: 'Helpline', onPress: () => go('/manage/helpline') },
+            { icon: Images, tone: 'mint', label: 'Hostel tour', onPress: () => go('/gallery') },
+            { icon: ShieldCheck, tone: 'lilac', label: 'Helpline', onPress: () => go('/helpline') },
             { icon: Wrench, tone: 'peach', label: 'Complaint', onPress: () => go({ pathname: '/helpdesk', params: { new: '1' } }) },
           ]} />
         </Section>

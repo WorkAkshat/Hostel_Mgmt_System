@@ -45,8 +45,8 @@ export default function StudentMe() {
 
       <Appear i={2}>
         <Menu title="Help & updates">
-          <MenuItem icon={ShieldCheck} tone="lilac" title="Helpline & Rules" sub="24x7 emergency contacts & hostel guidelines" onPress={() => go('/manage/helpline')} />
-          <MenuItem icon={Images} tone="mint" title="Hostel Tour" sub="Photos & videos of rooms and facilities" onPress={() => go('/manage/gallery')} />
+          <MenuItem icon={ShieldCheck} tone="lilac" title="Helpline & Rules" sub="24x7 emergency contacts & hostel guidelines" onPress={() => go('/helpline')} />
+          <MenuItem icon={Images} tone="mint" title="Hostel Tour" sub="Photos & videos of rooms and facilities" onPress={() => go('/gallery')} />
           <MenuItem icon={Bell} tone="sun" title="Notifications" sub="Leave, bill and complaint updates" right={unread ? <Badge label={`${unread} new`} tone="danger" /> : undefined} onPress={() => go('/notifications')} />
           <MenuItem icon={Wrench} tone="peach" title="Complaints" sub="Report a problem in your room" onPress={() => go('/helpdesk')} />
           <MenuItem icon={Lightbulb} tone="lilac" title="Suggestions" sub="Ideas to make the hostel better" onPress={() => go('/suggestions')} />

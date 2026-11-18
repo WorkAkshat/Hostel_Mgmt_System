@@ -21,8 +21,8 @@ const GROUPS = [
   {
     title: 'Hostel Tour & Support',
     items: [
-      { icon: Images, tone: 'mint' as const, title: 'PG Photos & Videos', sub: 'Upload room views & facilities for students', go: '/manage/gallery' },
-      { icon: ShieldCheck, tone: 'lilac' as const, title: 'Helpline & Rules', sub: '24x7 contacts & hostel guidelines', go: '/manage/helpline' },
+      { icon: Images, tone: 'mint' as const, title: 'PG Photos & Videos', sub: 'Upload room views & facilities for students', go: '/gallery' },
+      { icon: ShieldCheck, tone: 'lilac' as const, title: 'Helpline & Rules', sub: '24x7 contacts & hostel guidelines', go: '/helpline' },
     ],
   },
   {

@@ -75,9 +75,9 @@ export default function Profile() {
         <Appear i={2}>
           <Section title="Quick actions">
             <Card padded={false}>
-              <ListRow icon={Images} tone="mint" title="PG Photos & Videos" sub="Upload room photos and hostel tour" onPress={() => go('/manage/gallery')} />
+              <ListRow icon={Images} tone="mint" title="PG Photos & Videos" sub="Upload room photos and hostel tour" onPress={() => go('/gallery')} />
               <Divider />
-              <ListRow icon={ShieldCheck} tone="lilac" title="Helpline & Rules" sub="24x7 support & hostel guidelines" onPress={() => go('/manage/helpline')} />
+              <ListRow icon={ShieldCheck} tone="lilac" title="Helpline & Rules" sub="24x7 support & hostel guidelines" onPress={() => go('/helpline')} />
             </Card>
           </Section>
         </Appear>
