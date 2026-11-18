@@ -27,8 +27,15 @@ export const go = (href: Href) => {
   }
 };
 
-// Back arrow: go back if there is somewhere to go, otherwise land on the home tab
+// Back arrow: go back if there is somewhere to go, otherwise land on the role's home tab
 export const goBack = () => {
-  if (router.canGoBack()) router.back();
-  else router.replace('/');
+  if (router.canGoBack()) {
+    router.back();
+  } else if (current.startsWith('/student')) {
+    router.navigate('/student');
+  } else if (current.startsWith('/staff')) {
+    router.navigate('/staff');
+  } else {
+    router.navigate('/warden');
+  }
 };

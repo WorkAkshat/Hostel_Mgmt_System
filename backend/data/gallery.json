@@ -1,0 +1,47 @@
+[
+  {
+    "id": "media-1",
+    "title": "Double Sharing Deluxe Room",
+    "description": "Attached washroom, individual study table, wardrobes & balcony view",
+    "category": "ROOMS",
+    "mediaType": "IMAGE",
+    "url": "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=1000&q=80",
+    "createdAt": "2026-11-18T06:58:35.971Z"
+  },
+  {
+    "id": "media-2",
+    "title": "Single Sharing AC Room",
+    "description": "Fully furnished with air conditioner, study desk and high-speed Wi-Fi",
+    "category": "ROOMS",
+    "mediaType": "IMAGE",
+    "url": "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?auto=format&fit=crop&w=1000&q=80",
+    "createdAt": "2026-11-18T06:58:35.997Z"
+  },
+  {
+    "id": "media-3",
+    "title": "Mess & Dining Hall",
+    "description": "Hygienic 4-meal daily menu served in a clean, sanitized dining hall",
+    "category": "MESS",
+    "mediaType": "IMAGE",
+    "url": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=1000&q=80",
+    "createdAt": "2026-11-18T06:58:35.997Z"
+  },
+  {
+    "id": "media-4",
+    "title": "Hostel Building & Security Gate",
+    "description": "24x7 security guard, CCTV cameras, biometric attendance and smart gate pass",
+    "category": "BUILDING",
+    "mediaType": "IMAGE",
+    "url": "https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=1000&q=80",
+    "createdAt": "2026-11-18T06:58:35.997Z"
+  },
+  {
+    "id": "media-5",
+    "title": "Study & Recreation Lounge",
+    "description": "Quiet study tables, high speed internet and comfortable seating",
+    "category": "COMMON_AREA",
+    "mediaType": "IMAGE",
+    "url": "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?auto=format&fit=crop&w=1000&q=80",
+    "createdAt": "2026-11-18T06:58:35.997Z"
+  }
+]

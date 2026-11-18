@@ -75,7 +75,8 @@ export default function HelplineScreen() {
               </Row>
             ))}
           </Card>
-        </Appear>
+        </Section>
+      </Appear>
     </Screen>
   );
 }

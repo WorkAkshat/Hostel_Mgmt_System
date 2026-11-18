@@ -6,16 +6,16 @@ const {
   deleteMedia,
   getHelplineAndRules
 } = require('../controllers/galleryController');
-const { protect, adminOnly } = require('../middleware/authMiddleware');
+const { protect, authorize } = require('../middleware/auth');
 
 router.route('/')
   .get(getGallery)
-  .post(protect, adminOnly, addMedia);
+  .post(protect, authorize('ADMIN'), addMedia);
 
 router.route('/helpline')
   .get(getHelplineAndRules);
 
 router.route('/:id')
-  .delete(protect, adminOnly, deleteMedia);
+  .delete(protect, authorize('ADMIN'), deleteMedia);
 
 module.exports = router;
