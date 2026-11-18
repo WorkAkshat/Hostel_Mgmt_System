@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Image, Linking, StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { BedDouble, Eye, Film, Images, Plus, Sparkles, Trash2, UtensilsCrossed } from 'lucide-react-native';
+import { BedDouble, Camera, Check, Eye, Film, Image as ImageIcon, Images, Plus, Sparkles, Trash2, Upload, UtensilsCrossed } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { galleryApi } from '../../api';
 import { asList } from '../../api/client';
 import { useAuth } from '../../lib/auth';
@@ -133,29 +134,62 @@ const AddMediaSheet = ({ open, onClose }: { open: boolean; onClose: () => void }
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('ROOMS');
   const [mediaType, setMediaType] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
-  const [url, setUrl] = useState('');
+  const [selectedAsset, setSelectedAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async () => {
-    if (!title.trim() || !url.trim()) {
-      return setError('Please enter title and image/video URL.');
+  const pickFromGallery = async () => {
+    try {
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: mediaType === 'VIDEO' ? ['videos'] : ['images'],
+        allowsEditing: mediaType === 'IMAGE',
+        quality: 0.8,
+        base64: true,
+      });
+
+      if (!res.canceled && res.assets && res.assets[0]) {
+        setSelectedAsset(res.assets[0]);
+        setError(null);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Could not access phone gallery.');
     }
+  };
+
+  const submit = async () => {
+    if (!title.trim()) {
+      return setError('Please enter a title for the media.');
+    }
+    if (!selectedAsset) {
+      return setError('Please choose a photo or video from your phone gallery.');
+    }
+
     setBusy(true);
     setError(null);
     try {
+      let fileData: string | undefined = undefined;
+      if (selectedAsset) {
+        if (selectedAsset.base64) {
+          const mime = selectedAsset.mimeType || (mediaType === 'VIDEO' ? 'video/mp4' : 'image/jpeg');
+          fileData = `data:${mime};base64,${selectedAsset.base64}`;
+        } else {
+          fileData = selectedAsset.uri;
+        }
+      }
+
       await galleryApi.add({
         title: title.trim(),
         description: description.trim(),
         category,
         mediaType,
-        url: url.trim(),
+        fileData,
       });
-      toast.success('Media added', 'Students can now view this in the hostel tour.');
+
+      toast.success('Uploaded successfully', 'The photo/video is now visible in the hostel tour.');
       await qc.invalidateQueries({ queryKey: ['gallery'] });
       setTitle('');
       setDescription('');
-      setUrl('');
+      setSelectedAsset(null);
       onClose();
     } catch (e: any) {
       setError(e.message || 'Could not save media.');
@@ -169,8 +203,8 @@ const AddMediaSheet = ({ open, onClose }: { open: boolean; onClose: () => void }
       open={open}
       onClose={onClose}
       title="Add PG Photo / Video"
-      subtitle="Students see this in their hostel tour"
-      footer={<Button title="Save to Gallery" icon={Plus} onPress={submit} loading={busy} full />}
+      subtitle="Upload views directly from phone gallery"
+      footer={<Button title={busy ? 'Uploading…' : 'Save to Gallery'} icon={Plus} onPress={submit} loading={busy} full />}
     >
       <Field label="Category">
         <Choices
@@ -190,7 +224,7 @@ const AddMediaSheet = ({ open, onClose }: { open: boolean; onClose: () => void }
         <Choices
           pills
           value={mediaType}
-          onChange={(v: any) => setMediaType(v)}
+          onChange={(v: any) => { setMediaType(v); setSelectedAsset(null); }}
           options={[
             { value: 'IMAGE', label: 'Photo' },
             { value: 'VIDEO', label: 'Video Tour' },
@@ -198,20 +232,54 @@ const AddMediaSheet = ({ open, onClose }: { open: boolean; onClose: () => void }
         />
       </Field>
 
+      <Field label="Media from Gallery" required>
+        {selectedAsset ? (
+          <View style={{ gap: 8 }}>
+            <View style={{ width: '100%', height: 160, borderRadius: 12, overflow: 'hidden', backgroundColor: colors.bgTertiary }}>
+              <Image source={{ uri: selectedAsset.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+            </View>
+            <Button
+              title="Choose a different photo"
+              icon={Camera}
+              kind="secondary"
+              small
+              onPress={pickFromGallery}
+            />
+          </View>
+        ) : (
+          <Press
+            onPress={pickFromGallery}
+            scaleTo={0.98}
+            style={{
+              padding: 20,
+              borderRadius: 14,
+              borderWidth: 1.5,
+              borderStyle: 'dashed',
+              borderColor: colors.brand300,
+              backgroundColor: colors.mint50,
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+            }}
+          >
+            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colors.mint100, alignItems: 'center', justifyContent: 'center' }}>
+              <ImageIcon size={24} color={colors.brand700} />
+            </View>
+            <T v="title" w="bold" c={colors.brand700}>
+              Choose from Phone Gallery
+            </T>
+            <T v="caption" c={colors.text3}>
+              Tap to pick {mediaType === 'VIDEO' ? 'a video tour' : 'a photo'} from your device
+            </T>
+          </Press>
+        )}
+      </Field>
+
       <Field label="Title" required>
         <Input
           value={title}
           onChangeText={setTitle}
           placeholder="e.g. Twin sharing room with balcony"
-        />
-      </Field>
-
-      <Field label="Media URL" required hint="Direct image or video link (HTTPS)">
-        <Input
-          value={url}
-          onChangeText={setUrl}
-          autoCapitalize="none"
-          placeholder="https://..."
         />
       </Field>
 
@@ -233,7 +301,7 @@ const styles = StyleSheet.create({
   mediaContainer: {
     width: '100%',
     height: 200,
-    backgroundColor: colors.bg2,
+    backgroundColor: colors.bgTertiary,
     position: 'relative',
   },
   image: {

@@ -35,6 +35,7 @@ import Inventory from './pages/Inventory';
 import NightRollCall from './pages/NightRollCall';
 import CookDashboard from './pages/CookDashboard';
 import Suggestions from './pages/Suggestions';
+import Gallery from './pages/Gallery';
 
 import { useState, useEffect } from 'react';
 
@@ -318,6 +319,10 @@ const App = () => {
               path="/admin/inventory" 
               element={<PrivateRoute allowedRoles={['ADMIN']}><Inventory /></PrivateRoute>} 
             />
+            <Route 
+              path="/admin/gallery" 
+              element={<PrivateRoute allowedRoles={['ADMIN']}><Gallery /></PrivateRoute>} 
+            />
 
             {/* Student Routes */}
             <Route 
@@ -344,6 +349,10 @@ const App = () => {
             <Route 
               path="/student/suggestions" 
               element={<PrivateRoute allowedRoles={['STUDENT']}><Suggestions /></PrivateRoute>} 
+            />
+            <Route 
+              path="/student/gallery" 
+              element={<PrivateRoute allowedRoles={['STUDENT']}><Gallery /></PrivateRoute>} 
             />
 
             {/* Security Staff Routes */}

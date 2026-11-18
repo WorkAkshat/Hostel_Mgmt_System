@@ -56,7 +56,7 @@ export default function Profile() {
           <ProfileHero
             name={user?.name}
             line1={user?.email}
-            line2={user?.phoneNumber || 'Hari Pushp Tower'}
+            line2={(user as any)?.phoneNumber || (user as any)?.phone || 'Hari Pushp Tower'}
             pill={user?.assignedFloor ? `Floor ${user.assignedFloor} Warden` : user?.role === 'ADMIN' ? 'Chief Warden' : 'Staff'}
           />
         </Appear>

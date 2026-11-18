@@ -13,6 +13,7 @@ import {
   ChartColumn,
   UserRound,
   Boxes,
+  Image as ImageIcon,
 } from 'lucide-react';
 
 // Single source of truth for every role's navigation.
@@ -91,6 +92,7 @@ const NAVIGATION = {
       items: [
         { name: 'Stock register', icon: Boxes, path: '/admin/inventory' },
         { name: 'Staff', icon: Contact, path: '/admin/staff' },
+        { name: 'PG Gallery & Tour', icon: ImageIcon, path: '/admin/gallery' },
         { name: 'Activity Log', icon: Activity, path: '/admin/activity-log' },
       ],
     },
@@ -110,6 +112,7 @@ const NAVIGATION = {
           ],
         },
         { name: 'My Invoices', icon: Receipt, path: '/student/fees' },
+        { name: 'Hostel Tour', icon: ImageIcon, path: '/student/gallery' },
         { name: 'My Profile', icon: UserRound, path: '/student/profile' },
       ],
     },

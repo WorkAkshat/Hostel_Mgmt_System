@@ -97,9 +97,39 @@ const getGallery = (req, res) => {
 // @access  Private (Admin / Warden)
 const addMedia = (req, res) => {
   try {
-    const { title, description, category, mediaType, url } = req.body;
-    if (!url || !title) {
-      return res.status(400).json({ message: 'Title and Media URL are required' });
+    const { title, description, category, mediaType, url, fileData } = req.body;
+    if (!title) {
+      return res.status(400).json({ message: 'Title is required' });
+    }
+    if (!fileData && !url) {
+      return res.status(400).json({ message: 'Please select a photo or video from gallery' });
+    }
+
+    let finalUrl = url;
+    let detectedType = mediaType || 'IMAGE';
+
+    if (fileData && fileData.startsWith('data:')) {
+      const uploadsDir = path.join(__dirname, '..', 'uploads', 'gallery');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const isVideo = fileData.startsWith('data:video');
+      if (isVideo) detectedType = 'VIDEO';
+
+      const match = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (match) {
+        const mime = match[1];
+        const base64Content = match[2];
+        const ext = mime.includes('png') ? 'png' : mime.includes('mp4') ? 'mp4' : mime.includes('mov') ? 'mov' : 'jpg';
+        const filename = `gallery-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`;
+        const filePath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filePath, Buffer.from(base64Content, 'base64'));
+
+        const protocol = req.protocol || 'https';
+        const host = req.get('host') || 'hms-api.haripushphostel.in';
+        finalUrl = `${protocol}://${host}/uploads/gallery/${filename}`;
+      }
     }
 
     const mediaList = loadMedia();
@@ -108,8 +138,8 @@ const addMedia = (req, res) => {
       title: title.trim(),
       description: description ? description.trim() : '',
       category: category || 'ROOMS',
-      mediaType: mediaType || (url.includes('.mp4') || url.includes('.mov') ? 'VIDEO' : 'IMAGE'),
-      url: url.trim(),
+      mediaType: detectedType,
+      url: finalUrl,
       createdAt: new Date().toISOString()
     };
 
@@ -118,6 +148,7 @@ const addMedia = (req, res) => {
 
     res.status(201).json(newItem);
   } catch (error) {
+    console.error('Error saving media:', error);
     res.status(500).json({ message: 'Error saving media item' });
   }
 };
