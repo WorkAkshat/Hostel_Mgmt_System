@@ -12,6 +12,8 @@ const {
   testPushNotification,
   forgotPassword,
   resetPassword,
+  updateProfile,
+  changePassword,
 } = require('../controllers/authController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -22,6 +24,8 @@ router.post('/register', registerUser);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.get('/me', protect, getMe);
+router.put('/profile', protect, updateProfile);
+router.post('/change-password', protect, changePassword);
 router.post('/logout', protect, logoutUser);
 router.post('/refresh', protect, refreshToken);
 router.post('/push-token', protect, updatePushToken);

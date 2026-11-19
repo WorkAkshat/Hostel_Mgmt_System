@@ -487,7 +487,7 @@ const saveFile = (filePath, data) => {
 };
 
 const createProfileRequest = async (req, res) => {
-  const { phoneNumber, fatherName, parentContact, permanentAddress, state, pincode, coachingCollege } = req.body;
+  const { phoneNumber, fatherName, parentContact, permanentAddress, state, pincode, coachingCollege, motherName, motherContact, emergencyContact, bloodGroup, course } = req.body;
 
   try {
     const student = await prisma.student.findFirst({
@@ -515,7 +515,12 @@ const createProfileRequest = async (req, res) => {
         permanentAddress,
         state,
         pincode,
-        coachingCollege
+        coachingCollege,
+        motherName,
+        motherContact,
+        emergencyContact,
+        bloodGroup,
+        course
       },
       status: 'PENDING',
       createdAt: new Date().toISOString()
@@ -577,7 +582,7 @@ const approveProfileRequest = async (req, res) => {
       return res.status(400).json({ message: 'Request is already processed' });
     }
 
-    const { phoneNumber, fatherName, parentContact, permanentAddress, state, pincode, coachingCollege } = profileReq.requestedChanges;
+    const { phoneNumber, fatherName, parentContact, permanentAddress, state, pincode, coachingCollege, motherName, motherContact, emergencyContact, bloodGroup, course } = profileReq.requestedChanges;
 
     await prisma.student.update({
       where: { id: profileReq.studentId },
@@ -588,7 +593,12 @@ const approveProfileRequest = async (req, res) => {
         permanentAddress: permanentAddress || undefined,
         state: state || undefined,
         pincode: pincode || undefined,
-        coachingCollege: coachingCollege || undefined
+        coachingCollege: coachingCollege || undefined,
+        motherName: motherName || undefined,
+        motherContact: motherContact || undefined,
+        emergencyContact: emergencyContact || undefined,
+        bloodGroup: bloodGroup || undefined,
+        course: course || undefined
       }
     });
 

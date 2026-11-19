@@ -12,6 +12,9 @@ export type User = {
   role: Role;
   assignedFloor?: number | null;
   companyName?: string;
+  avatar?: string | null;
+  phoneNumber?: string | null;
+  emergencyContact?: string | null;
   studentDetails?: { id: string; rollNumber: string; phoneNumber?: string; status?: string; room?: { id: string; roomNumber: string } | null } | null;
   staffDetails?: { id: string; department: string; designation: string } | null;
 };
@@ -21,6 +24,7 @@ type AuthState = {
   ready: boolean;
   login: (email: string, password: string) => Promise<User>;
   logout: () => Promise<void>;
+  updateUser: (u: User) => void;
 };
 
 const Ctx = createContext<AuthState | null>(null);
@@ -77,7 +81,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await clear();
   }, [clear]);
 
-  const value = useMemo(() => ({ user, ready, login, logout }), [user, ready, login, logout]);
+  const updateUser = useCallback((u: User) => {
+    setUser(u);
+    storage.set(KEYS.user, JSON.stringify(u)).catch(() => {});
+  }, []);
+
+  const value = useMemo(() => ({ user, ready, login, logout, updateUser }), [user, ready, login, logout, updateUser]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };
 

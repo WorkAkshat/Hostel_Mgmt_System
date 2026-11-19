@@ -887,6 +887,138 @@ const resetPassword = async (req, res) => {
   }
 };
 
+// @desc    Update current user's profile (name, phone, avatar)
+// @route   PUT /api/auth/profile
+// @access  Private
+const updateProfile = async (req, res) => {
+  const { name, phoneNumber, avatarData, emergencyContact } = req.body;
+  try {
+    let finalAvatar = undefined;
+    if (avatarData && avatarData.startsWith('data:')) {
+      const fs = require('fs');
+      const path = require('path');
+      const uploadsDir = path.join(__dirname, '..', 'uploads', 'gallery');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      const match = avatarData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (match) {
+        const mime = match[1];
+        const base64Content = match[2];
+        const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
+        const filename = `avatar-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`;
+        const filePath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filePath, Buffer.from(base64Content, 'base64'));
+
+        const protocol = req.protocol || 'https';
+        const host = req.get('host') || 'hms-api.haripushphostel.in';
+        finalAvatar = `${protocol}://${host}/uploads/gallery/${filename}`;
+      }
+    }
+
+    const updateData = {};
+    if (name) updateData.name = String(name).trim();
+    if (finalAvatar) updateData.avatar = finalAvatar;
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: updateData,
+      include: { student: true, staff: true }
+    });
+
+    if (phoneNumber && user.student) {
+      await prisma.student.update({
+        where: { id: user.student.id },
+        data: {
+          phoneNumber: String(phoneNumber).trim(),
+          ...(finalAvatar ? { profilePic: finalAvatar } : {}),
+          ...(emergencyContact ? { emergencyContact: String(emergencyContact).trim() } : {})
+        }
+      });
+    } else if (phoneNumber && user.staff) {
+      await prisma.staff.update({
+        where: { id: user.staff.id },
+        data: { phoneNumber: String(phoneNumber).trim() }
+      });
+    } else if (user.student && finalAvatar) {
+      await prisma.student.update({
+        where: { id: user.student.id },
+        data: { profilePic: finalAvatar }
+      });
+    }
+
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      include: { student: { include: { room: true } }, staff: true }
+    });
+
+    res.json({
+      id: updatedUser.id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      role: updatedUser.role,
+      avatar: updatedUser.avatar,
+      assignedFloor: updatedUser.assignedFloor,
+      phoneNumber: updatedUser.student?.phoneNumber || updatedUser.staff?.phoneNumber,
+      studentDetails: updatedUser.student ? {
+        id: updatedUser.student.id,
+        rollNumber: updatedUser.student.rollNumber,
+        phoneNumber: updatedUser.student.phoneNumber,
+        parentContact: updatedUser.student.parentContact,
+        status: updatedUser.student.status,
+        room: updatedUser.student.room ? {
+          id: updatedUser.student.room.id,
+          roomNumber: updatedUser.student.room.roomNumber,
+          block: updatedUser.student.room.block,
+          isAc: updatedUser.student.room.isAc
+        } : null
+      } : null,
+      staffDetails: updatedUser.staff ? {
+        id: updatedUser.staff.id,
+        department: updatedUser.staff.department,
+        designation: updatedUser.staff.designation,
+        phoneNumber: updatedUser.staff.phoneNumber
+      } : null
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({ message: 'Error updating profile' });
+  }
+};
+
+// @desc    Change current user's password
+// @route   POST /api/auth/change-password
+// @access  Private
+const changePassword = async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ message: 'Current and new password are required' });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ message: 'New password must be at least 6 characters' });
+  }
+  try {
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Current password does not match' });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { password: hashedPassword }
+    });
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    console.error('Error changing password:', error);
+    res.status(500).json({ message: 'Error changing password' });
+  }
+};
+
 module.exports = {
   loginUser,
   getMe,
@@ -899,6 +1031,8 @@ module.exports = {
   updatePushToken,
   testPushNotification,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  updateProfile,
+  changePassword
 };
 
