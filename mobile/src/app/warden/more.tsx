@@ -57,7 +57,13 @@ export default function WardenMore() {
   return (
     <Screen title="More" subtitle="Everything else you manage" back>
       <Appear>
-        <ProfileHero name={user?.name} line1={user?.email} line2={user?.companyName} pill={user?.assignedFloor ? `Floor ${user.assignedFloor} warden` : 'Chief warden'} />
+        <ProfileHero
+          name={user?.name}
+          line1={user?.email}
+          line2={user?.companyName}
+          pill={user?.assignedFloor ? `Floor ${user.assignedFloor} warden` : 'Chief warden'}
+          onPress={() => go('/profile')}
+        />
       </Appear>
       {GROUPS.map((g, gi) => (
         <Appear key={g.title} i={gi + 1}>

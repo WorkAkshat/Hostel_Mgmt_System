@@ -40,7 +40,6 @@ function Navigator() {
         </Stack.Protected>
         <Stack.Protected guard={role === 'STUDENT'}>
           <Stack.Screen name="student" />
-          <Stack.Screen name="profile" />
         </Stack.Protected>
         <Stack.Protected guard={role === 'ADMIN'}>
           <Stack.Screen name="warden" />
@@ -50,6 +49,7 @@ function Navigator() {
           <Stack.Screen name="staff" />
         </Stack.Protected>
         <Stack.Protected guard={!!user}>
+          <Stack.Screen name="profile" />
           <Stack.Screen name="gallery" />
           <Stack.Screen name="helpline" />
           <Stack.Screen name="helpdesk" />

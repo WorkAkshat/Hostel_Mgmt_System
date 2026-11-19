@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { BedDouble, CircleCheck, Clock, FilePen, IdCard, Images, ShieldCheck, Upload, XCircle } from 'lucide-react-native';
+import { BedDouble, ChevronRight, CircleCheck, Clock, FilePen, IdCard, Images, ShieldCheck, Upload, UserRound, XCircle } from 'lucide-react-native';
 import { dashboardApi, studentsApi } from '../api';
 import { asList } from '../api/client';
 import { useAuth } from '../lib/auth';
 import { useData } from '../lib/query';
 import { fmtDate, timeAgo } from '../lib/format';
 import { DOCUMENT_TYPES, STUDENT_STATUS, priceFor } from '../lib/hostel';
-import { colors } from '../ui/theme';
-import { Avatar, Badge, Button, Card, Divider, IconTile, Row, T } from '../ui/primitives';
+import { colors, radius } from '../ui/theme';
+import { Avatar, Badge, Button, Card, Divider, IconTile, Press, Row, T } from '../ui/primitives';
 import { Choices, Field, Input, digits } from '../ui/form';
 import { ErrorBox, Loading, useToast } from '../ui/feedback';
 import { Appear, ListRow, Screen, Section } from '../ui/layout';
@@ -46,8 +46,12 @@ export default function Profile() {
   const student = useData(['student', id], () => studentsApi.byId(id), { enabled: isStudent && !!id });
   const requests = useData(['my-profile-requests'], studentsApi.myProfileRequests, { enabled: isStudent });
   const docs = useData(['my-documents', id], () => studentsApi.studentDocuments(id), { enabled: isStudent && !!id });
+
   const [editing, setEditing] = useState(false);
   const [addingDoc, setAddingDoc] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState<any>(null);
+  const [viewingHistory, setViewingHistory] = useState<any>(null);
+  const [viewingRequest, setViewingRequest] = useState<any>(null);
 
   if (!isStudent) {
     return (
@@ -94,8 +98,18 @@ export default function Profile() {
   const st = s ? STUDENT_STATUS[s.status] || { label: s.status, tone: 'white' as const } : null;
 
   return (
-    <Screen title="My profile" back tabBar={false} onRefresh={() => Promise.all([student.refetch(), requests.refetch(), docs.refetch()])}>
-      {student.error ? <ErrorBox message={(student.error as Error).message} onRetry={student.refetch} /> : !s ? <Loading rows={3} h={140} /> : (
+    <Screen
+      title="My profile"
+      subtitle="Resident information & documents"
+      back
+      tabBar={false}
+      onRefresh={() => Promise.all([student.refetch(), requests.refetch(), docs.refetch()])}
+    >
+      {student.error ? (
+        <ErrorBox message={(student.error as Error).message} onRetry={student.refetch} />
+      ) : !s ? (
+        <Loading rows={3} h={140} />
+      ) : (
         <>
           <ProfileHero
             name={s.user?.name}
@@ -103,33 +117,51 @@ export default function Profile() {
             line1={s.rollNumber}
             line2={[s.user?.email, s.dateOfJoining ? `Joined ${fmtDate(s.dateOfJoining, { year: 'numeric' })}` : ''].filter(Boolean).join(' · ')}
             pill={st?.label}
-            cells={[{ k: 'Room', v: String(s.room?.roomNumber || '—') }, { k: 'Bed', v: s.bedId ? String(s.bedId).split('-').pop() || '—' : '—' }, { k: 'Floor', v: String(s.room?.floorNumber || '—') }]}
+            cells={[
+              { k: 'Room', v: String(s.room?.roomNumber || '—') },
+              { k: 'Bed', v: s.bedId ? String(s.bedId).split('-').pop() || '—' : '—' },
+              { k: 'Floor', v: String(s.room?.floorNumber || '—') },
+            ]}
           />
 
           {pending && (
             <Card tone="sun" style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
               <Clock size={18} color={colors.sun800} />
-              <T v="small" c={colors.sun900} style={{ flex: 1 }}>Your change request from {timeAgo(pending.createdAt)} is waiting for the warden.</T>
+              <T v="small" c={colors.sun900} style={{ flex: 1 }}>
+                Your change request from {timeAgo(pending.createdAt)} is waiting for the warden.
+              </T>
             </Card>
           )}
 
-          <Section title="Contact & family" action={pending ? undefined : 'Request change'} onAction={() => setEditing(true)}>
-            <Card padded style={{ paddingVertical: 4 }}>
-              <Info label="Your phone" value={s.phoneNumber} /><Divider />
-              <Info label="Father's name" value={s.fatherName} /><Divider />
-              <Info label="Parent phone" value={s.parentContact} /><Divider />
-              <Info label="Mother" value={[s.motherName, s.motherContact].filter(Boolean).join(' · ')} /><Divider />
-              <Info label="Emergency contact" value={s.emergencyContact} />
-            </Card>
+          <Section
+            title="Contact & family"
+            action={pending ? undefined : 'Request change'}
+            onAction={() => setEditing(true)}
+          >
+            <Press onPress={() => !pending && setEditing(true)} style={{ borderRadius: radius.card }}>
+              <Card padded style={{ paddingVertical: 4 }}>
+                <Info label="Your phone" value={s.phoneNumber} /><Divider />
+                <Info label="Father's name" value={s.fatherName} /><Divider />
+                <Info label="Parent phone" value={s.parentContact} /><Divider />
+                <Info label="Mother" value={[s.motherName, s.motherContact].filter(Boolean).join(' · ')} /><Divider />
+                <Info label="Emergency contact" value={s.emergencyContact} />
+              </Card>
+            </Press>
           </Section>
 
-          <Section title="Home & college">
-            <Card padded style={{ paddingVertical: 4 }}>
-              <Info label="Home address" value={[s.permanentAddress, s.state, s.pincode].filter(Boolean).join(', ')} /><Divider />
-              <Info label="Company / college" value={s.coachingCollege} /><Divider />
-              <Info label="Blood group" value={s.bloodGroup} /><Divider />
-              <Info label="Monthly fee" value={s.room ? `₹${priceFor(s.room.sharingType).total.toLocaleString('en-IN')} · ${priceFor(s.room.sharingType).label}` : ''} />
-            </Card>
+          <Section
+            title="Home & college"
+            action={pending ? undefined : 'Request change'}
+            onAction={() => setEditing(true)}
+          >
+            <Press onPress={() => !pending && setEditing(true)} style={{ borderRadius: radius.card }}>
+              <Card padded style={{ paddingVertical: 4 }}>
+                <Info label="Home address" value={[s.permanentAddress, s.state, s.pincode].filter(Boolean).join(', ')} /><Divider />
+                <Info label="Company / college" value={s.coachingCollege} /><Divider />
+                <Info label="Blood group" value={s.bloodGroup} /><Divider />
+                <Info label="Monthly fee" value={s.room ? `₹${priceFor(s.room.sharingType).total.toLocaleString('en-IN')} · ${priceFor(s.room.sharingType).label}` : ''} />
+              </Card>
+            </Press>
           </Section>
 
           {/* Room History */}
@@ -150,16 +182,19 @@ export default function Profile() {
                     : `Moved out of Room ${h.fromRoomNo || ''}`;
                   return (
                     <View key={h.id || idx}>
-                      <Row style={{ padding: 12, alignItems: 'center' }} gap={10}>
-                        <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: colors.mint100, alignItems: 'center', justifyContent: 'center' }}>
-                          <BedDouble size={16} color={colors.brand700} />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                          <T v="title" w="bold">{title}</T>
-                          <T v="caption" c={colors.text3}>{h.reason || 'Room change'}</T>
-                        </View>
-                        <Badge label={fmtDate(h.changedAt)} tone="mint" />
-                      </Row>
+                      <Press onPress={() => setViewingHistory(h)} style={{ padding: 12 }}>
+                        <Row style={{ alignItems: 'center' }} gap={10}>
+                          <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: colors.mint100, alignItems: 'center', justifyContent: 'center' }}>
+                            <BedDouble size={16} color={colors.brand700} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <T v="title" w="bold">{title}</T>
+                            <T v="caption" c={colors.text3}>{h.reason || 'Room change'}</T>
+                          </View>
+                          <Badge label={fmtDate(h.changedAt)} tone="mint" />
+                          <ChevronRight size={16} color={colors.text3} />
+                        </Row>
+                      </Press>
                       {idx < arr.length - 1 && <Divider />}
                     </View>
                   );
@@ -170,13 +205,25 @@ export default function Profile() {
 
           <Section title="ID documents" action="Add" onAction={() => setAddingDoc(true)}>
             {asList(docs.data).length === 0 ? (
-              <Card><T v="small" c={colors.text2}>No ID added yet. The hostel needs one government ID for your file.</T></Card>
+              <Press onPress={() => setAddingDoc(true)}>
+                <Card style={{ alignItems: 'center', padding: 18, gap: 6 }}>
+                  <IdCard size={28} color={colors.text3} />
+                  <T v="small" c={colors.text2} center>No ID added yet. Tap to add Aadhaar or government ID.</T>
+                  <Button title="Add ID Document" small icon={Upload} onPress={() => setAddingDoc(true)} style={{ marginTop: 4 }} />
+                </Card>
+              </Press>
             ) : asList(docs.data).map((d: any) => (
-              <Card key={d.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <IconTile icon={d.status === 'VERIFIED' ? ShieldCheck : IdCard} tone={d.status === 'VERIFIED' ? 'success' : 'mint'} />
-                <View style={{ flex: 1 }}><T v="title">{DOCUMENT_TYPES[d.docType] || d.docType}</T><T v="caption" c={colors.text3}>•••• {String(d.documentNumber).slice(-4)}</T></View>
-                <Badge label={(DOC as any)[d.status]?.label || d.status} tone={(DOC as any)[d.status]?.tone || 'white'} />
-              </Card>
+              <Press key={d.id} onPress={() => setViewingDoc(d)}>
+                <Card style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  <IconTile icon={d.status === 'VERIFIED' ? ShieldCheck : IdCard} tone={d.status === 'VERIFIED' ? 'success' : 'mint'} />
+                  <View style={{ flex: 1 }}>
+                    <T v="title">{DOCUMENT_TYPES[d.docType] || d.docType}</T>
+                    <T v="caption" c={colors.text3}>•••• {String(d.documentNumber).slice(-4)}</T>
+                  </View>
+                  <Badge label={(DOC as any)[d.status]?.label || d.status} tone={(DOC as any)[d.status]?.tone || 'white'} />
+                  <ChevronRight size={16} color={colors.text3} />
+                </Card>
+              </Press>
             ))}
           </Section>
 
@@ -185,19 +232,147 @@ export default function Profile() {
               {asList(requests.data).slice(0, 5).map((r: any) => {
                 const rs = (REQ as any)[r.status] || REQ.PENDING;
                 return (
-                  <Card key={r.id} style={{ gap: 6 }}>
-                    <Row style={{ justifyContent: 'space-between' }}><T v="caption" c={colors.text3}>{timeAgo(r.createdAt)}</T><Badge label={rs.label} tone={rs.tone} icon={rs.icon} /></Row>
-                    {Object.entries(r.requestedChanges || {}).filter(([, v]) => v).map(([k, v]) => <T key={k} v="small"><T v="small" c={colors.text3}>{LABEL[k] || k}: </T>{String(v)}</T>)}
-                  </Card>
+                  <Press key={r.id} onPress={() => setViewingRequest(r)}>
+                    <Card style={{ gap: 6 }}>
+                      <Row style={{ justifyContent: 'space-between' }}>
+                        <T v="caption" c={colors.text3}>{timeAgo(r.createdAt)}</T>
+                        <Badge label={rs.label} tone={rs.tone} icon={rs.icon} />
+                      </Row>
+                      {Object.entries(r.requestedChanges || {}).filter(([, v]) => v).map(([k, v]) => (
+                        <T key={k} v="small">
+                          <T v="small" c={colors.text3}>{LABEL[k] || k}: </T>{String(v)}
+                        </T>
+                      ))}
+                    </Card>
+                  </Press>
                 );
               })}
             </Section>
           )}
-          <T v="caption" c={colors.text3} center>Name, roll number and room are managed by the warden office.</T>
+
+          <T v="caption" c={colors.text3} center style={{ marginVertical: 8 }}>
+            Name, roll number and room allotment are managed by the warden office.
+          </T>
         </>
       )}
+
+      {/* Change Request Sheet */}
       <ChangeSheet open={editing} student={s} onClose={() => setEditing(false)} />
+
+      {/* Add Document Sheet */}
       <DocSheet open={addingDoc} onClose={() => setAddingDoc(false)} studentId={id} />
+
+      {/* View Document Detail Sheet */}
+      <Sheet
+        open={!!viewingDoc}
+        onClose={() => setViewingDoc(null)}
+        title={DOCUMENT_TYPES[viewingDoc?.docType] || 'ID Document'}
+        subtitle="Resident government verification details"
+        footer={
+          viewingDoc?.status === 'REJECTED' ? (
+            <Button
+              title="Replace Document"
+              icon={Upload}
+              onPress={() => {
+                setViewingDoc(null);
+                setAddingDoc(true);
+              }}
+              full
+            />
+          ) : (
+            <Button
+              title="Done"
+              kind="secondary"
+              onPress={() => setViewingDoc(null)}
+              full
+            />
+          )
+        }
+      >
+        {viewingDoc && (
+          <View style={{ gap: 12 }}>
+            <Card style={{ gap: 8 }}>
+              <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <T v="title" w="bold">{DOCUMENT_TYPES[viewingDoc.docType] || viewingDoc.docType}</T>
+                <Badge
+                  label={(DOC as any)[viewingDoc.status]?.label || viewingDoc.status}
+                  tone={(DOC as any)[viewingDoc.status]?.tone || 'white'}
+                />
+              </Row>
+              <Divider />
+              <Info label="Document Number" value={viewingDoc.documentNumber} />
+              <Divider />
+              <Info
+                label="Verification Status"
+                value={
+                  viewingDoc.status === 'VERIFIED'
+                    ? 'Verified and approved by the Warden for hostel records.'
+                    : viewingDoc.status === 'PENDING'
+                    ? 'Being reviewed by the Warden Office.'
+                    : 'Rejected. Please submit a valid document number.'
+                }
+              />
+            </Card>
+          </View>
+        )}
+      </Sheet>
+
+      {/* Room Detail Sheet */}
+      <Sheet
+        open={!!viewingHistory}
+        onClose={() => setViewingHistory(null)}
+        title={viewingHistory?.toRoomNo ? `Room ${viewingHistory.toRoomNo}` : 'Room Allotment'}
+        subtitle="Hostel stay and room history"
+        footer={<Button title="Close" kind="secondary" onPress={() => setViewingHistory(null)} full />}
+      >
+        {viewingHistory && (
+          <View style={{ gap: 12 }}>
+            <Card style={{ gap: 8 }}>
+              <Info label="Allotment" value={viewingHistory.toRoomNo ? `Room ${viewingHistory.toRoomNo}` : '—'} />
+              <Divider />
+              <Info label="Floor" value={s?.room?.floorNumber ? `Floor ${s.room.floorNumber}` : '—'} />
+              <Divider />
+              <Info label="Reason / Remarks" value={viewingHistory.reason || 'Current room allotment'} />
+              <Divider />
+              <Info label="Effective Date" value={fmtDate(viewingHistory.changedAt)} />
+              <Divider />
+              <Info label="Sharing Type" value={s?.room?.sharingType ? `${s.room.sharingType} sharing` : '—'} />
+            </Card>
+          </View>
+        )}
+      </Sheet>
+
+      {/* Change Request Detail Sheet */}
+      <Sheet
+        open={!!viewingRequest}
+        onClose={() => setViewingRequest(null)}
+        title="Change Request Details"
+        subtitle={viewingRequest ? timeAgo(viewingRequest.createdAt) : ''}
+        footer={<Button title="Close" kind="secondary" onPress={() => setViewingRequest(null)} full />}
+      >
+        {viewingRequest && (
+          <View style={{ gap: 12 }}>
+            <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+              <T v="title" w="bold">Request Status</T>
+              <Badge
+                label={(REQ as any)[viewingRequest.status]?.label || viewingRequest.status}
+                tone={(REQ as any)[viewingRequest.status]?.tone || 'white'}
+                icon={(REQ as any)[viewingRequest.status]?.icon}
+              />
+            </Row>
+            <Card style={{ gap: 8 }}>
+              <T v="caption" c={colors.text3}>Requested Updates:</T>
+              {Object.entries(viewingRequest.requestedChanges || {}).filter(([, v]) => v).map(([k, v]) => (
+                <View key={k}>
+                  <Info label={LABEL[k] || k} value={String(v)} />
+                  <Divider />
+                </View>
+              ))}
+              <Info label="Submitted On" value={fmtDate(viewingRequest.createdAt)} />
+            </Card>
+          </View>
+        )}
+      </Sheet>
     </Screen>
   );
 }
@@ -280,4 +455,3 @@ const DocSheet = ({ open, onClose, studentId }: { open: boolean; onClose: () => 
     </Sheet>
   );
 };
-
