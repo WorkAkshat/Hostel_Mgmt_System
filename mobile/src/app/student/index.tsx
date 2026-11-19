@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { BedDouble, CalendarDays, CircleCheck, Images, Lightbulb, Megaphone, Plus, ShieldCheck, UtensilsCrossed, Wallet, Wrench } from 'lucide-react-native';
+import { BedDouble, CalendarDays, CircleCheck, Images, LayoutGrid, Lightbulb, Megaphone, Plus, ShieldCheck, UserRound, UtensilsCrossed, Wallet, Wrench } from 'lucide-react-native';
 import { dashboardApi, demandNotesApi, feesApi, leavesApi, messApi, noticesApi, pollsApi } from '../../api';
 import { asList } from '../../api/client';
 import { useAuth } from '../../lib/auth';
@@ -12,6 +12,7 @@ import { Avatar, Badge, Card, IconTile, Press, Row, Skeleton, T } from '../../ui
 import { Hero, HeroCells, QuickActions, onHero } from '../../ui/blocks';
 import { MEAL_ICONS } from '../../features/mealIcons';
 import { Appear, Grid, ListRow, Screen, Section, Stat } from '../../ui/layout';
+import { Sheet } from '../../ui/Sheet';
 import Bell from '../../features/Bell';
 import PollCard from '../../features/PollCard';
 import AnnouncementBanner from '../../features/AnnouncementBanner';
@@ -20,6 +21,7 @@ import { go } from '../../lib/nav';
 export default function StudentHome() {
   const { user } = useAuth();
   const refreshAll = useRefreshAll();
+  const [quickOpen, setQuickOpen] = useState(false);
   const dash = useData(['dashboard'], dashboardApi.get);
   const leaves = useData(['my-leaves'], leavesApi.mine);
   const menu = useData(['menu'], messApi.menu, { interval: 300_000 });
@@ -63,7 +65,14 @@ export default function StudentHome() {
       title={`Hi, ${firstName(user?.name)} 👋`}
       left={<Press onPress={() => go('/student/me')} scaleTo={0.9} accessibilityRole="button" accessibilityLabel="My profile" style={{ borderRadius: 24, borderWidth: 2, borderColor: colors.white }}><Avatar name={user?.name} uri={profile?.avatar} size={44} tone="mint" /></Press>}
       subtitle={`${greeting()} · ${new Date().toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}`}
-      right={<Bell />}
+      right={
+        <Row gap={8} style={{ alignItems: 'center' }}>
+          <Press onPress={() => setQuickOpen(true)} scaleTo={0.92} accessibilityRole="button" accessibilityLabel="Quick actions" style={styles.quickBtn}>
+            <LayoutGrid size={20} color={colors.brand700} />
+          </Press>
+          <Bell />
+        </Row>
+      }
       onRefresh={refreshAll}
     >
       <AnnouncementBanner />
@@ -204,6 +213,18 @@ export default function StudentHome() {
       {/* Poll */}
       {openPoll && <Appear i={3}><Section title="Poll" action="All polls" onAction={() => go('/polls')}><PollCard poll={openPoll} /></Section></Appear>}
 
+      <Sheet open={quickOpen} onClose={() => setQuickOpen(false)} title="Quick actions" subtitle="Shortcuts for student features">
+        <QuickActions items={[
+          { icon: Plus, tone: 'sun', label: 'Apply leave', onPress: () => { setQuickOpen(false); go({ pathname: '/student/leaves', params: { apply: '1' } }); } },
+          { icon: Wallet, tone: 'sun', label: 'Pay bills', onPress: () => { setQuickOpen(false); go('/student/bills'); } },
+          { icon: Wrench, tone: 'peach', label: 'Complaint', onPress: () => { setQuickOpen(false); go({ pathname: '/helpdesk', params: { new: '1' } }); } },
+          { icon: Images, tone: 'mint', label: 'Hostel tour', onPress: () => { setQuickOpen(false); go('/gallery'); } },
+          { icon: UtensilsCrossed, tone: 'peach', label: 'Mess menu', onPress: () => { setQuickOpen(false); go('/student/mess'); } },
+          { icon: ShieldCheck, tone: 'lilac', label: 'Helpline', onPress: () => { setQuickOpen(false); go('/helpline'); } },
+          { icon: Megaphone, tone: 'mint', label: 'Notices', onPress: () => { setQuickOpen(false); go('/notices'); } },
+          { icon: UserRound, tone: 'mint', label: 'My profile', onPress: () => { setQuickOpen(false); go('/profile'); } },
+        ]} />
+      </Sheet>
 
     </Screen>
   );
@@ -212,4 +233,5 @@ export default function StudentHome() {
 const styles = StyleSheet.create({
   heroIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.18)', alignItems: 'center', justifyContent: 'center' },
   meal: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  quickBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: colors.mint100, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.mint200 },
 });
