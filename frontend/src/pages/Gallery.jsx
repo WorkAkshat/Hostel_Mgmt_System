@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Image as ImageIcon, Plus, Trash2, Upload, Film, X, Check, BedDouble, UtensilsCrossed, Building2, Sparkles, Pencil, Settings2, Phone, ShieldCheck, MapPin } from 'lucide-react';
+import { Image as ImageIcon, Plus, Trash2, Upload, Film, X, Check, BedDouble, UtensilsCrossed, Building2, Sparkles, Pencil, Settings2, Phone, ShieldCheck, MapPin, FileText, Eye } from 'lucide-react';
 import { galleryApi } from '../utils/api/gallery';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
@@ -56,7 +56,8 @@ export default function Gallery() {
     hostelName: 'Hari Pushp Tower (Girls PG)',
     address: 'Sector 4, Jaipur, Rajasthan',
     contacts: [],
-    rules: []
+    rules: [],
+    documents: []
   });
   const [hostelNameInput, setHostelNameInput] = useState('Hari Pushp Tower (Girls PG)');
   const [hostelAddressInput, setHostelAddressInput] = useState('Sector 4, Jaipur, Rajasthan');
@@ -64,6 +65,13 @@ export default function Gallery() {
   const [editingContact, setEditingContact] = useState(null);
   const [newRuleText, setNewRuleText] = useState('');
   const [editingRule, setEditingRule] = useState(null);
+
+  // Document / Notice Sheet states
+  const [docTitle, setDocTitle] = useState('');
+  const [docDescription, setDocDescription] = useState('');
+  const [docFileData, setDocFileData] = useState(null);
+  const [docFileName, setDocFileName] = useState('');
+  const [viewingDoc, setViewingDoc] = useState(null);
 
   const loadHelpline = useCallback(async () => {
     try {
@@ -328,6 +336,52 @@ export default function Gallery() {
       toast.success('Rule deleted');
     } catch (err) {
       toast.error('Error', err.message || 'Could not delete rule');
+    }
+  };
+
+  // Official Notice / Rule Sheet Handlers
+  const handleDocFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setDocFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setDocFileData(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleAddDocument = async (e) => {
+    e.preventDefault();
+    if (!docTitle.trim() || !docFileData) {
+      toast.error('Required', 'Please enter a title and select a sheet photo or document');
+      return;
+    }
+    try {
+      const updated = await galleryApi.addDocument({
+        title: docTitle.trim(),
+        description: docDescription.trim(),
+        fileData: docFileData,
+      });
+      setHelplineData(updated);
+      setDocTitle('');
+      setDocDescription('');
+      setDocFileData(null);
+      setDocFileName('');
+      toast.success('Sheet / notice uploaded successfully');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not upload sheet');
+    }
+  };
+
+  const handleDeleteDocument = async (id) => {
+    if (!window.confirm('Delete this sheet / notice?')) return;
+    try {
+      const updated = await galleryApi.removeDocument(id);
+      setHelplineData(updated);
+      toast.success('Sheet / notice removed');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not delete sheet');
     }
   };
 
@@ -1164,11 +1218,153 @@ export default function Gallery() {
               </div>
             </div>
 
+            {/* Official Sheets & Notices Section */}
+            <div className="space-y-3 pt-3 border-t border-[var(--border-color)]">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-[var(--text-primary)]">Official Sheets & Notices</h3>
+                  <p className="text-[11px] text-slate-500">Official warden circulars, signed rule sheets, and code of conduct</p>
+                </div>
+              </div>
+
+              {isAdmin && (
+                <form onSubmit={handleAddDocument} className="p-3.5 rounded-xl border border-[var(--border-color)] bg-slate-50 space-y-2.5">
+                  <div className="text-xs font-bold text-slate-700">+ Upload Official Sheet / Notice</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Sheet / Notice Title (e.g. Annual Rules 2026)"
+                      value={docTitle}
+                      onChange={(e) => setDocTitle(e.target.value)}
+                      className="px-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-white text-xs"
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Description / Note (e.g. Approved by Warden)"
+                      value={docDescription}
+                      onChange={(e) => setDocDescription(e.target.value)}
+                      className="px-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-white text-xs"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <label className="inline-flex items-center gap-2 px-3 py-1.5 bg-white border border-[var(--border-color)] rounded-lg text-xs font-medium text-slate-700 hover:bg-slate-100 cursor-pointer">
+                      <Upload size={14} />
+                      <span>{docFileName || 'Choose Sheet Photo / PDF…'}</span>
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={handleDocFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={!docFileData || !docTitle.trim()}
+                      className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                    >
+                      Upload Sheet
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <div className="space-y-2">
+                {(helplineData?.documents || []).length === 0 ? (
+                  <div className="text-center py-4 text-xs text-slate-500">
+                    No official sheets or notices uploaded yet.
+                  </div>
+                ) : (
+                  (helplineData?.documents || []).map((doc) => (
+                    <div key={doc.id} className="p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <img
+                          src={doc.url}
+                          alt={doc.title}
+                          className="w-12 h-12 rounded-lg object-cover bg-slate-100 shrink-0"
+                          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-bold text-slate-900 truncate">{doc.title}</div>
+                          {doc.description && <div className="text-xs text-slate-500 truncate">{doc.description}</div>}
+                          <div className="text-[11px] text-brand-700 font-medium mt-0.5">Official Warden Sheet</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setViewingDoc(doc)}
+                          className="p-2 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                        >
+                          <Eye size={14} />
+                          <span className="hidden sm:inline">View Sheet</span>
+                        </button>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteDocument(doc.id)}
+                            className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer"
+                            title="Delete Sheet"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
             <div className="flex justify-end pt-3 border-t border-[var(--border-color)]">
               <button
                 type="button"
                 onClick={() => setShowHelplineModal(false)}
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* View Document Full Screen Modal */}
+      {viewingDoc && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] max-w-2xl w-full p-5 shadow-2xl space-y-4 animate-scale-up max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+              <div>
+                <h3 className="text-base font-bold text-[var(--text-primary)]">{viewingDoc.title}</h3>
+                {viewingDoc.description && <p className="text-xs text-slate-500">{viewingDoc.description}</p>}
+              </div>
+              <button
+                onClick={() => setViewingDoc(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto flex items-center justify-center bg-black/5 rounded-xl p-2 min-h-[300px]">
+              <img
+                src={viewingDoc.url}
+                alt={viewingDoc.title}
+                className="max-h-[70vh] max-w-full rounded-lg object-contain shadow-sm"
+              />
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t border-[var(--border-color)]">
+              <a
+                href={viewingDoc.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-brand-700 font-semibold hover:underline"
+              >
+                Open in new tab ↗
+              </a>
+              <button
+                type="button"
+                onClick={() => setViewingDoc(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold cursor-pointer"
               >
                 Close
               </button>

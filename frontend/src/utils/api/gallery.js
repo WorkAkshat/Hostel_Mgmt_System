@@ -18,6 +18,8 @@ export const galleryApi = {
   addRule: (data) => api.post('/gallery/helpline/rules', data),
   updateRule: (id, data) => api.put(`/gallery/helpline/rules/${id}`, data),
   removeRule: (id) => api.delete(`/gallery/helpline/rules/${id}`),
+  addDocument: (data) => api.post('/gallery/helpline/documents', data),
+  removeDocument: (id) => api.delete(`/gallery/helpline/documents/${id}`),
 };
 
 export default galleryApi;

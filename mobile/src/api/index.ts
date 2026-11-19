@@ -203,11 +203,13 @@ export const inventoryApi = {
 
 export type HelplineContact = { id: string; title: string; phone: string; sub?: string };
 export type HelplineRule = { id: string; text: string };
+export type HelplineDocument = { id: string; title: string; description?: string; url: string; createdAt: string };
 export type HelplineData = {
   hostelName: string;
   address: string;
   contacts: HelplineContact[];
   rules: HelplineRule[];
+  documents?: HelplineDocument[];
 };
 
 export const galleryApi = {
@@ -228,4 +230,6 @@ export const galleryApi = {
   addRule: (data: { text: string }) => api<HelplineData>('/gallery/helpline/rules', { method: 'POST', body: data }),
   updateRule: (id: string, data: { text: string }) => api<HelplineData>(`/gallery/helpline/rules/${id}`, { method: 'PUT', body: data }),
   removeRule: (id: string) => api<HelplineData>(`/gallery/helpline/rules/${id}`, { method: 'DELETE' }),
+  addDocument: (data: { title: string; description?: string; fileData?: string; url?: string }) => api<HelplineData>('/gallery/helpline/documents', { method: 'POST', body: data }),
+  removeDocument: (id: string) => api<HelplineData>(`/gallery/helpline/documents/${id}`, { method: 'DELETE' }),
 };

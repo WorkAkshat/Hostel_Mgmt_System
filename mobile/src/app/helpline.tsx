@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Image, ScrollView, StyleSheet, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { MapPin, Pencil, Phone, Plus, Save, Trash2 } from 'lucide-react-native';
-import { galleryApi, HelplineContact, HelplineRule } from '../api';
+import { Camera, Eye, FileText, Image as ImageIcon, MapPin, Pencil, Phone, Plus, Save, Trash2, Upload } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { galleryApi, HelplineContact, HelplineDocument, HelplineRule } from '../api';
 import { useAuth } from '../lib/auth';
 import { call } from '../lib/contact';
 import { useData } from '../lib/query';
-import { colors } from '../ui/theme';
-import { Button, Card, Divider, IconButton, Row, T } from '../ui/primitives';
+import { colors, radius } from '../ui/theme';
+import { Button, Card, Divider, IconButton, Press, Row, T } from '../ui/primitives';
 import { Field, Input } from '../ui/form';
 import { Confirm, useToast } from '../ui/feedback';
 import { Appear, Screen, Section } from '../ui/layout';
@@ -58,6 +59,15 @@ export default function HelplineScreen() {
   const [savingRule, setSavingRule] = useState(false);
   const [deletingRule, setDeletingRule] = useState<HelplineRule | null>(null);
 
+  // Document / Notice Sheet state
+  const [uploadDocOpen, setUploadDocOpen] = useState(false);
+  const [docTitle, setDocTitle] = useState('');
+  const [docDescription, setDocDescription] = useState('');
+  const [selectedAsset, setSelectedAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [savingDoc, setSavingDoc] = useState(false);
+  const [deletingDoc, setDeletingDoc] = useState<HelplineDocument | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<HelplineDocument | null>(null);
+
   const hostelName = query.data?.hostelName || 'Hari Pushp Tower (Girls PG)';
   const hostelAddress = query.data?.address || 'Sector 4, Jaipur, Rajasthan';
 
@@ -75,6 +85,13 @@ export default function HelplineScreen() {
       );
     }
     return DEFAULT_RULES;
+  }, [query.data]);
+
+  const documents: HelplineDocument[] = useMemo(() => {
+    if (query.data?.documents && Array.isArray(query.data.documents)) {
+      return query.data.documents;
+    }
+    return [];
   }, [query.data]);
 
   // Handlers for Hostel Info
@@ -214,6 +231,82 @@ export default function HelplineScreen() {
     }
   };
 
+  // Handlers for Official Notice / Rule Sheet
+  const pickSheetFromGallery = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      return toast.error('Permission needed', 'Please allow gallery access to upload notice or rule sheet.');
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.85,
+      base64: true,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setSelectedAsset(result.assets[0]);
+    }
+  };
+
+  const captureSheetPhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      return toast.error('Permission needed', 'Please allow camera access to take photo of notice or rule sheet.');
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 0.85,
+      base64: true,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setSelectedAsset(result.assets[0]);
+    }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!docTitle.trim()) {
+      return toast.error('Required', 'Please enter a title for the sheet or notice');
+    }
+    if (!selectedAsset) {
+      return toast.error('Required', 'Please select a photo or scan of the sheet / notice');
+    }
+
+    setSavingDoc(true);
+    try {
+      const mime = selectedAsset.mimeType || 'image/jpeg';
+      const fileData = selectedAsset.base64 ? `data:${mime};base64,${selectedAsset.base64}` : selectedAsset.uri;
+
+      await galleryApi.addDocument({
+        title: docTitle.trim(),
+        description: docDescription.trim(),
+        fileData,
+      });
+
+      toast.success('Uploaded', 'Notice / rule sheet is now visible to all residents');
+      await qc.invalidateQueries({ queryKey: ['helpline-rules'] });
+      setUploadDocOpen(false);
+      setDocTitle('');
+      setDocDescription('');
+      setSelectedAsset(null);
+    } catch (e: any) {
+      toast.error('Upload failed', e.message || 'Please try again');
+    } finally {
+      setSavingDoc(false);
+    }
+  };
+
+  const handleDeleteDocument = async () => {
+    if (!deletingDoc) return;
+    try {
+      await galleryApi.removeDocument(deletingDoc.id);
+      toast.success('Deleted', 'Sheet / notice removed');
+      await qc.invalidateQueries({ queryKey: ['helpline-rules'] });
+      setDeletingDoc(null);
+    } catch (e: any) {
+      toast.error('Failed to delete', e.message || 'Please try again');
+    }
+  };
+
   return (
     <Screen
       title="Helpline & Rules"
@@ -245,7 +338,77 @@ export default function HelplineScreen() {
         </Card>
       </Appear>
 
+      {/* Official Notice & Rule Sheets Section */}
       <Appear i={1}>
+        <Section
+          title="Official Sheets & Notices"
+          action={admin ? '+ Upload Sheet' : undefined}
+          onAction={admin ? () => setUploadDocOpen(true) : undefined}
+        >
+          {documents.length === 0 ? (
+            <Card style={{ padding: 16, alignItems: 'center', gap: 6 }}>
+              <FileText size={32} color={colors.text3} />
+              <T v="title" w="semibold" center>No uploaded sheets yet</T>
+              <T v="caption" c={colors.text2} center>
+                {admin ? 'Tap "+ Upload Sheet" to upload official warden circulars, code of conduct, or notice sheets.' : 'Official warden circulars and rule sheets will appear here.'}
+              </T>
+              {admin && (
+                <Button
+                  title="Upload Sheet / Notice"
+                  icon={Upload}
+                  small
+                  onPress={() => setUploadDocOpen(true)}
+                  style={{ marginTop: 6 }}
+                />
+              )}
+            </Card>
+          ) : (
+            <View style={{ gap: 10 }}>
+              {documents.map((doc) => (
+                <Press
+                  key={doc.id}
+                  onPress={() => setViewingDoc(doc)}
+                  style={{ borderRadius: radius.card }}
+                >
+                  <Card tone="white" style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 }}>
+                    <Image
+                      source={{ uri: doc.url }}
+                      style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: colors.mint50 }}
+                      resizeMode="cover"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <T v="title" w="bold" numberOfLines={1}>{doc.title}</T>
+                      {doc.description ? <T v="caption" c={colors.text2} numberOfLines={1}>{doc.description}</T> : null}
+                      <T v="caption" c={colors.brand700} w="semibold" style={{ marginTop: 2 }}>Tap to view full sheet ›</T>
+                    </View>
+                    <Row gap={6} align="center">
+                      <IconButton
+                        icon={Eye}
+                        label="View sheet"
+                        tone="mint"
+                        size={36}
+                        onPress={() => setViewingDoc(doc)}
+                      />
+                      {admin && (
+                        <IconButton
+                          icon={Trash2}
+                          label="Delete sheet"
+                          tone="danger"
+                          size={36}
+                          onPress={() => setDeletingDoc(doc)}
+                        />
+                      )}
+                    </Row>
+                  </Card>
+                </Press>
+              ))}
+            </View>
+          )}
+        </Section>
+      </Appear>
+
+      {/* 24x7 Contacts Section */}
+      <Appear i={2}>
         <Section
           title="24x7 Contacts & Helpline"
           action={admin ? '+ Add Contact' : undefined}
@@ -295,7 +458,8 @@ export default function HelplineScreen() {
         </Section>
       </Appear>
 
-      <Appear i={2}>
+      {/* Rules Section */}
+      <Appear i={3}>
         <Section
           title="Hostel Guidelines & Rules"
           action={admin ? '+ Add Rule' : undefined}
@@ -334,6 +498,107 @@ export default function HelplineScreen() {
           </Card>
         </Section>
       </Appear>
+
+      {/* Upload Sheet / Notice Modal */}
+      <Sheet
+        open={uploadDocOpen}
+        onClose={() => { setUploadDocOpen(false); setSelectedAsset(null); }}
+        title="Upload Sheet / Notice"
+        subtitle="Attach circular, printed rule sheet or notice"
+        footer={
+          <Button
+            title={savingDoc ? 'Uploading…' : 'Upload Sheet / Notice'}
+            icon={Upload}
+            onPress={handleUploadDocument}
+            loading={savingDoc}
+            full
+          />
+        }
+      >
+        <Field label="Sheet / Notice Title" required>
+          <Input
+            value={docTitle}
+            onChangeText={setDocTitle}
+            placeholder="e.g. Annual Code of Conduct Sheet, Mess Circular"
+          />
+        </Field>
+        <Field label="Description / Summary (Optional)">
+          <Input
+            value={docDescription}
+            onChangeText={setDocDescription}
+            placeholder="e.g. Official signed copy approved by Warden"
+          />
+        </Field>
+
+        <Field label="Select Sheet / Document Photo" required>
+          <Row gap={10}>
+            <Button
+              title="From Gallery"
+              icon={ImageIcon}
+              kind="secondary"
+              onPress={pickSheetFromGallery}
+              style={{ flex: 1 }}
+            />
+            <Button
+              title="Take Photo"
+              icon={Camera}
+              kind="secondary"
+              onPress={captureSheetPhoto}
+              style={{ flex: 1 }}
+            />
+          </Row>
+
+          {selectedAsset ? (
+            <View style={{ marginTop: 10, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.border, backgroundColor: colors.mint50, padding: 8, alignItems: 'center' }}>
+              <Image
+                source={{ uri: selectedAsset.uri }}
+                style={{ width: '100%', height: 180, borderRadius: 8 }}
+                resizeMode="contain"
+              />
+              <T v="caption" c={colors.brand700} w="semibold" style={{ marginTop: 6 }}>
+                Sheet photo selected ({Math.round((selectedAsset.width || 0))}×{Math.round((selectedAsset.height || 0))})
+              </T>
+            </View>
+          ) : (
+            <T v="caption" c={colors.text3} style={{ marginTop: 6 }}>
+              Choose a clear photo, screenshot, or scanned document of the sheet or notice.
+            </T>
+          )}
+        </Field>
+      </Sheet>
+
+      {/* Full Sheet Viewer Modal */}
+      <Sheet
+        open={!!viewingDoc}
+        onClose={() => setViewingDoc(null)}
+        title={viewingDoc?.title || 'Notice / Rule Sheet'}
+        subtitle={viewingDoc?.description || 'Official hostel notice document'}
+      >
+        {viewingDoc && (
+          <View style={{ gap: 12 }}>
+            <ScrollView
+              maximumZoomScale={3}
+              minimumZoomScale={1}
+              style={{ maxHeight: 440, borderRadius: 12, backgroundColor: '#000' }}
+            >
+              <Image
+                source={{ uri: viewingDoc.url }}
+                style={{ width: '100%', height: 420 }}
+                resizeMode="contain"
+              />
+            </ScrollView>
+            <T v="caption" c={colors.text3} center>
+              Pinch or double tap to zoom in and read text
+            </T>
+            <Button
+              title="Close Sheet"
+              kind="secondary"
+              onPress={() => setViewingDoc(null)}
+              full
+            />
+          </View>
+        )}
+      </Sheet>
 
       {/* Edit Hostel Info Sheet */}
       <Sheet
@@ -433,6 +698,17 @@ export default function HelplineScreen() {
           />
         </Field>
       </Sheet>
+
+      {/* Delete Document Confirmation */}
+      <Confirm
+        open={!!deletingDoc}
+        title="Delete Sheet / Notice?"
+        message={`Are you sure you want to remove "${deletingDoc?.title}"? Residents will no longer see it.`}
+        confirmLabel="Delete Sheet"
+        danger
+        onConfirm={handleDeleteDocument}
+        onClose={() => setDeletingDoc(null)}
+      />
 
       {/* Delete Contact Confirmation */}
       <Confirm

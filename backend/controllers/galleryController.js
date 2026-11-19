@@ -340,6 +340,15 @@ const DEFAULT_HELPLINE = {
     { id: 'r-4', text: 'Sub-meter electricity is billed from 10th to 10th of each calendar month.' },
     { id: 'r-5', text: 'Leave requests must be applied through the app at least 24 hours prior to travel.' },
     { id: 'r-6', text: 'Maintain silence in study hours and cleanliness in mess and common areas.' }
+  ],
+  documents: [
+    {
+      id: 'doc-1',
+      title: 'Official Hostel Guidelines & Code of Conduct Sheet',
+      description: 'Signed copy from Chief Warden Office for session 2026',
+      url: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=1200&q=80',
+      createdAt: '2026-11-19T10:00:00.000Z'
+    }
   ]
 };
 
@@ -357,6 +366,7 @@ const loadHelpline = () => {
     if (!data.address) data.address = DEFAULT_HELPLINE.address;
     if (!Array.isArray(data.contacts)) data.contacts = DEFAULT_HELPLINE.contacts;
     if (!Array.isArray(data.rules)) data.rules = DEFAULT_HELPLINE.rules;
+    if (!Array.isArray(data.documents)) data.documents = DEFAULT_HELPLINE.documents || [];
     data.rules = data.rules.map((r, i) => (typeof r === 'string' ? { id: `r-${i + 1}`, text: r } : r));
     return data;
   } catch (err) {
@@ -518,6 +528,78 @@ const deleteHelplineRule = (req, res) => {
   }
 };
 
+// @desc    Upload official rule sheet or notice document
+// @route   POST /api/v1/gallery/helpline/documents
+// @access  Private (Admin / Warden)
+const addHelplineDocument = (req, res) => {
+  try {
+    const { title, description, fileData, url } = req.body;
+    if (!title) {
+      return res.status(400).json({ message: 'Sheet / notice title is required' });
+    }
+    if (!fileData && !url) {
+      return res.status(400).json({ message: 'Please select a sheet photo or document' });
+    }
+
+    let finalUrl = url;
+    if (fileData && fileData.startsWith('data:')) {
+      const uploadsDir = path.join(__dirname, '..', 'uploads', 'gallery');
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+
+      const match = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (match) {
+        const mime = match[1];
+        const base64Content = match[2];
+        const ext = mime.includes('png') ? 'png' : mime.includes('pdf') ? 'pdf' : mime.includes('webp') ? 'webp' : 'jpg';
+        const filename = `sheet-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`;
+        const filePath = path.join(uploadsDir, filename);
+        fs.writeFileSync(filePath, Buffer.from(base64Content, 'base64'));
+
+        const protocol = req.protocol || 'https';
+        const host = req.get('host') || 'hms-api.haripushphostel.in';
+        finalUrl = `${protocol}://${host}/uploads/gallery/${filename}`;
+      }
+    }
+
+    const data = loadHelpline();
+    if (!Array.isArray(data.documents)) data.documents = [];
+
+    const newDoc = {
+      id: 'doc-' + Date.now(),
+      title: String(title).trim(),
+      description: description ? String(description).trim() : '',
+      url: finalUrl,
+      createdAt: new Date().toISOString()
+    };
+
+    data.documents.unshift(newDoc);
+    saveHelpline(data);
+    res.status(201).json(data);
+  } catch (error) {
+    console.error('Error adding document:', error);
+    res.status(500).json({ message: 'Error uploading sheet/notice' });
+  }
+};
+
+// @desc    Delete official rule sheet or notice document
+// @route   DELETE /api/v1/gallery/helpline/documents/:id
+// @access  Private (Admin / Warden)
+const deleteHelplineDocument = (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = loadHelpline();
+    if (Array.isArray(data.documents)) {
+      data.documents = data.documents.filter(d => String(d.id) !== String(id));
+    }
+    saveHelpline(data);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting sheet/notice' });
+  }
+};
+
 module.exports = {
   getGallery,
   getGalleryMeta,
@@ -535,5 +617,7 @@ module.exports = {
   deleteHelplineContact,
   addHelplineRule,
   updateHelplineRule,
-  deleteHelplineRule
+  deleteHelplineRule,
+  addHelplineDocument,
+  deleteHelplineDocument
 };

@@ -17,7 +17,9 @@ const {
   deleteHelplineContact,
   addHelplineRule,
   updateHelplineRule,
-  deleteHelplineRule
+  deleteHelplineRule,
+  addHelplineDocument,
+  deleteHelplineDocument
 } = require('../controllers/galleryController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -57,6 +59,12 @@ router.route('/helpline/rules')
 router.route('/helpline/rules/:id')
   .put(protect, authorize('ADMIN'), updateHelplineRule)
   .delete(protect, authorize('ADMIN'), deleteHelplineRule);
+
+router.route('/helpline/documents')
+  .post(protect, authorize('ADMIN'), addHelplineDocument);
+
+router.route('/helpline/documents/:id')
+  .delete(protect, authorize('ADMIN'), deleteHelplineDocument);
 
 router.route('/:id')
   .put(protect, authorize('ADMIN'), updateMedia)

@@ -46,5 +46,14 @@
       "id": "r-6",
       "text": "Maintain silence in study hours and cleanliness in mess and common areas."
     }
+  ],
+  "documents": [
+    {
+      "id": "doc-1",
+      "title": "Official Hostel Guidelines & Code of Conduct Sheet",
+      "description": "Signed copy from Chief Warden Office for session 2026",
+      "url": "https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&w=1200&q=80",
+      "createdAt": "2026-11-19T10:00:00.000Z"
+    }
   ]
 }
