@@ -10,7 +10,14 @@ const {
   deleteCategory,
   addType,
   deleteType,
-  getHelplineAndRules
+  getHelplineAndRules,
+  updateHostelInfo,
+  addHelplineContact,
+  updateHelplineContact,
+  deleteHelplineContact,
+  addHelplineRule,
+  updateHelplineRule,
+  deleteHelplineRule
 } = require('../controllers/galleryController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -34,7 +41,22 @@ router.route('/types/:value')
   .delete(protect, authorize('ADMIN'), deleteType);
 
 router.route('/helpline')
-  .get(getHelplineAndRules);
+  .get(getHelplineAndRules)
+  .put(protect, authorize('ADMIN'), updateHostelInfo);
+
+router.route('/helpline/contacts')
+  .post(protect, authorize('ADMIN'), addHelplineContact);
+
+router.route('/helpline/contacts/:id')
+  .put(protect, authorize('ADMIN'), updateHelplineContact)
+  .delete(protect, authorize('ADMIN'), deleteHelplineContact);
+
+router.route('/helpline/rules')
+  .post(protect, authorize('ADMIN'), addHelplineRule);
+
+router.route('/helpline/rules/:id')
+  .put(protect, authorize('ADMIN'), updateHelplineRule)
+  .delete(protect, authorize('ADMIN'), deleteHelplineRule);
 
 router.route('/:id')
   .put(protect, authorize('ADMIN'), updateMedia)

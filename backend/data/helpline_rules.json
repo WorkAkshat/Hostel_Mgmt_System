@@ -1,0 +1,50 @@
+{
+  "hostelName": "Hari Pushp Tower (Girls PG)",
+  "address": "Sector 4, Jaipur, Rajasthan",
+  "contacts": [
+    {
+      "id": "c-1",
+      "title": "Chief Warden",
+      "phone": "9460191558",
+      "sub": "Available for student support & queries"
+    },
+    {
+      "id": "c-2",
+      "title": "Hostel Caretaker",
+      "phone": "9001236013",
+      "sub": "Room maintenance & day-to-day help"
+    },
+    {
+      "id": "c-3",
+      "title": "Emergency / Police Helpline",
+      "phone": "112",
+      "sub": "National emergency assistance 24x7"
+    }
+  ],
+  "rules": [
+    {
+      "id": "r-1",
+      "text": "Night roll call attendance at 9:30 PM is mandatory for every resident."
+    },
+    {
+      "id": "r-2",
+      "text": "Hostel main gate closes strictly at 10:00 PM."
+    },
+    {
+      "id": "r-3",
+      "text": "Male visitors are restricted to the ground floor reception area only."
+    },
+    {
+      "id": "r-4",
+      "text": "Sub-meter electricity is billed from 10th to 10th of each calendar month."
+    },
+    {
+      "id": "r-5",
+      "text": "Leave requests must be applied through the app at least 24 hours prior to travel."
+    },
+    {
+      "id": "r-6",
+      "text": "Maintain silence in study hours and cleanliness in mess and common areas."
+    }
+  ]
+}

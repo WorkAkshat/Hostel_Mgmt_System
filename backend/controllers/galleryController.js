@@ -4,6 +4,7 @@ const path = require('path');
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const GALLERY_FILE = path.join(DATA_DIR, 'gallery.json');
 const META_FILE = path.join(DATA_DIR, 'gallery_meta.json');
+const HELPLINE_FILE = path.join(DATA_DIR, 'helpline_rules.json');
 
 const DEFAULT_META = {
   categories: [
@@ -324,23 +325,197 @@ const deleteType = (req, res) => {
 // @desc    Get 24x7 helpline & rules
 // @route   GET /api/v1/gallery/helpline
 // @access  Public / Authenticated
+const DEFAULT_HELPLINE = {
+  hostelName: 'Hari Pushp Tower (Girls PG)',
+  address: 'Sector 4, Jaipur, Rajasthan',
+  contacts: [
+    { id: 'c-1', title: 'Chief Warden', phone: '9460191558', sub: 'Available for student support & queries' },
+    { id: 'c-2', title: 'Hostel Caretaker', phone: '9001236013', sub: 'Room maintenance & day-to-day help' },
+    { id: 'c-3', title: 'Emergency / Police Helpline', phone: '112', sub: 'National emergency assistance 24x7' }
+  ],
+  rules: [
+    { id: 'r-1', text: 'Night roll call attendance at 9:30 PM is mandatory for every resident.' },
+    { id: 'r-2', text: 'Hostel main gate closes strictly at 10:00 PM.' },
+    { id: 'r-3', text: 'Male visitors are restricted to the ground floor reception area only.' },
+    { id: 'r-4', text: 'Sub-meter electricity is billed from 10th to 10th of each calendar month.' },
+    { id: 'r-5', text: 'Leave requests must be applied through the app at least 24 hours prior to travel.' },
+    { id: 'r-6', text: 'Maintain silence in study hours and cleanliness in mess and common areas.' }
+  ]
+};
+
+const loadHelpline = () => {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (!fs.existsSync(HELPLINE_FILE)) {
+      fs.writeFileSync(HELPLINE_FILE, JSON.stringify(DEFAULT_HELPLINE, null, 2));
+      return DEFAULT_HELPLINE;
+    }
+    const data = JSON.parse(fs.readFileSync(HELPLINE_FILE, 'utf8'));
+    if (!data.hostelName) data.hostelName = DEFAULT_HELPLINE.hostelName;
+    if (!data.address) data.address = DEFAULT_HELPLINE.address;
+    if (!Array.isArray(data.contacts)) data.contacts = DEFAULT_HELPLINE.contacts;
+    if (!Array.isArray(data.rules)) data.rules = DEFAULT_HELPLINE.rules;
+    data.rules = data.rules.map((r, i) => (typeof r === 'string' ? { id: `r-${i + 1}`, text: r } : r));
+    return data;
+  } catch (err) {
+    console.error('Error loading helpline:', err);
+    return DEFAULT_HELPLINE;
+  }
+};
+
+const saveHelpline = (data) => {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    fs.writeFileSync(HELPLINE_FILE, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Error saving helpline:', err);
+  }
+};
+
 const getHelplineAndRules = (req, res) => {
-  res.json({
-    name: 'Hari Pushp Tower (Girls PG)',
-    address: 'Hari Pushp Tower, Sector 4, Jaipur, Rajasthan',
-    helpline: '+91 90012 36013',
-    wardenPhone: '+91 94601 91558',
-    caretakerPhone: '+91 90012 36013',
-    emergency: '112',
-    rules: [
-      'Night roll call attendance at 9:30 PM is mandatory every evening.',
-      'Hostel main gate closes at 10:00 PM sharp.',
-      'Male visitors are restricted to the ground floor reception area only.',
-      'Sub-meter electricity is billed from 10th to 10th of each calendar month.',
-      'Hostel leave requests must be submitted in the app at least 24 hours prior to travel.',
-      'Cleanliness in dining hall and common study areas is strictly expected.'
-    ]
-  });
+  const data = loadHelpline();
+  res.json(data);
+};
+
+// @desc    Update hostel details (name & address)
+// @route   PUT /api/v1/gallery/helpline
+// @access  Private (Admin / Warden)
+const updateHostelInfo = (req, res) => {
+  try {
+    const { hostelName, address } = req.body;
+    const data = loadHelpline();
+    if (hostelName) data.hostelName = String(hostelName).trim();
+    if (address !== undefined) data.address = String(address).trim();
+    saveHelpline(data);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating hostel info' });
+  }
+};
+
+// @desc    Add helpline contact
+// @route   POST /api/v1/gallery/helpline/contacts
+// @access  Private (Admin / Warden)
+const addHelplineContact = (req, res) => {
+  try {
+    const { title, phone, sub } = req.body;
+    if (!title || !phone) {
+      return res.status(400).json({ message: 'Title and phone number are required' });
+    }
+    const data = loadHelpline();
+    const newContact = {
+      id: 'c-' + Date.now(),
+      title: String(title).trim(),
+      phone: String(phone).trim(),
+      sub: sub ? String(sub).trim() : ''
+    };
+    data.contacts.push(newContact);
+    saveHelpline(data);
+    res.status(201).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding contact' });
+  }
+};
+
+// @desc    Update helpline contact
+// @route   PUT /api/v1/gallery/helpline/contacts/:id
+// @access  Private (Admin / Warden)
+const updateHelplineContact = (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, phone, sub } = req.body;
+    const data = loadHelpline();
+    const idx = data.contacts.findIndex(c => String(c.id) === String(id));
+    if (idx === -1) {
+      return res.status(404).json({ message: 'Contact not found' });
+    }
+    if (title) data.contacts[idx].title = String(title).trim();
+    if (phone) data.contacts[idx].phone = String(phone).trim();
+    if (sub !== undefined) data.contacts[idx].sub = String(sub).trim();
+    saveHelpline(data);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating contact' });
+  }
+};
+
+// @desc    Delete helpline contact
+// @route   DELETE /api/v1/gallery/helpline/contacts/:id
+// @access  Private (Admin / Warden)
+const deleteHelplineContact = (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = loadHelpline();
+    data.contacts = data.contacts.filter(c => String(c.id) !== String(id));
+    saveHelpline(data);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting contact' });
+  }
+};
+
+// @desc    Add hostel rule
+// @route   POST /api/v1/gallery/helpline/rules
+// @access  Private (Admin / Warden)
+const addHelplineRule = (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ message: 'Rule text is required' });
+    }
+    const data = loadHelpline();
+    const newRule = {
+      id: 'r-' + Date.now(),
+      text: String(text).trim()
+    };
+    data.rules.push(newRule);
+    saveHelpline(data);
+    res.status(201).json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error adding rule' });
+  }
+};
+
+// @desc    Update hostel rule
+// @route   PUT /api/v1/gallery/helpline/rules/:id
+// @access  Private (Admin / Warden)
+const updateHelplineRule = (req, res) => {
+  try {
+    const { id } = req.params;
+    const { text } = req.body;
+    if (!text) {
+      return res.status(400).json({ message: 'Rule text is required' });
+    }
+    const data = loadHelpline();
+    const idx = data.rules.findIndex(r => String(r.id) === String(id));
+    if (idx === -1) {
+      return res.status(404).json({ message: 'Rule not found' });
+    }
+    data.rules[idx].text = String(text).trim();
+    saveHelpline(data);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating rule' });
+  }
+};
+
+// @desc    Delete hostel rule
+// @route   DELETE /api/v1/gallery/helpline/rules/:id
+// @access  Private (Admin / Warden)
+const deleteHelplineRule = (req, res) => {
+  try {
+    const { id } = req.params;
+    const data = loadHelpline();
+    data.rules = data.rules.filter(r => String(r.id) !== String(id));
+    saveHelpline(data);
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: 'Error deleting rule' });
+  }
 };
 
 module.exports = {
@@ -353,5 +528,12 @@ module.exports = {
   deleteCategory,
   addType,
   deleteType,
-  getHelplineAndRules
+  getHelplineAndRules,
+  updateHostelInfo,
+  addHelplineContact,
+  updateHelplineContact,
+  deleteHelplineContact,
+  addHelplineRule,
+  updateHelplineRule,
+  deleteHelplineRule
 };

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Image as ImageIcon, Plus, Trash2, Upload, Film, X, Check, BedDouble, UtensilsCrossed, Building2, Sparkles, Pencil, Settings2 } from 'lucide-react';
+import { Image as ImageIcon, Plus, Trash2, Upload, Film, X, Check, BedDouble, UtensilsCrossed, Building2, Sparkles, Pencil, Settings2, Phone, ShieldCheck, MapPin } from 'lucide-react';
 import { galleryApi } from '../utils/api/gallery';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
@@ -50,6 +50,34 @@ export default function Gallery() {
   const [showNewTypeInput, setShowNewTypeInput] = useState(false);
   const [newTypeLabel, setNewTypeLabel] = useState('');
 
+  // Helpline & Rules state
+  const [showHelplineModal, setShowHelplineModal] = useState(false);
+  const [helplineData, setHelplineData] = useState({
+    hostelName: 'Hari Pushp Tower (Girls PG)',
+    address: 'Sector 4, Jaipur, Rajasthan',
+    contacts: [],
+    rules: []
+  });
+  const [hostelNameInput, setHostelNameInput] = useState('Hari Pushp Tower (Girls PG)');
+  const [hostelAddressInput, setHostelAddressInput] = useState('Sector 4, Jaipur, Rajasthan');
+  const [newContact, setNewContact] = useState({ title: '', phone: '', sub: '' });
+  const [editingContact, setEditingContact] = useState(null);
+  const [newRuleText, setNewRuleText] = useState('');
+  const [editingRule, setEditingRule] = useState(null);
+
+  const loadHelpline = useCallback(async () => {
+    try {
+      const res = await galleryApi.helpline();
+      if (res) {
+        setHelplineData(res);
+        setHostelNameInput(res.hostelName || res.name || 'Hari Pushp Tower (Girls PG)');
+        setHostelAddressInput(res.address || 'Sector 4, Jaipur, Rajasthan');
+      }
+    } catch (err) {
+      console.error('Failed to load helpline', err);
+    }
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -61,12 +89,13 @@ export default function Gallery() {
       setItems(mediaRes?.data || mediaRes || []);
       if (metaRes?.categories?.length) setCategories(metaRes.categories);
       if (metaRes?.types?.length) setTypes(metaRes.types);
+      loadHelpline();
     } catch (err) {
       setError(err.message || 'Failed to load gallery');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadHelpline]);
 
   useEffect(() => {
     loadData();
@@ -212,6 +241,96 @@ export default function Gallery() {
     }
   };
 
+  // Helpline Handlers
+  const handleSaveHostel = async (e) => {
+    e.preventDefault();
+    if (!hostelNameInput.trim()) return;
+    try {
+      const updated = await galleryApi.updateHostelInfo({
+        hostelName: hostelNameInput.trim(),
+        address: hostelAddressInput.trim(),
+      });
+      setHelplineData(updated);
+      toast.success('Hostel details saved');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not update hostel details');
+    }
+  };
+
+  const handleAddContact = async (e) => {
+    e.preventDefault();
+    if (!newContact.title || !newContact.phone) return;
+    try {
+      const updated = await galleryApi.addContact(newContact);
+      setHelplineData(updated);
+      setNewContact({ title: '', phone: '', sub: '' });
+      toast.success('Contact added');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not add contact');
+    }
+  };
+
+  const handleUpdateContact = async (e) => {
+    e.preventDefault();
+    if (!editingContact || !editingContact.title || !editingContact.phone) return;
+    try {
+      const updated = await galleryApi.updateContact(editingContact.id, editingContact);
+      setHelplineData(updated);
+      setEditingContact(null);
+      toast.success('Contact updated');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not update contact');
+    }
+  };
+
+  const handleDeleteContact = async (id) => {
+    if (!window.confirm('Delete this helpline contact?')) return;
+    try {
+      const updated = await galleryApi.removeContact(id);
+      setHelplineData(updated);
+      toast.success('Contact deleted');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not delete contact');
+    }
+  };
+
+  const handleAddRule = async (e) => {
+    e.preventDefault();
+    if (!newRuleText.trim()) return;
+    try {
+      const updated = await galleryApi.addRule({ text: newRuleText.trim() });
+      setHelplineData(updated);
+      setNewRuleText('');
+      toast.success('Rule added');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not add rule');
+    }
+  };
+
+  const handleUpdateRule = async (e) => {
+    e.preventDefault();
+    if (!editingRule || !editingRule.text.trim()) return;
+    try {
+      const updated = await galleryApi.updateRule(editingRule.id, { text: editingRule.text.trim() });
+      setHelplineData(updated);
+      setEditingRule(null);
+      toast.success('Rule updated');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not update rule');
+    }
+  };
+
+  const handleDeleteRule = async (id) => {
+    if (!window.confirm('Delete this hostel rule?')) return;
+    try {
+      const updated = await galleryApi.removeRule(id);
+      setHelplineData(updated);
+      toast.success('Rule deleted');
+    } catch (err) {
+      toast.error('Error', err.message || 'Could not delete rule');
+    }
+  };
+
   const filteredItems = items.filter((item) => {
     if (activeTab === 'ALL') return true;
     return item.category === activeTab;
@@ -228,8 +347,16 @@ export default function Gallery() {
             Browse rooms, mess, reception, and amenities of Hari Pushp Tower
           </p>
         </div>
-        {isAdmin && (
+        {isAdmin ? (
           <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => { loadHelpline(); setShowHelplineModal(true); }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-xl font-medium transition-all cursor-pointer text-sm"
+              title="Manage Helpline Contacts & Rules"
+            >
+              <ShieldCheck size={16} />
+              <span>Helpline & Rules</span>
+            </button>
             <button
               onClick={() => setShowManageModal(true)}
               className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-medium transition-all cursor-pointer text-sm"
@@ -244,6 +371,17 @@ export default function Gallery() {
             >
               <Plus size={18} />
               <span>Upload Photo / Video</span>
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              onClick={() => { loadHelpline(); setShowHelplineModal(true); }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-xl font-medium transition-all cursor-pointer text-sm"
+              title="Helpline & Hostel Guidelines"
+            >
+              <Phone size={16} />
+              <span>Helpline & Rules</span>
             </button>
           </div>
         )}
@@ -756,6 +894,283 @@ export default function Gallery() {
                 className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer"
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Helpline & Rules Modal */}
+      {showHelplineModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-[var(--bg-card)] rounded-2xl border border-[var(--border-color)] max-w-2xl w-full p-6 shadow-xl space-y-6 animate-scale-up max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-3">
+              <div>
+                <h2 className="text-lg font-bold text-[var(--text-primary)]">24x7 Helpline & Hostel Rules</h2>
+                <p className="text-xs text-[var(--text-secondary)] mt-0.5">Emergency contacts, warden numbers, and resident guidelines</p>
+              </div>
+              <button
+                onClick={() => setShowHelplineModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Hostel Info */}
+            <div className="p-4 rounded-xl bg-brand-50/50 border border-brand-100 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <MapPin size={18} className="text-brand-600" />
+                  <span className="text-sm font-bold text-brand-900">Hostel Details</span>
+                </div>
+              </div>
+              {isAdmin ? (
+                <form onSubmit={handleSaveHostel} className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Hostel Name</label>
+                      <input
+                        type="text"
+                        value={hostelNameInput}
+                        onChange={(e) => setHostelNameInput(e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-white text-sm"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Address</label>
+                      <input
+                        type="text"
+                        value={hostelAddressInput}
+                        onChange={(e) => setHostelAddressInput(e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-white text-sm"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                    >
+                      Save Details
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div>
+                  <h3 className="font-bold text-slate-900">{helplineData?.hostelName || 'Hari Pushp Tower (Girls PG)'}</h3>
+                  <p className="text-xs text-slate-600">{helplineData?.address || 'Sector 4, Jaipur, Rajasthan'}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Contacts Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">24x7 Helpline Contacts</h3>
+              </div>
+
+              {isAdmin && (
+                <form onSubmit={handleAddContact} className="p-3.5 rounded-xl border border-[var(--border-color)] bg-slate-50 space-y-2.5">
+                  <div className="text-xs font-bold text-slate-700">+ Add New Helpline Contact</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Title / Name (e.g. Chief Warden)"
+                      value={newContact.title}
+                      onChange={(e) => setNewContact({ ...newContact, title: e.target.value })}
+                      className="px-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-white text-xs"
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Phone (e.g. 9460191558)"
+                      value={newContact.phone}
+                      onChange={(e) => setNewContact({ ...newContact, phone: e.target.value })}
+                      className="px-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-white text-xs"
+                      required
+                    />
+                    <input
+                      type="text"
+                      placeholder="Availability (e.g. 24x7 Support)"
+                      value={newContact.sub}
+                      onChange={(e) => setNewContact({ ...newContact, sub: e.target.value })}
+                      className="px-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-white text-xs"
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                    >
+                      Add Contact
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <div className="space-y-2">
+                {(helplineData?.contacts || []).map((c) => (
+                  <div key={c.id || c.phone} className="p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] flex items-center justify-between gap-3">
+                    {editingContact?.id === c.id ? (
+                      <form onSubmit={handleUpdateContact} className="flex-1 space-y-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <input
+                            type="text"
+                            value={editingContact.title}
+                            onChange={(e) => setEditingContact({ ...editingContact, title: e.target.value })}
+                            className="px-2.5 py-1 rounded-lg border border-brand-400 bg-white text-xs"
+                            required
+                          />
+                          <input
+                            type="text"
+                            value={editingContact.phone}
+                            onChange={(e) => setEditingContact({ ...editingContact, phone: e.target.value })}
+                            className="px-2.5 py-1 rounded-lg border border-brand-400 bg-white text-xs"
+                            required
+                          />
+                          <input
+                            type="text"
+                            value={editingContact.sub || ''}
+                            onChange={(e) => setEditingContact({ ...editingContact, sub: e.target.value })}
+                            className="px-2.5 py-1 rounded-lg border border-brand-400 bg-white text-xs"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button type="submit" className="px-2.5 py-1 bg-brand-600 text-white rounded text-xs font-semibold cursor-pointer">Save</button>
+                          <button type="button" onClick={() => setEditingContact(null)} className="px-2.5 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer">Cancel</button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div>
+                          <div className="text-sm font-bold text-slate-900">{c.title}</div>
+                          <div className="text-xs font-semibold text-brand-700">{c.phone}</div>
+                          {c.sub && <div className="text-[11px] text-slate-500 mt-0.5">{c.sub}</div>}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <a
+                            href={`tel:${c.phone}`}
+                            className="p-2 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-lg text-xs font-semibold flex items-center gap-1"
+                          >
+                            <Phone size={14} />
+                            <span className="hidden sm:inline">Call</span>
+                          </a>
+                          {isAdmin && (
+                            <>
+                              <button
+                                onClick={() => setEditingContact({ ...c })}
+                                className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg cursor-pointer"
+                                title="Edit Contact"
+                              >
+                                <Pencil size={15} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteContact(c.id)}
+                                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer"
+                                title="Delete Contact"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Rules Section */}
+            <div className="space-y-3 pt-3 border-t border-[var(--border-color)]">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-[var(--text-primary)]">Hostel Guidelines & Rules</h3>
+              </div>
+
+              {isAdmin && (
+                <form onSubmit={handleAddRule} className="p-3.5 rounded-xl border border-[var(--border-color)] bg-slate-50 space-y-2">
+                  <div className="text-xs font-bold text-slate-700">+ Add New Guideline</div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. Maintain silence in study hours and cleanliness in mess…"
+                      value={newRuleText}
+                      onChange={(e) => setNewRuleText(e.target.value)}
+                      className="flex-1 px-3 py-1.5 rounded-lg border border-[var(--border-color)] bg-white text-xs"
+                      required
+                    />
+                    <button
+                      type="submit"
+                      className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                    >
+                      Add Rule
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              <div className="space-y-2">
+                {(helplineData?.rules || []).map((r, idx) => {
+                  const ruleObj = typeof r === 'string' ? { id: `r-${idx + 1}`, text: r } : r;
+                  return (
+                    <div key={ruleObj.id || idx} className="p-3 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] flex items-start justify-between gap-3">
+                      {editingRule?.id === ruleObj.id ? (
+                        <form onSubmit={handleUpdateRule} className="flex-1 space-y-2">
+                          <input
+                            type="text"
+                            value={editingRule.text}
+                            onChange={(e) => setEditingRule({ ...editingRule, text: e.target.value })}
+                            className="w-full px-2.5 py-1.5 rounded-lg border border-brand-400 bg-white text-xs"
+                            required
+                          />
+                          <div className="flex gap-2">
+                            <button type="submit" className="px-2.5 py-1 bg-brand-600 text-white rounded text-xs font-semibold cursor-pointer">Save</button>
+                            <button type="button" onClick={() => setEditingRule(null)} className="px-2.5 py-1 bg-slate-200 text-slate-700 rounded text-xs cursor-pointer">Cancel</button>
+                          </div>
+                        </form>
+                      ) : (
+                        <>
+                          <div className="flex items-start gap-2.5 flex-1">
+                            <span className="w-5 h-5 rounded-full bg-brand-100 text-brand-700 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs text-slate-700 leading-relaxed">{ruleObj.text}</span>
+                          </div>
+                          {isAdmin && (
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => setEditingRule({ ...ruleObj })}
+                                className="p-1.5 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg cursor-pointer"
+                                title="Edit Rule"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRule(ruleObj.id)}
+                                className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg cursor-pointer"
+                                title="Delete Rule"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-[var(--border-color)]">
+              <button
+                type="button"
+                onClick={() => setShowHelplineModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold cursor-pointer"
+              >
+                Close
               </button>
             </div>
           </div>

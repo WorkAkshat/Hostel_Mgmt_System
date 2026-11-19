@@ -1,0 +1,30 @@
+{
+  "categories": [
+    {
+      "value": "ROOMS",
+      "label": "Rooms"
+    },
+    {
+      "value": "MESS",
+      "label": "Mess & Food"
+    },
+    {
+      "value": "BUILDING",
+      "label": "Building"
+    },
+    {
+      "value": "COMMON_AREA",
+      "label": "Common Area"
+    }
+  ],
+  "types": [
+    {
+      "value": "IMAGE",
+      "label": "Photo"
+    },
+    {
+      "value": "VIDEO",
+      "label": "Video Tour"
+    }
+  ]
+}

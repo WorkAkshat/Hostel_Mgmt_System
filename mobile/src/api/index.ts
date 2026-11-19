@@ -201,6 +201,15 @@ export const inventoryApi = {
   move: (id: string, data: { type: 'IN' | 'OUT' | 'ADJUST'; quantity: number; unitCost?: number | null; note?: string; date?: string }) => api(`/inventory/items/${id}/movements`, { method: 'POST', body: data }),
 };
 
+export type HelplineContact = { id: string; title: string; phone: string; sub?: string };
+export type HelplineRule = { id: string; text: string };
+export type HelplineData = {
+  hostelName: string;
+  address: string;
+  contacts: HelplineContact[];
+  rules: HelplineRule[];
+};
+
 export const galleryApi = {
   all: () => api('/gallery'),
   meta: () => api('/gallery/meta'),
@@ -211,5 +220,12 @@ export const galleryApi = {
   removeCategory: (value: string) => api(`/gallery/categories/${value}`, { method: 'DELETE' }),
   addType: (label: string, value?: string) => api('/gallery/types', { method: 'POST', body: { label, value } }),
   removeType: (value: string) => api(`/gallery/types/${value}`, { method: 'DELETE' }),
-  helpline: () => api('/gallery/helpline'),
+  helpline: () => api<HelplineData>('/gallery/helpline'),
+  updateHostelInfo: (data: { hostelName?: string; address?: string }) => api<HelplineData>('/gallery/helpline', { method: 'PUT', body: data }),
+  addContact: (data: { title: string; phone: string; sub?: string }) => api<HelplineData>('/gallery/helpline/contacts', { method: 'POST', body: data }),
+  updateContact: (id: string, data: { title?: string; phone?: string; sub?: string }) => api<HelplineData>(`/gallery/helpline/contacts/${id}`, { method: 'PUT', body: data }),
+  removeContact: (id: string) => api<HelplineData>(`/gallery/helpline/contacts/${id}`, { method: 'DELETE' }),
+  addRule: (data: { text: string }) => api<HelplineData>('/gallery/helpline/rules', { method: 'POST', body: data }),
+  updateRule: (id: string, data: { text: string }) => api<HelplineData>(`/gallery/helpline/rules/${id}`, { method: 'PUT', body: data }),
+  removeRule: (id: string) => api<HelplineData>(`/gallery/helpline/rules/${id}`, { method: 'DELETE' }),
 };
