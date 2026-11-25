@@ -190,6 +190,31 @@ const server = app.listen(PORT, () => {
   console.log(`  API Base Endpoint: http://localhost:${PORT}/api/v1`);
   console.log(`==================================================\n`);
 
+  // Ensure essential master accounts exist (e.g. Smt. Pushpa Sankhala Chief Warden)
+  setTimeout(async () => {
+    try {
+      const { PrismaClient } = require('@prisma/client');
+      const bcrypt = require('bcryptjs');
+      const p = new PrismaClient();
+      const pushpa = await p.user.findUnique({ where: { email: 'sankhalapushpa44@gmail.com' } });
+      if (!pushpa) {
+        const hash = await bcrypt.hash('password123', 10);
+        await p.user.create({
+          data: {
+            email: 'sankhalapushpa44@gmail.com',
+            name: 'Smt. Pushpa Sankhala (Chief Warden)',
+            password: hash,
+            role: 'ADMIN',
+            assignedFloor: null,
+          }
+        });
+        console.log('[Master Accounts] Created Chief Warden account for sankhalapushpa44@gmail.com');
+      }
+    } catch (e) {
+      console.error('[Master Accounts Check Error]', e.message);
+    }
+  }, 3000);
+
   // Automated background runner for month-end student billing
   setTimeout(() => {
     generateMonthlyBillingRun()
