@@ -7,7 +7,7 @@ const { FEE_STRUCTURE } = require('../config/companyConfig');
 // @access  Private (Admin / Warden)
 const submitReading = async (req, res) => {
   try {
-    const { roomId, readingMonth, readingDate, previousReading, currentReading, ratePerUnit = FEE_STRUCTURE.electricityRate } = req.body;
+    const { roomId, readingMonth, readingDate, previousReading, currentReading, ratePerUnit = FEE_STRUCTURE.electricityRate, splitCount = 1 } = req.body;
 
     if (!roomId || !readingMonth || previousReading === undefined || currentReading === undefined) {
       return res.status(400).json({ message: 'Please provide roomId, readingMonth, previousReading, and currentReading.' });
@@ -15,6 +15,7 @@ const submitReading = async (req, res) => {
 
     const prev = parseFloat(previousReading);
     const curr = parseFloat(currentReading);
+    const split = Math.max(1, parseInt(splitCount, 10) || 1);
 
     if (!Number.isFinite(prev) || !Number.isFinite(curr) || prev < 0) {
       return res.status(400).json({ message: 'Meter readings must be positive numbers.' });
@@ -39,6 +40,7 @@ const submitReading = async (req, res) => {
         unitsConsumed,
         ratePerUnit: rate,
         totalAmount,
+        splitCount: split,
         enteredBy: req.user.name || 'Warden'
       },
       create: {
@@ -50,6 +52,7 @@ const submitReading = async (req, res) => {
         unitsConsumed,
         ratePerUnit: rate,
         totalAmount,
+        splitCount: split,
         enteredBy: req.user.name || 'Warden'
       }
     });

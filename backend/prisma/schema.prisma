@@ -244,6 +244,7 @@ model ElectricityReading {
   unitsConsumed   Float
   ratePerUnit     Float    @default(8.0) // ₹ per unit
   totalAmount     Float
+  splitCount      Int      @default(1) // divide by 1, 2, or 3 residents
   enteredBy       String   // warden name/id
   createdAt       DateTime @default(now())
 

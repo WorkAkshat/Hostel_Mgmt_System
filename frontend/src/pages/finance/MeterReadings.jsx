@@ -37,9 +37,12 @@ const MeterReadings = ({ open, onClose, month, rooms, readings, prevReadings, ra
     setIsEditingRate(false);
     setDrafts(Object.fromEntries(rooms.map((room) => {
       const saved = byRoom[room.id];
+      const activeResidents = room.students?.filter((s) => s.status !== 'CHECKED_OUT').length || 0;
+      const defaultSplit = saved?.splitCount || (activeResidents ? Math.min(3, Math.max(1, activeResidents)) : (room.sharingType || 1));
       return [room.id, {
         prev: saved ? String(saved.previousReading) : prevByRoom[room.id] ? String(prevByRoom[room.id].currentReading) : '',
         curr: saved ? String(saved.currentReading) : '',
+        splitCount: defaultSplit,
       }];
     })));
   }, [open, rooms, byRoom, prevByRoom]);
@@ -65,12 +68,15 @@ const MeterReadings = ({ open, onClose, month, rooms, readings, prevReadings, ra
     const d = drafts[room.id];
     const prev = num(d.prev);
     const curr = num(d.curr);
+    const split = d.splitCount || 1;
     if (prev == null || curr == null) return toast.error(`Room ${room.roomNumber}`, 'Enter both the previous and the current reading.');
     if (curr < prev) return toast.error(`Room ${room.roomNumber}`, 'Current reading cannot be lower than the previous one.');
     setSaving(room.id);
     try {
-      await electricityApi.submitReading({ roomId: room.id, readingMonth: month, previousReading: prev, currentReading: curr, ratePerUnit: currentRate });
-      toast.success(`Room ${room.roomNumber} saved`, `${curr - prev} units · ${rupees((curr - prev) * currentRate)}`);
+      await electricityApi.submitReading({ roomId: room.id, readingMonth: month, previousReading: prev, currentReading: curr, ratePerUnit: currentRate, splitCount: split });
+      const totalCost = (curr - prev) * currentRate;
+      const perHead = Math.round(totalCost / split);
+      toast.success(`Room ${room.roomNumber} saved`, `${curr - prev} units · ${rupees(totalCost)}${split > 1 ? ` (÷${split} = ${rupees(perHead)}/student)` : ''}`);
       onSaved();
     } catch (err) {
       toast.error('Could not save the reading', err.message);
@@ -145,11 +151,15 @@ const MeterReadings = ({ open, onClose, month, rooms, readings, prevReadings, ra
       ) : (
         <ul className="list-none m-0 p-0 flex flex-col gap-2.5">
           {shown.map((room) => {
-            const d = drafts[room.id] || { prev: '', curr: '' };
+            const d = drafts[room.id] || { prev: '', curr: '', splitCount: 1 };
             const saved = byRoom[room.id];
             const units = num(d.curr) != null && num(d.prev) != null ? num(d.curr) - num(d.prev) : null;
-            const changed = !saved || String(saved.previousReading) !== d.prev || String(saved.currentReading) !== d.curr;
             const residents = room.students?.filter((s) => s.status !== 'CHECKED_OUT').length || 0;
+            const savedSplit = saved?.splitCount || (residents ? Math.min(3, Math.max(1, residents)) : (room.sharingType || 1));
+            const changed = !saved || String(saved.previousReading) !== d.prev || String(saved.currentReading) !== d.curr || savedSplit !== (d.splitCount || 1);
+            const split = d.splitCount || 1;
+            const totalCost = units != null && units >= 0 ? units * currentRate : 0;
+            const perHead = Math.round(totalCost / split);
             return (
               <li key={room.id} className={`rounded-2xl border p-3.5 ${saved && !changed ? 'bg-mint-50 border-mint-200' : 'bg-white border-[var(--border-color)]'}`}>
                 <div className="flex items-center gap-2 mb-2.5">
@@ -170,9 +180,37 @@ const MeterReadings = ({ open, onClose, month, rooms, readings, prevReadings, ra
                     <Save size={15} /> <span className="hidden sm:inline">{saving === room.id ? 'Saving' : 'Save'}</span>
                   </button>
                 </div>
+                {/* Divide by selector */}
+                <div className="flex items-center justify-between mt-2.5 px-2.5 py-1.5 rounded-lg bg-amber-50/70 border border-amber-200/60">
+                  <span className="text-[11px] font-bold text-amber-900">Divide bill by:</span>
+                  <div className="inline-flex gap-1.5">
+                    {[1, 2, 3].map((n) => {
+                      const active = split === n;
+                      return (
+                        <button
+                          key={n}
+                          type="button"
+                          onClick={() => setDrafts((x) => ({ ...x, [room.id]: { ...d, splitCount: n } }))}
+                          className={`px-2.5 py-1 rounded text-[11px] font-bold transition-colors cursor-pointer border ${
+                            active
+                              ? 'bg-brand-700 text-white border-brand-700 shadow-sm'
+                              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {n === 1 ? '1 (Full)' : `÷ ${n}`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
                 {units != null && units >= 0 && (
                   <p className="text-[12px] text-[var(--text-secondary)] m-0 mt-2">
-                    {units} units · <strong>{rupees(units * currentRate)}</strong>{residents > 1 ? ` · ${rupees((units * currentRate) / residents)} each` : ''}
+                    {units} units · <strong>{rupees(totalCost)}</strong>
+                    {split > 1 ? (
+                      <span className="text-brand-700 font-semibold"> · ÷{split} = {rupees(perHead)} / student</span>
+                    ) : (
+                      <span className="text-[var(--text-tertiary)]"> · 1 student (Full bill {rupees(totalCost)})</span>
+                    )}
                   </p>
                 )}
                 {units != null && units < 0 && <p className="text-[12px] text-[var(--danger)] m-0 mt-2">Current reading is lower than the previous one.</p>}

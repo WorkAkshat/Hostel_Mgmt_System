@@ -172,7 +172,7 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
   const [savingRate, setSavingRate] = useState(false);
   const currentRate = customRate !== '' ? (parseFloat(customRate) || defaultRate) : defaultRate;
 
-  const [draft, setDraft] = useState<Record<string, { prev: string; curr: string }>>({});
+  const [draft, setDraft] = useState<Record<string, { prev: string; curr: string; splitCount: number }>>({});
   const [busy, setBusy] = useState<string | null>(null);
   const [finishing, setFinishing] = useState<'send' | 'review' | null>(null);
   const [confirmFinish, setConfirmFinish] = useState(false);
@@ -202,7 +202,12 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
   useEffect(() => {
     setDraft(Object.fromEntries(list.map((r: any) => {
       const saved = byRoom[r.id];
-      return [r.id, { prev: saved ? String(saved.previousReading) : prevByRoom[r.id] ? String(prevByRoom[r.id].currentReading) : '', curr: saved ? String(saved.currentReading) : '' }];
+      const defaultSplit = saved?.splitCount || (r.students?.length ? Math.min(3, Math.max(1, r.students.length)) : (r.sharingType || 1));
+      return [r.id, {
+        prev: saved ? String(saved.previousReading) : prevByRoom[r.id] ? String(prevByRoom[r.id].currentReading) : '',
+        curr: saved ? String(saved.currentReading) : '',
+        splitCount: defaultSplit,
+      }];
     })));
   }, [list, byRoom, prevByRoom]);
 
@@ -210,12 +215,15 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
   const save = async (room: any) => {
     const d = draft[room.id];
     const p = Number(d?.prev), c = Number(d?.curr);
+    const split = d?.splitCount || 1;
     if (d?.prev === '' || d?.curr === '' || Number.isNaN(p) || Number.isNaN(c)) return toast.error(`Room ${room.roomNumber}`, 'Enter both readings.');
     if (c < p) return toast.error(`Room ${room.roomNumber}`, 'Current reading cannot be lower than the previous one.');
     setBusy(room.id);
     try {
-      await electricityApi.submit({ roomId: room.id, readingMonth: month, previousReading: p, currentReading: c, ratePerUnit: currentRate });
-      toast.success(`Room ${room.roomNumber} saved`, `${c - p} units · ${rupees((c - p) * currentRate)}`);
+      await electricityApi.submit({ roomId: room.id, readingMonth: month, previousReading: p, currentReading: c, ratePerUnit: currentRate, splitCount: split });
+      const totalCost = (c - p) * currentRate;
+      const perHead = Math.round(totalCost / split);
+      toast.success(`Room ${room.roomNumber} saved`, `${c - p} units · ${rupees(totalCost)}${split > 1 ? ` (÷${split} = ${rupees(perHead)}/student)` : ''}`);
       await qc.invalidateQueries({ queryKey: ['readings', month] });
     } catch (e: any) { toast.error('Could not save', e.message); } finally { setBusy(null); }
   };
@@ -232,13 +240,17 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
           </Press>
         </Row>
         <Progress value={done} max={list.length || 1} color={done === list.length && done ? colors.brand500 : colors.sun400} />
-        <T v="caption" c={colors.text3}>The room bill is split equally between its residents.</T>
+        <T v="caption" c={colors.text3}>Set readings and choose divide by 1, 2, or 3 based on occupancy.</T>
       </Card>
       {list.length === 0 ? <Empty icon={Gauge} title="No occupied rooms" /> : list.map((room: any) => {
-        const d = draft[room.id] || { prev: '', curr: '' };
+        const d = draft[room.id] || { prev: '', curr: '', splitCount: 1 };
         const saved = byRoom[room.id];
-        const changed = !saved || String(saved.previousReading) !== d.prev || String(saved.currentReading) !== d.curr;
+        const savedSplit = saved?.splitCount || (room.students?.length ? Math.min(3, Math.max(1, room.students.length)) : (room.sharingType || 1));
+        const changed = !saved || String(saved.previousReading) !== d.prev || String(saved.currentReading) !== d.curr || savedSplit !== d.splitCount;
         const units = d.prev !== '' && d.curr !== '' ? Number(d.curr) - Number(d.prev) : null;
+        const totalCost = units != null && units >= 0 ? units * currentRate : 0;
+        const split = d.splitCount || 1;
+        const perHead = Math.round(totalCost / split);
         return (
           <Card key={room.id} tone={saved && !changed ? 'mint' : undefined} style={{ gap: 10 }}>
             <Row>
@@ -251,9 +263,53 @@ const Meters = ({ month, onCalculated }: { month: string; onCalculated: () => vo
               <View style={{ flex: 1, gap: 4 }}><T v="caption" c={colors.text3}>Current</T><Input value={d.curr} onChangeText={(v) => setDraft((x) => ({ ...x, [room.id]: { ...d, curr: money(v) } }))} keyboardType="decimal-pad" placeholder="Meter now" /></View>
               <Button title="Save" icon={Save} small kind={changed ? 'primary' : 'secondary'} disabled={!changed} loading={busy === room.id} onPress={() => save(room)} style={{ height: 48 }} />
             </Row>
-            {units != null && (units >= 0
-              ? <Row gap={6}><Zap size={13} color={colors.sun800} /><T v="caption" c={colors.text2}>{units} units · {rupees(units * currentRate)}{(room.students || []).length > 1 ? ` · ${rupees((units * currentRate) / room.students.length)} each` : ''}</T></Row>
-              : <T v="caption" c={colors.danger}>Current reading is lower than the previous one.</T>)}
+            {/* Split count buttons (Divide by 1, 2, or 3) */}
+            <View style={{ backgroundColor: colors.cream100, padding: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.sun200 }}>
+              <Row style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <T v="caption" w="bold" c={colors.sun900}>Divide bill by:</T>
+                <Row gap={6}>
+                  {[1, 2, 3].map((n) => {
+                    const active = split === n;
+                    return (
+                      <Press
+                        key={n}
+                        onPress={() => setDraft((x) => ({ ...x, [room.id]: { ...d, splitCount: n } }))}
+                        scaleTo={0.92}
+                        style={{
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 8,
+                          backgroundColor: active ? colors.brand700 : colors.white,
+                          borderWidth: 1,
+                          borderColor: active ? colors.brand700 : colors.border,
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Divide by ${n}`}
+                      >
+                        <T v="caption" w="bold" c={active ? colors.white : colors.text}>
+                          {n === 1 ? '1 (Full)' : `÷ ${n}`}
+                        </T>
+                      </Press>
+                    );
+                  })}
+                </Row>
+              </Row>
+            </View>
+            {units != null && (units >= 0 ? (
+              <Row gap={6} style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+                <Zap size={13} color={colors.sun800} />
+                <T v="caption" c={colors.text2}>
+                  {units} units · <T v="caption" w="bold" c={colors.text}>{rupees(totalCost)}</T>
+                  {split > 1 ? (
+                    <T v="caption" w="bold" c={colors.brand700}> · ÷{split} = {rupees(perHead)} / student</T>
+                  ) : (
+                    <T v="caption" c={colors.text3}> · 1 student (Full bill {rupees(totalCost)})</T>
+                  )}
+                </T>
+              </Row>
+            ) : (
+              <T v="caption" c={colors.danger}>Current reading is lower than the previous one.</T>
+            ))}
           </Card>
         );
       })}

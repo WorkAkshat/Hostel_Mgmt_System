@@ -137,7 +137,7 @@ export const demandNotesApi = {
 
 export const electricityApi = {
   readings: (params: { month?: string; floorNumber?: string | number } = {}) => api(`/electricity/readings${q(params)}`),
-  submit: (data: { roomId: string; readingMonth: string; previousReading: number; currentReading: number; ratePerUnit: number }) =>
+  submit: (data: { roomId: string; readingMonth: string; previousReading: number; currentReading: number; ratePerUnit: number; splitCount?: number }) =>
     api('/electricity/readings', { method: 'POST', body: data }),
 };
 

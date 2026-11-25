@@ -91,8 +91,8 @@ const generateDemandNotes = async (req, res) => {
       }
 
       const reading = student.room.electricityReadings?.[0];
-      // The room meter is shared, so its bill is split equally between the residents
-      const sharers = Math.max(1, student.room._count?.students || 1);
+      // The room meter bill is split by the reading's configured splitCount (1, 2, or 3), or defaults to checked-in residents count
+      const sharers = Math.max(1, parseInt(reading?.splitCount, 10) || student.room._count?.students || 1);
       const elecUnits = reading ? Math.round((reading.unitsConsumed / sharers) * 100) / 100 : 0;
       const elecRate = reading ? reading.ratePerUnit : FEE_STRUCTURE.electricityRate;
       const elecAmt = reading ? Math.round(reading.totalAmount / sharers) : 0;
