@@ -6,11 +6,12 @@ This document contains all official System Login IDs, Warden Accounts, Staff Acc
 
 ## 🛡️ Admin & Chief Warden Accounts
 
-| Account Name | Assigned Scope | Login Email (User ID) | Default Password | Role |
-| :--- | :--- | :--- | :--- | :--- |
-| **Chief Warden (Consolidated)** | All Floors & Analytics | `admin@haripushppg.com` | `password123` | `ADMIN` |
-| **Dr. Shalini Sharma** | Super Admin | `warden@haripushppg.com` | `password123` | `ADMIN` |
-| **Akshat Sharma** | System Admin | `akshatsharma3132@gmail.com` | *(Registered Password)* | `ADMIN` |
+| Account Name | Assigned Scope | Login Email (User ID) | Default Password | Role | Contact |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Smt. Pushpa Sankhala** | Chief Warden (All Floors) | `sankhalapushpa44@gmail.com` | `password123` | `ADMIN` | `9351197288` |
+| **Chief Warden (Consolidated)** | All Floors & Analytics | `admin@haripushppg.com` | `password123` | `ADMIN` | — |
+| **Dr. Shalini Sharma** | Super Admin | `warden@haripushppg.com` | `password123` | `ADMIN` | — |
+| **Akshat Sharma** | System Admin | `akshatsharma3132@gmail.com` | *(Registered Password)* | `ADMIN` | — |
 
 ---
 

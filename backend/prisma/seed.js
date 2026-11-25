@@ -88,6 +88,9 @@ async function main() {
     data: { email: 'admin@haripushppg.com', password: hashedPassword, name: 'Chief Warden (Consolidated)', role: 'ADMIN', assignedFloor: null },
   });
   await prisma.user.create({
+    data: { email: 'sankhalapushpa44@gmail.com', password: hashedPassword, name: 'Smt. Pushpa Sankhala (Chief Warden)', role: 'ADMIN', assignedFloor: null },
+  });
+  await prisma.user.create({
     data: { email: 'warden@haripushppg.com', password: hashedPassword, name: 'Dr. Shalini Sharma (Super Admin)', role: 'ADMIN', assignedFloor: null },
   });
   await prisma.user.create({
