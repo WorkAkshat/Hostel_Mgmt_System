@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, View, Linking } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { CalendarDays, ChevronDown, Download, CircleCheck, HandCoins, Plus, MessageCircle, Phone, Receipt, Share2, ShieldCheck, UserRound, Wrench, BedDouble } from 'lucide-react-native';
+import { CalendarDays, ChevronDown, Download, CircleCheck, HandCoins, Plus, MessageCircle, Phone, Receipt, Share2, ShieldCheck, UserRound, Wrench, BedDouble, FileText } from 'lucide-react-native';
 import { demandNotesApi, feesApi, studentsApi } from '../../../api';
+import { asList } from '../../../api/client';
 import { useData } from '../../../lib/query';
 import { call, whatsapp } from '../../../lib/contact';
 import { fmtDate, fmtDateTime, plural, rupees, timeAgo } from '../../../lib/format';
@@ -31,6 +32,8 @@ export default function StudentDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const toast = useToast();
   const { data: s, isLoading, error, refetch } = useData(['student', id], () => studentsApi.byId(String(id)), { enabled: !!id });
+  const docsQuery = useData(['student-docs', id], () => studentsApi.studentDocuments(String(id)), { enabled: !!id });
+  const docs = asList(docsQuery.data);
   const all = useAllBills();
   const config = useData(['company-config'], demandNotesApi.companyConfig, { interval: false });
   const record = useRecordBill();
@@ -339,6 +342,39 @@ export default function StudentDetail() {
                       <Badge label={fmtDate(h.changedAt)} tone="mint" />
                     </Row>
                     {idx < arr.length - 1 && <Divider />}
+                  </View>
+                );
+              })}
+            </Card>
+          </Section>
+        </Appear>
+      )}
+
+      {/* Uploaded Documents / Admission Forms */}
+      {docs.length > 0 && (
+        <Appear i={5}>
+          <Section title={`Admission form & documents · ${docs.length}`}>
+            <Card padded={false}>
+              {docs.map((d: any, idx: number) => {
+                const fullUrl = d.fileUrl?.startsWith('http')
+                  ? d.fileUrl
+                  : `https://hms-api.haripushphostel.in${d.fileUrl}`;
+                return (
+                  <View key={d.id || idx}>
+                    <Press
+                      onPress={() => Linking.openURL(fullUrl)}
+                      style={{ flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 }}
+                    >
+                      <View style={{ width: 34, height: 34, borderRadius: 8, backgroundColor: colors.cream100, alignItems: 'center', justifyContent: 'center' }}>
+                        <FileText size={16} color={colors.sun800} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <T v="title" w="bold">{d.documentName || 'Admission Form'}</T>
+                        <T v="caption" c={colors.text3}>Official scanned form · Tap to view PDF</T>
+                      </View>
+                      <Badge label="VERIFIED" tone="mint" />
+                    </Press>
+                    {idx < docs.length - 1 && <Divider />}
                   </View>
                 );
               })}
