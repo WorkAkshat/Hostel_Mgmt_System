@@ -51,9 +51,21 @@ const loginUser = async (req, res) => {
     if (!user && rawEmail !== normalizedEmail) {
       user = allUsers.find(u => u.email.trim().toLowerCase() === normalizedEmail);
     }
+    // Allow login by 10-digit mobile number as well (especially helpful for students on mobile web/iPhone)
+    if (!user) {
+      const cleanInput = rawEmail.replace(/\D/g, '');
+      if (cleanInput.length >= 10) {
+        user = allUsers.find(u => {
+          const studentPhone = u.student?.phoneNumber?.replace(/\D/g, '');
+          const staffPhone = u.staff?.phoneNumber?.replace(/\D/g, '');
+          return (studentPhone && (studentPhone === cleanInput || studentPhone.endsWith(cleanInput))) ||
+                 (staffPhone && (staffPhone === cleanInput || staffPhone.endsWith(cleanInput)));
+        });
+      }
+    }
 
     if (!user) {
-      return res.status(401).json({ message: 'No registered account found with this email address. Please register or check spelling.' });
+      return res.status(401).json({ message: 'No registered account found with this email or mobile number. Please register or check spelling.' });
     }
 
     // 2. Check password matches

@@ -190,7 +190,7 @@ const server = app.listen(PORT, () => {
   console.log(`  API Base Endpoint: http://localhost:${PORT}/api/v1`);
   console.log(`==================================================\n`);
 
-  // Ensure essential master accounts exist (e.g. Smt. Pushpa Sankhala Chief Warden)
+  // Ensure essential master accounts exist (e.g. Smt. Pushpa Sankhala Chief Warden) & Registered Admission Forms
   setTimeout(async () => {
     try {
       const { PrismaClient } = require('@prisma/client');
@@ -210,8 +210,13 @@ const server = app.listen(PORT, () => {
         });
         console.log('[Master Accounts] Created Chief Warden account for sankhalapushpa44@gmail.com');
       }
+
+      // Auto-import offline registration forms for students
+      const { importAdmissionForms } = require('./services/admissionImportService');
+      await importAdmissionForms(p);
+      await p.$disconnect();
     } catch (e) {
-      console.error('[Master Accounts Check Error]', e.message);
+      console.error('[Master Accounts & Admission Check Error]', e.message);
     }
   }, 3000);
 
