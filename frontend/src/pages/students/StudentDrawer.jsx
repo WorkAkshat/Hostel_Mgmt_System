@@ -85,7 +85,7 @@ const StudentDrawer = ({ student, onClose, onEdit, onDelete, onPrint, onPreview,
     }
   };
 
-  const s = { ...student, ...(details || {}) };
+  const s = student ? { ...student, ...(details || {}) } : null;
   const status = s ? STUDENT_STATUS[s.status] || STUDENT_STATUS.CHECKED_IN : null;
   const room = s?.room;
   const unpaid = (details?.invoices || []).filter((i) => i.status === 'UNPAID');
