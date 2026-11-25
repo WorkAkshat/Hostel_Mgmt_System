@@ -1031,6 +1031,34 @@ const changePassword = async (req, res) => {
   }
 };
 
+// @desc    Admin reset user password
+// @route   POST /api/v1/auth/admin-set-password
+// @access  Private (ADMIN only)
+const adminSetPassword = async (req, res) => {
+  const { email, newPassword, role, assignedFloor } = req.body;
+  if (!email || !newPassword) {
+    return res.status(400).json({ message: 'Email and new password are required' });
+  }
+
+  try {
+    const cleanEmail = email.trim().toLowerCase();
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const updateData = { password: hashedPassword };
+    if (role) updateData.role = role;
+    if (assignedFloor !== undefined) updateData.assignedFloor = assignedFloor;
+
+    const user = await prisma.user.update({
+      where: { email: cleanEmail },
+      data: updateData
+    });
+
+    res.json({ message: `Password and permissions updated successfully for ${user.email}`, user: { email: user.email, role: user.role, assignedFloor: user.assignedFloor } });
+  } catch (error) {
+    console.error('Error in adminSetPassword:', error);
+    res.status(500).json({ message: 'Error setting password', error: error.message });
+  }
+};
+
 module.exports = {
   loginUser,
   getMe,
@@ -1045,6 +1073,7 @@ module.exports = {
   forgotPassword,
   resetPassword,
   updateProfile,
-  changePassword
+  changePassword,
+  adminSetPassword
 };
 

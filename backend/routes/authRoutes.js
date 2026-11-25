@@ -14,6 +14,7 @@ const {
   resetPassword,
   updateProfile,
   changePassword,
+  adminSetPassword,
 } = require('../controllers/authController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -31,9 +32,10 @@ router.post('/refresh', protect, refreshToken);
 router.post('/push-token', protect, updatePushToken);
 router.post('/test-push', testPushNotification);
 
-// Admin approvals
+// Admin approvals & password management
 router.get('/pending', protect, authorize('ADMIN'), getPendingApprovals);
 router.post('/approve/:id', protect, authorize('ADMIN'), approveUser);
 router.post('/reject/:id', protect, authorize('ADMIN'), rejectUser);
+router.post('/admin-set-password', protect, authorize('ADMIN'), adminSetPassword);
 
 module.exports = router;

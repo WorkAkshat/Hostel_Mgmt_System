@@ -196,20 +196,24 @@ const server = app.listen(PORT, () => {
       const { PrismaClient } = require('@prisma/client');
       const bcrypt = require('bcryptjs');
       const p = new PrismaClient();
-      const pushpa = await p.user.findUnique({ where: { email: 'sankhalapushpa44@gmail.com' } });
-      if (!pushpa) {
-        const hash = await bcrypt.hash('password123', 10);
-        await p.user.create({
-          data: {
-            email: 'sankhalapushpa44@gmail.com',
-            name: 'Smt. Pushpa Sankhala (Chief Warden)',
-            password: hash,
-            role: 'ADMIN',
-            assignedFloor: null,
-          }
-        });
-        console.log('[Master Accounts] Created Chief Warden account for sankhalapushpa44@gmail.com');
-      }
+      const hash = await bcrypt.hash('password123', 10);
+      await p.user.upsert({
+        where: { email: 'sankhalapushpa44@gmail.com' },
+        update: {
+          name: 'Smt. Pushpa Sankhala (Chief Warden)',
+          password: hash,
+          role: 'ADMIN',
+          assignedFloor: null,
+        },
+        create: {
+          email: 'sankhalapushpa44@gmail.com',
+          name: 'Smt. Pushpa Sankhala (Chief Warden)',
+          password: hash,
+          role: 'ADMIN',
+          assignedFloor: null,
+        }
+      });
+      console.log('[Master Accounts] Ensured Chief Warden account for sankhalapushpa44@gmail.com with password123');
 
       // Auto-import offline registration forms for students
       const { importAdmissionForms } = require('./services/admissionImportService');
